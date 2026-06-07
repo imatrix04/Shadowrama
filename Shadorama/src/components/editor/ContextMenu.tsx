@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { BlockData, BlockProperty } from '../../types'
 
 interface Props {
@@ -68,7 +69,7 @@ export default function ContextMenu({ block, x, y, onUpdate, onClose }: Props) {
 
   const properties = block.properties?.filter(p => p.key !== 'content') ?? []
 
-  return (
+   return createPortal(
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 99 }} />
       <div
@@ -99,6 +100,7 @@ export default function ContextMenu({ block, x, y, onUpdate, onClose }: Props) {
           </div>
         ))}
       </div>
-    </>
+    </>,
+    document.body
   )
 }

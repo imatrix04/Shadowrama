@@ -11,6 +11,7 @@ interface Props {
 
 export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateBlock }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(1)
 
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -18,31 +19,46 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
   }
 
   return (
-    <div style={styles.wrapper}>
-      {/* Contrôles zoom */}
-      <div style={{ position: 'absolute', bottom: '1rem', right: '1rem', zIndex: 10, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+    <div ref={wrapperRef} style={styles.wrapper}>
+
+      <div style={{ transform: `scale(${zoom})`, transformOrigin: 'center center', transition: 'transform 0.15s' }}>
+        <div ref={canvasRef} style={styles.canvas} onClick={handleCanvasClick}>
+          {blocks.map(block => (
+            <Block
+              key={block.id}
+              block={block}
+              isSelected={selectedBlock?.id === block.id}
+              onSelect={onSelectBlock}
+              onUpdate={onUpdateBlock}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* position: fixed → toujours au même endroit peu importe le zoom */}
+      <div style={{
+        position: 'fixed',
+        bottom: '1.5rem',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 200,
+        display: 'flex',
+        gap: '0.5rem',
+        alignItems: 'center',
+        backgroundColor: '#1a1a1a',
+        border: '1px solid #333',
+        borderRadius: '8px',
+        padding: '0.4rem 0.75rem',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+      }}>
         <button onClick={() => setZoom(z => Math.max(0.25, z - 0.1))} style={btnStyle}>−</button>
-        <span style={{ color: '#aaa', fontSize: '0.8rem', minWidth: '40px', textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
+        <span style={{ color: '#aaa', fontSize: '0.8rem', minWidth: '42px', textAlign: 'center' }}>
+          {Math.round(zoom * 100)}%
+        </span>
         <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} style={btnStyle}>+</button>
         <button onClick={() => setZoom(1)} style={btnStyle}>↺</button>
       </div>
 
-      <div style={{ transform: `scale(${zoom})`, transformOrigin: 'center center', transition: 'transform 0.1s' }}></div>
-      <div
-        ref={canvasRef}
-        style={styles.canvas}
-        onClick={handleCanvasClick}
-      >
-        {blocks.map(block => (
-          <Block
-            key={block.id}
-            block={block}
-            isSelected={selectedBlock?.id === block.id}
-            onSelect={onSelectBlock}
-            onUpdate={onUpdateBlock}
-          />
-        ))}
-      </div>
     </div>
   )
 }
