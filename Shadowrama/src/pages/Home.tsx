@@ -5,7 +5,7 @@ export default function Home() {
 
   return (
     <div style={styles.container}>
-      <h1>Shadorama</h1>
+      <h1>Shadowrama</h1>
       <button style={styles.button} onClick={() => navigate('/editor')}>
         Créer un diaporama
       </button>
