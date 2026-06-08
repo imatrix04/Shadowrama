@@ -12,8 +12,7 @@ interface Props {
 export default function TextBlock({ block, onUpdate, isEditing, onStartEdit, onStopEdit }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [savedContent, setSavedContent] = useState(block.content)
-
-  // Sync depuis PropertiesPanel quand pas en édition
+  
   useEffect(() => {
     if (!isEditing && ref.current) {
       ref.current.innerText = block.content

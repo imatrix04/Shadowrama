@@ -18,6 +18,15 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
     if (e.target === canvasRef.current) onSelectBlock(null)
   }
 
+  const handleReorder = (id: number, direction: 'front' | 'back' | 'forward' | 'backward') => {
+  onUpdateBlock(id, {
+    zIndex: direction === 'front' ? 999
+          : direction === 'back' ? 0
+          : direction === 'forward' ? ((blocks.find(b => b.id === id)?.zIndex ?? 0) + 1)
+          : Math.max(0, (blocks.find(b => b.id === id)?.zIndex ?? 0) - 1)
+  })
+  }
+
   return (
     <div ref={wrapperRef} style={styles.wrapper}>
 
@@ -25,12 +34,13 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
         <div ref={canvasRef} style={styles.canvas} onClick={handleCanvasClick}>
           {blocks.map(block => (
             <Block
-              key={block.id}
-              block={block}
-              isSelected={selectedBlock?.id === block.id}
-              onSelect={onSelectBlock}
-              onUpdate={onUpdateBlock}
-            />
+            key={block.id}
+            block={block}
+            isSelected={selectedBlock?.id === block.id}
+            onSelect={onSelectBlock}
+            onUpdate={onUpdateBlock}
+            onReorder={handleReorder} // ← ajout
+          />
           ))}
         </div>
       </div>

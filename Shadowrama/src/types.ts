@@ -1,7 +1,8 @@
 export interface BlockProperty {
   key: string
   label: string
-  type: 'text' | 'textarea' | 'number' | 'color'
+  type: 'text' | 'textarea' | 'number' | 'color' | 'select'
+  options?: { label: string; value: string }[]
 }
 
 export interface BlockData {

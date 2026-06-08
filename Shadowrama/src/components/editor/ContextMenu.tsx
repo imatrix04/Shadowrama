@@ -7,6 +7,7 @@ interface Props {
   x: number
   y: number
   onUpdate: (id: number, changes: Partial<BlockData>) => void
+  onReorder: (id: number, direction: 'front' | 'back' | 'forward' | 'backward') => void
   onClose: () => void
 }
 
@@ -19,6 +20,31 @@ const inputStyle: React.CSSProperties = {
   fontSize: '0.82rem',
   width: '100%',
   boxSizing: 'border-box',
+}
+
+const sectionStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.3rem',
+  borderBottom: '1px solid #333',
+  paddingBottom: '0.5rem',
+}
+
+const labelStyle: React.CSSProperties = {
+  fontSize: '0.7rem',
+  color: '#555',
+  textTransform: 'uppercase',
+  letterSpacing: '1px',
+}
+
+const btnStyle: React.CSSProperties = {
+  padding: '0.25rem 0.5rem',
+  backgroundColor: '#2a2a2a',
+  border: '1px solid #444',
+  borderRadius: '4px',
+  color: '#fff',
+  fontSize: '0.75rem',
+  cursor: 'pointer',
 }
 
 function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: number, changes: Partial<BlockData>) => void) {
@@ -50,12 +76,26 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
           onChange={e => onUpdate(block.id, { [prop.key]: e.target.value })}
         />
       )
+    case 'select':
+      return (
+        <select
+          style={{ ...inputStyle, cursor: 'pointer' }}
+          value={block[prop.key] ?? ''}
+          onChange={e => onUpdate(block.id, { [prop.key]: e.target.value })}
+        >
+          {prop.options?.map(opt => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      )
     default:
       return null
   }
 }
 
-export default function ContextMenu({ block, x, y, onUpdate, onClose }: Props) {
+export default function ContextMenu({ block, x, y, onUpdate, onReorder, onClose }: Props) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ x, y })
 
@@ -69,11 +109,12 @@ export default function ContextMenu({ block, x, y, onUpdate, onClose }: Props) {
 
   const properties = block.properties?.filter(p => p.key !== 'content') ?? []
 
-   return createPortal(
+  return createPortal(
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 99 }} />
       <div
         ref={menuRef}
+        onWheel={e => e.stopPropagation()}
         style={{
           position: 'fixed',
           left: pos.x,
@@ -83,6 +124,9 @@ export default function ContextMenu({ block, x, y, onUpdate, onClose }: Props) {
           border: '1px solid #333',
           borderRadius: '8px',
           padding: '0.75rem',
+          width: '180px',
+          maxHeight: '320px',
+          overflowY: 'auto', 
           minWidth: '200px',
           display: 'flex',
           flexDirection: 'column',
@@ -90,12 +134,34 @@ export default function ContextMenu({ block, x, y, onUpdate, onClose }: Props) {
           boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         }}
       >
-        <p style={{ margin: 0, fontSize: '0.7rem', color: '#555', textTransform: 'uppercase', letterSpacing: '1px' }}>
-          {block.type}
-        </p>
+        {/* Type */}
+        <p style={{ margin: 0, ...labelStyle }}>{block.type}</p>
+
+        {/* Section ordre */}
+        <div style={sectionStyle}>
+          <span style={labelStyle}>Ordre</span>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {([
+              { label: '⬆️ Premier plan', dir: 'front' },
+              { label: '⬇️ Arrière plan', dir: 'back' },
+              { label: '↑ Avancer', dir: 'forward' },
+              { label: '↓ Reculer', dir: 'backward' },
+            ] as const).map(({ label, dir }) => (
+              <button
+                key={dir}
+                style={btnStyle}
+                onClick={() => { onReorder(block.id, dir); onClose() }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Propriétés */}
         {properties.map(prop => (
           <div key={prop.key} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-            <label style={{ fontSize: '0.72rem', color: '#888' }}>{prop.label}</label>
+            <label style={labelStyle}>{prop.label}</label>
             {renderField(prop, block, onUpdate)}
           </div>
         ))}

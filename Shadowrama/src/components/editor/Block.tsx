@@ -8,9 +8,10 @@ interface Props {
   isSelected: boolean
   onSelect: (block: BlockData) => void
   onUpdate: (id: number, changes: Partial<BlockData>) => void
+  onReorder: (id: number, direction: 'front' | 'back' | 'forward' | 'backward') => void // ← ajout
 }
 
-export default function Block({ block, isSelected, onSelect, onUpdate }: Props) {
+export default function Block({ block, isSelected, onSelect, onUpdate, onReorder }: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const isDragging = useRef(false)
   const offset = useRef({ x: 0, y: 0 })
@@ -56,6 +57,7 @@ export default function Block({ block, isSelected, onSelect, onUpdate }: Props) 
         top: block.y,
         width: block.width,
         height: block.height,
+        zIndex: block.zIndex ?? 0, // ← ajout
         outline: isSelected && !isEditing ? '2px solid #6c63ff' : '2px solid transparent',
         cursor: isEditing ? 'text' : 'grab',
         userSelect: isEditing ? 'text' : 'none',
@@ -77,6 +79,7 @@ export default function Block({ block, isSelected, onSelect, onUpdate }: Props) 
           x={contextMenu.x}
           y={contextMenu.y}
           onUpdate={onUpdate}
+          onReorder={onReorder}
           onClose={() => setContextMenu(null)}
         />
       )}
