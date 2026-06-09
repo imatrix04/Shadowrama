@@ -42,6 +42,15 @@ export default function Editor() {
     setSlides(updated)
   }
 
+  const handleDeleteBlock = (id: number) => {
+  setSlides(prev => prev.map((slide, i) =>
+    i === currentSlide
+      ? { ...slide, blocks: slide.blocks.filter(b => b.id !== id) }
+      : slide
+  ))
+  setSelectedBlockId(null)
+  } 
+
   return (
     <div style={{ display: 'flex', height: '100vh', backgroundColor: '#1a1a2e', color: '#fff' }}>
       <Sidebar onAddBlock={addBlock} />
@@ -50,6 +59,7 @@ export default function Editor() {
         selectedBlock={selectedBlock}
         onSelectBlock={(block) => setSelectedBlockId(block?.id ?? null)}
         onUpdateBlock={updateBlock}
+        onDeleteBlock={handleDeleteBlock}
       />
     </div>
   )

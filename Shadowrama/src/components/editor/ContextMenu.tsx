@@ -7,6 +7,7 @@ interface Props {
   x: number
   y: number
   onUpdate: (id: number, changes: Partial<BlockData>) => void
+  onDelete: (id: number) => void
   onReorder: (id: number, direction: 'front' | 'back' | 'forward' | 'backward') => void
   onClose: () => void
 }
@@ -90,12 +91,24 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
           ))}
         </select>
       )
+    case 'float':
+      return (
+        <input
+          type="number"
+          style={inputStyle}
+          value={block[prop.key] ?? 1}
+          min={0}
+          max={1}
+          step={0.05}
+          onChange={e => onUpdate(block.id, { [prop.key]: parseFloat(e.target.value) })}
+        />
+      )
     default:
       return null
   }
 }
 
-export default function ContextMenu({ block, x, y, onUpdate, onReorder, onClose }: Props) {
+export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder, onClose }: Props) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ x, y })
 
@@ -165,6 +178,16 @@ export default function ContextMenu({ block, x, y, onUpdate, onReorder, onClose 
             {renderField(prop, block, onUpdate)}
           </div>
         ))}
+
+        <div style={{ borderTop: '1px solid #333', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
+          <button
+            style={{ ...btnStyle, color: '#ff4d4d', width: '100%' }}
+            onClick={() => { onDelete(block.id); onClose() }}
+          >
+            🗑 Supprimer
+          </button>
+        </div>
+
       </div>
     </>,
     document.body

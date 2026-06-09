@@ -7,6 +7,10 @@ const shapeConfig: BlockConfig = {
   properties: [
     { key: 'shape', label: 'Forme', type: 'text' },
     { key: 'backgroundColor', label: 'Couleur', type: 'color' },
+    { key: 'borderRadius', label: 'Arrondi', type: 'number' },
+    { key: 'borderColor', label: 'Couleur de bordure', type: 'color' },
+    { key: 'borderWidth', label: 'Largeur de bordure', type: 'number' },
+    { key: 'opacity', label: 'Opacité', type: 'float' },
   ]
 }
 
