@@ -27,7 +27,7 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
 
   useEffect(() => {
   const handleKeyDown = (e: KeyboardEvent) => {
-    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlock) {
+    if ((e.key === 'Delete') && selectedBlock) {
       onDeleteBlock(selectedBlock.id)
     }
   }
