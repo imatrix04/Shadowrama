@@ -14,30 +14,8 @@ export default function Sidebar({ onAddBlock }: Props) {
   }
 
   return (
-    <div style={{ display: 'flex', flexShrink: 0, position: 'relative' }}>
-      {/* Panel avec animation */}
-      <div style={{
-        width: open ? '200px' : '0px',
-        overflow: 'hidden',
-        transition: 'width 0.2s ease',
-        height: '100%',
-        backgroundColor: '#111',
-        borderRight: open ? '1px solid #333' : 'none',
-        display: 'flex',
-        flexDirection: 'column',
-        boxSizing: 'border-box',
-      }}>
-        <div style={{ padding: '0.75rem 0.5rem', minWidth: '160px', display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto' }}>
-          <p style={styles.title}>Blocs</p>
-          {BLOCKS_CONFIG.map(config => (
-            <button key={config.type} style={styles.block} onClick={() => handleAdd(config)}>
-              {config.label}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div style={{ display: 'flex', flexShrink: 0, position: 'relative', zIndex: 10 }}>
 
-      {/* Bouton toggle */}
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -61,6 +39,26 @@ export default function Sidebar({ onAddBlock }: Props) {
       >
         {open ? '◀' : '▶'}
       </button>
+
+      {/* Panel avec animation */}
+      <div style={{
+        width: open ? '200px' : '0px',
+        overflow: 'hidden',
+        transition: 'width 0.5s ease',
+        height: '100%',
+        backgroundColor: '#111',
+        borderRight: open ? '1px solid #333' : 'none',
+        boxSizing: 'border-box',
+      }}>
+        <div style={{ minWidth: '160px', height: '100%', display: 'flex', flexDirection: 'column', padding: '0.75rem 0.5rem', gap: '0.5rem', boxSizing: 'border-box', overflowY: 'auto' }}>
+          <p style={styles.title}>Blocs</p>
+          {BLOCKS_CONFIG.map(config => (
+            <button key={config.type} style={styles.block} onClick={() => handleAdd(config)}>
+              {config.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
@@ -72,6 +70,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.75rem',
     textTransform: 'uppercase',
     letterSpacing: '1px',
+    textAlign: 'center',
   },
   block: {
     padding: '0.6rem',
