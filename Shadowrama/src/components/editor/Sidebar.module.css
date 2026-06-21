@@ -1,0 +1,91 @@
+.wrapper {
+  display: flex;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.toggleBtn {
+  position: absolute;
+  top: 1rem;
+  right: -28px;
+  z-index: 51;
+  width: 28px;
+  height: 28px;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: 0 6px 6px 0;
+  color: var(--editor-text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: right 0.2s, background-color 0.15s;
+}
+
+.toggleBtn:hover {
+  background-color: var(--editor-btn-bg-hover);
+}
+
+.toggleBtnOpen {
+  right: -16px;
+}
+
+.panel {
+  width: 0px;
+  overflow: hidden;
+  transition: width 0.5s ease;
+  height: 100%;
+  background-color: var(--editor-bg-panel);
+  border-right: none;
+  box-sizing: border-box;
+}
+
+.panelOpen {
+  width: 200px;
+  border-right: 1px solid var(--editor-border);
+}
+
+.panelInner {
+  min-width: 160px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 0.5rem;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.title {
+  margin: 0 0 0.5rem 0;
+  color: var(--editor-text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.blockBtn {
+  padding: 0.6rem;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: 6px;
+  color: var(--editor-text);
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.85rem;
+  width: 100%;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.blockBtn:hover {
+  background-color: var(--editor-btn-bg-hover);
+  border-color: var(--accent);
+}
+
+.blockBtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

@@ -1,33 +1,39 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Slide } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
+import styles from './PresentationMode.module.css'
 
 interface Props {
   slides: Slide[]
   onClose: () => void
 }
 
+const CONTROLS_REVEAL_ZONE_PX = 80 // distance depuis le bas de l'écran qui révèle les contrôles
+const CONTROLS_HIDE_DELAY_MS = 1500
+
 export default function PresentationMode({ slides, onClose }: Props) {
   const [current, setCurrent] = useState(0)
   const [scale, setScale] = useState(1)
+  const [controlsVisible, setControlsVisible] = useState(true)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── Scale automatique selon la taille de l'écran
   useEffect(() => {
     const updateScale = () => {
-        const el = wrapperRef.current
-        if (!el) return
-        const availW = el.clientWidth
-        const availH = el.clientHeight
-        const scaleX = availW / 960
-        const scaleY = availH / 540
-        setScale(Math.min(scaleX, scaleY))
+      const el = wrapperRef.current
+      if (!el) return
+      const availW = el.clientWidth
+      const availH = el.clientHeight
+      const scaleX = availW / 960
+      const scaleY = availH / 540
+      setScale(Math.min(scaleX, scaleY))
     }
 
     updateScale()
     window.addEventListener('resize', updateScale)
     return () => window.removeEventListener('resize', updateScale)
-    }, [])
+  }, [])
 
   // ── Clavier
   useEffect(() => {
@@ -44,18 +50,50 @@ export default function PresentationMode({ slides, onClose }: Props) {
     return () => window.removeEventListener('keydown', handleKey)
   }, [slides.length, onClose])
 
+  // ── Affichage/masquage des contrôles selon la position de la souris
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const distanceFromBottom = window.innerHeight - e.clientY
+
+    if (distanceFromBottom <= CONTROLS_REVEAL_ZONE_PX) {
+      setControlsVisible(true)
+      if (hideTimeout.current) clearTimeout(hideTimeout.current)
+    } else {
+      // on relance un délai avant de masquer, pour éviter un clignotement
+      if (hideTimeout.current) clearTimeout(hideTimeout.current)
+      hideTimeout.current = setTimeout(() => setControlsVisible(false), CONTROLS_HIDE_DELAY_MS)
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (hideTimeout.current) clearTimeout(hideTimeout.current)
+    }
+  }, [])
+
+  // ── Navigation par clic : gauche = précédent, droite = suivant
+  const handleSlideAreaClick = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+    const midpoint = rect.width / 2
+
+    if (clickX < midpoint) {
+      setCurrent(prev => Math.max(prev - 1, 0))
+    } else {
+      setCurrent(prev => Math.min(prev + 1, slides.length - 1))
+    }
+  }
+
   const slide = slides[current]
 
   return (
-    <div style={styles.overlay}>
-
-      {/* Zone slide */}
-      <div ref={wrapperRef} style={styles.slideWrapper}>
-        <div style={{
-          ...styles.slide,
-          transform: `scale(${scale})`,
-          transformOrigin: 'center center',
-        }}>
+    <div className={styles.overlay}>
+      <div
+        ref={wrapperRef}
+        className={styles.slideWrapper}
+        onMouseMove={handleMouseMove}
+        onClick={handleSlideAreaClick}
+      >
+        <div className={styles.slide} style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}>
           {slide.blocks
             .slice()
             .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
@@ -65,15 +103,8 @@ export default function PresentationMode({ slides, onClose }: Props) {
               return (
                 <div
                   key={block.id}
-                  style={{
-                    position: 'absolute',
-                    left: block.x,
-                    top: block.y,
-                    width: block.width,
-                    height: block.height,
-                    zIndex: block.zIndex ?? 0,
-                    pointerEvents: 'none',
-                  }}
+                  className={styles.blockWrapper}
+                  style={{ left: block.x, top: block.y, width: block.width, height: block.height, zIndex: block.zIndex ?? 0 }}
                 >
                   <BlockComponent
                     block={block}
@@ -88,79 +119,29 @@ export default function PresentationMode({ slides, onClose }: Props) {
         </div>
       </div>
 
-      {/* Contrôles */}
-      <div style={styles.controls}>
-        <button style={btnStyle}
+      <div
+        className={`${styles.controls} ${controlsVisible ? styles.controlsVisible : ''}`}
+        onClick={e => e.stopPropagation()}
+      >
+        <button
+          className={styles.btn}
           onClick={() => setCurrent(p => Math.max(p - 1, 0))}
-          disabled={current === 0}>
+          disabled={current === 0}
+        >
           ◀
         </button>
-        <span style={{ color: '#aaa', fontSize: '0.85rem' }}>
-          {current + 1} / {slides.length}
-        </span>
-        <button style={btnStyle}
+        <span className={styles.counter}>{current + 1} / {slides.length}</span>
+        <button
+          className={styles.btn}
           onClick={() => setCurrent(p => Math.min(p + 1, slides.length - 1))}
-          disabled={current === slides.length - 1}>
+          disabled={current === slides.length - 1}
+        >
           ▶
         </button>
-        <button style={{ ...btnStyle, marginLeft: '1rem', borderColor: '#ff4444', color: '#ff4444' }}
-          onClick={onClose}>
+        <button className={`${styles.btn} ${styles.closeBtn}`} onClick={onClose}>
           ✕ Quitter
         </button>
       </div>
-
     </div>
   )
-}
-
-const btnStyle: React.CSSProperties = {
-  padding: '0.4rem 0.8rem',
-  backgroundColor: '#1a1a1a',
-  border: '1px solid #444',
-  borderRadius: '6px',
-  color: '#fff',
-  fontSize: '0.9rem',
-  cursor: 'pointer',
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: '#000',
-    zIndex: 1000,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  slideWrapper: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    overflow: 'hidden',
-    padding: 0,
-  },
-  slide: {
-    width: '960px',
-    height: '540px',
-    backgroundColor: '#2d2d2d',
-    position: 'relative',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    flexShrink: 0,
-  },
-  controls: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    padding: '1rem',
-    backgroundColor: '#111',
-    borderTop: '1px solid #222',
-    width: '100%',
-    justifyContent: 'center',
-    boxSizing: 'border-box',
-  },
 }

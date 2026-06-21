@@ -1,0 +1,79 @@
+.wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--editor-bg);
+  overflow: hidden;
+}
+
+.canvas {
+  width: 960px;
+  height: 540px;
+  background-color: var(--editor-bg-canvas);
+  position: relative;
+  border-radius: 8px;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.snapLineV {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--accent);
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.snapLineH {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: var(--accent);
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.zoomControls {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.zoomBtn {
+  padding: 0.3rem 0.6rem;
+  background-color: var(--editor-bg-panel);
+  border: 1px solid var(--editor-border-light);
+  border-radius: 4px;
+  color: var(--editor-text);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.zoomBtn:hover {
+  background-color: var(--editor-btn-bg-hover);
+  border-color: var(--accent);
+}
+
+.zoomLabel {
+  color: var(--editor-text-muted);
+  font-size: 0.8rem;
+  min-width: 42px;
+  text-align: center;
+}

@@ -1,5 +1,34 @@
 import type { Slide } from '../types'
 
+const DRAFT_KEY = 'shadowrama-draft'
+
+export interface ProjectDraft {
+  projectName: string | null
+  slides: Slide[]
+  savedAt: number
+}
+
+export function saveDraft(projectName: string | null, slides: Slide[]) {
+  const draft: ProjectDraft = { projectName, slides, savedAt: Date.now() }
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+}
+
+export function loadDraft(): ProjectDraft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed?.slides)) return null
+    return parsed as ProjectDraft
+  } catch {
+    return null
+  }
+}
+
+export function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY)
+}
+
 export function saveProject(slides: Slide[], name: string) {
   const payload = {
     version: 1,

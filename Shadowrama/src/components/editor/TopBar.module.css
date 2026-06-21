@@ -1,0 +1,144 @@
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background-color: var(--editor-bg-panel);
+  border-bottom: 1px solid var(--editor-border);
+  height: 48px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.logo {
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+
+.projectName {
+  font-size: 0.8rem;
+  color: var(--editor-text-muted);
+}
+
+.dirtyDot {
+  color: var(--warning);
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn {
+  padding: 0.4rem 0.8rem;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: 6px;
+  color: var(--editor-text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.btn:hover {
+  background-color: var(--editor-btn-bg-hover);
+  border-color: var(--accent);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.btnAccent {
+  background-color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+.btnAccent:hover {
+  background-color: var(--accent-hover);
+}
+
+.fileLabel {
+  /* même look que .btn mais pour le <label> qui enveloppe l'input file */
+  padding: 0.4rem 0.8rem;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: 6px;
+  color: var(--editor-text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.fileLabel:hover {
+  background-color: var(--editor-btn-bg-hover);
+  border-color: var(--accent);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+/* ── Modale nom de projet ── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.dialog {
+  background-color: #1e1e2e;
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  padding: 1rem;
+  width: 280px;
+}
+
+.dialogTitle {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  color: var(--editor-text-muted);
+}
+
+.dialogInput {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #2a2a2a;
+  border: 1px solid var(--editor-border-light);
+  border-radius: 4px;
+  color: var(--editor-text);
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.dialogInput:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}

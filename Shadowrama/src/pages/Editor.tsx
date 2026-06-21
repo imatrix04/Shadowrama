@@ -1,79 +1,59 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { BLOCKS_CONFIG } from '../blocks'
 import type { BlockData, Slide } from '../types'
+import { useEditorHistory } from '../hooks/useEditorHistory'
+import { loadDraft, saveDraft } from '../utils/fileManager'
 import Canvas from '../components/editor/Canvas'
 import Sidebar from '../components/editor/Sidebar'
 import TopBar from '../components/editor/TopBar'
 import SlidePanel from '../components/editor/SlidePanel'
 
-const MAX_HISTORY = 50
 
 export default function Editor() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [selectedBlockId, setSelectedBlockId] = useState<number | null>(null)
-  const [projectName, setProjectName] = useState<string | null>(null)
+  const [initialDraft] = useState(() => loadDraft())
+  const [projectName, setProjectName] = useState<string | null>(initialDraft?.projectName ?? null)
 
-  const [slides, setSlides] = useState<Slide[]>(() => {
-    try {
-      const saved = localStorage.getItem('shadowrama-project')
-      return saved ? JSON.parse(saved) : [{ id: 1, blocks: [] }]
-    } catch {
-      return [{ id: 1, blocks: [] }]
-    }
-  })
+  const { slides, commit, patch, undo, redo, setSlides } = useEditorHistory(
+   initialDraft?.slides ?? [{ id: 1, blocks: [] }]
+  )
 
-  // ── Historique
-  const history = useRef<Slide[][]>([])
-  const isUndoing = useRef(false)
-
-  // Sauvegarde un snapshot AVANT chaque modification
-  const saveSnapshot = useCallback(() => {
-    history.current.push(JSON.parse(JSON.stringify(slides)))
-    if (history.current.length > MAX_HISTORY) {
-      history.current.shift()
-    }
-  }, [slides])
-
-  // ── Ctrl+Z
+  // ── Ctrl+Z / Ctrl+Shift+Z (redo)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
-        if (history.current.length === 0) return
-        isUndoing.current = true
-        const prev = history.current.pop()!
-        setSlides(prev)
+        undo()
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault()
+        redo()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [undo, redo])
 
-  // ── Autosave (pas pendant un undo)
+  // ── Autosave
   useEffect(() => {
-    if (isUndoing.current) {
-      isUndoing.current = false
-      return
-    }
-    localStorage.setItem('shadowrama-project', JSON.stringify(slides))
-  }, [slides])
+    saveDraft(projectName, slides)
+  }, [slides, projectName])
 
   const selectedBlock = slides[currentSlide].blocks.find(b => b.id === selectedBlockId) ?? null
 
   // ── Slides
   const addSlide = () => {
-    saveSnapshot()
-    setSlides(prev => [...prev, { id: Date.now(), blocks: [] }])
+    commit(prev => [...prev, { id: Date.now(), blocks: [] }])
     setCurrentSlide(slides.length)
   }
 
   const duplicateSlide = (index: number) => {
-    saveSnapshot()
     const copy: Slide = {
       id: Date.now(),
       blocks: slides[index].blocks.map(b => ({ ...b, id: Date.now() + Math.random() }))
     }
-    setSlides(prev => {
+    commit(prev => {
       const next = [...prev]
       next.splice(index + 1, 0, copy)
       return next
@@ -83,8 +63,7 @@ export default function Editor() {
 
   const deleteSlide = (index: number) => {
     if (slides.length === 1) return
-    saveSnapshot()
-    setSlides(prev => prev.filter((_, i) => i !== index))
+    commit(prev => prev.filter((_, i) => i !== index))
     setCurrentSlide(prev => Math.min(prev, slides.length - 2))
   }
 
@@ -92,34 +71,39 @@ export default function Editor() {
   const addBlock = (block: Partial<BlockData> & { type: string }) => {
     const config = BLOCKS_CONFIG.find(c => c.type === block.type)
     if (!config) return
-    saveSnapshot()
-    const newBlock= {
+    const newBlock = {
       x: 100, y: 100, width: 200, height: 60,
       ...config.defaultProps, ...block,
       id: Date.now(),
       properties: config.properties,
     } as BlockData
-    setSlides(prev => prev.map((s, i) =>
+    commit(prev => prev.map((s, i) =>
       i === currentSlide ? { ...s, blocks: [...s.blocks, newBlock] } : s
     ))
   }
 
   const updateBlock = (id: number, changes: Partial<BlockData>) => {
-    setSlides(prev => prev.map((s, i) =>
+    // Pas de snapshot pendant le drag/resize continu
+    patch(prev => prev.map((s, i) =>
       i === currentSlide
         ? { ...s, blocks: s.blocks.map(b => b.id === id ? ({ ...b, ...changes } as BlockData) : b) }
         : s
     ))
   }
 
-  // Appelé par Canvas quand le drag se termine
+  const handleNewProject = () => {
+    setSlides([{ id: Date.now(), blocks: [] }])
+    setProjectName(null)
+    setCurrentSlide(0)
+    setSelectedBlockId(null)
+  }
+
   const handleBlockDragEnd = useCallback(() => {
-    saveSnapshot()
-  }, [saveSnapshot])
+    commit(prev => prev)
+  }, [commit])
 
   const handleDeleteBlock = (id: number) => {
-    saveSnapshot()
-    setSlides(prev => prev.map((slide, i) =>
+    commit(prev => prev.map((slide, i) =>
       i === currentSlide
         ? { ...slide, blocks: slide.blocks.filter(b => b.id !== id) }
         : slide
@@ -134,6 +118,7 @@ export default function Editor() {
         projectName={projectName}
         setProjectName={setProjectName}
         onLoad={(loaded, name) => { setSlides(loaded); setSelectedBlockId(null); setProjectName(name) }}
+        onNew={handleNewProject}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar onAddBlock={addBlock} />

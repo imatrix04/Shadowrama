@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import type { BlockData } from '../../types'
 import Block from './Block'
+import styles from './Canvas.module.css'
 
 const CANVAS_W = 960
 const CANVAS_H = 540
@@ -29,7 +30,6 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
   const panStart = useRef({ x: 0, y: 0 })
   const [snapLines, setSnapLines] = useState<SnapLine[]>([])
 
-  // ── Clavier (Delete)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Delete' && selectedBlock) {
@@ -40,7 +40,6 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedBlock])
 
-  // ── Molette (zoom + scroll)
   useEffect(() => {
     const el = wrapperRef.current
     if (!el) return
@@ -56,9 +55,7 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
 
         setView(prev => {
           const newZoom = Math.min(3, Math.max(0.25, prev.zoom + delta * prev.zoom))
-
           if (newZoom === prev.zoom) return prev
-
           return {
             zoom: newZoom,
             offset: {
@@ -70,7 +67,6 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
         return
       }
 
-      // Shift + scroll = pan
       setView(prev => ({
         ...prev,
         offset: {
@@ -80,12 +76,10 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
       }))
     }
 
-
     el.addEventListener('wheel', handleWheel, { passive: false })
     return () => el.removeEventListener('wheel', handleWheel)
   }, [])
 
-  // ── Pan (clic molette)
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button === 1) {
       e.preventDefault()
@@ -149,19 +143,19 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
 
     const bCenterX = x + block.width / 2
     const bCenterY = y + block.height / 2
-    const bRight   = x + block.width
-    const bBottom  = y + block.height
+    const bRight = x + block.width
+    const bBottom = y + block.height
 
     const vSources = [
-      { val: x,        label: 'left' },
+      { val: x, label: 'left' },
       { val: bCenterX, label: 'centerX' },
-      { val: bRight,   label: 'right' },
+      { val: bRight, label: 'right' },
     ]
 
     const hSources = [
-      { val: y,        label: 'top' },
+      { val: y, label: 'top' },
       { val: bCenterY, label: 'centerY' },
-      { val: bBottom,  label: 'bottom' },
+      { val: bBottom, label: 'bottom' },
     ]
 
     const vTargets: number[] = [
@@ -205,7 +199,7 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
   return (
     <div
       ref={wrapperRef}
-      style={styles.wrapper}
+      className={styles.wrapper}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -215,23 +209,15 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
         transformOrigin: '0 0',
         transition: isPanning.current ? 'none' : 'transform 0.05s',
       }}>
-        <div ref={canvasRef} style={styles.canvas} onClick={handleCanvasClick}>
+        <div ref={canvasRef} className={styles.canvas} onClick={handleCanvasClick}>
 
-          {snapLines.map((line, i) =>
-            line.type === 'v' ? (
-              <div key={i} style={{
-                position: 'absolute', top: 0, bottom: 0, left: line.pos,
-                width: 1, backgroundColor: '#6c63ff', opacity: 0.8,
-                pointerEvents: 'none', zIndex: 1000,
-              }} />
-            ) : (
-              <div key={i} style={{
-                position: 'absolute', left: 0, right: 0, top: line.pos,
-                height: 1, backgroundColor: '#6c63ff', opacity: 0.8,
-                pointerEvents: 'none', zIndex: 1000,
-              }} />
-            )
-          )}
+          {snapLines.map((line, i) => (
+            <div
+              key={i}
+              className={line.type === 'v' ? styles.snapLineV : styles.snapLineH}
+              style={line.type === 'v' ? { left: line.pos } : { top: line.pos }}
+            />
+          ))}
 
           {blocks.map(block => (
             <Block
@@ -249,32 +235,12 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
         </div>
       </div>
 
-      <div style={{
-        position: 'fixed', bottom: '1.5rem', left: '50%',
-        transform: 'translateX(-50%)', zIndex: 200,
-        display: 'flex', gap: '0.5rem', alignItems: 'center',
-        backgroundColor: '#1a1a1a', border: '1px solid #333',
-        borderRadius: '8px', padding: '0.4rem 0.75rem',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-      }}>
-        <button onClick={() => zoomAtCenter(Math.max(0.25, zoom - 0.1))} style={btnStyle}>−</button>
-        <span style={{ color: '#aaa', fontSize: '0.8rem', minWidth: '42px', textAlign: 'center' }}>
-          {Math.round(zoom * 100)}%
-        </span>
-        <button onClick={() => zoomAtCenter(Math.min(3, zoom + 0.1))} style={btnStyle}>+</button>
-        <button onClick={() => { setView({ zoom: 1, offset: { x: 0, y: 0 } }) }} style={btnStyle}>↺</button>
+      <div className={styles.zoomControls}>
+        <button onClick={() => zoomAtCenter(Math.max(0.25, zoom - 0.1))} className={styles.zoomBtn}>−</button>
+        <span className={styles.zoomLabel}>{Math.round(zoom * 100)}%</span>
+        <button onClick={() => zoomAtCenter(Math.min(3, zoom + 0.1))} className={styles.zoomBtn}>+</button>
+        <button onClick={() => setView({ zoom: 1, offset: { x: 0, y: 0 } })} className={styles.zoomBtn}>↺</button>
       </div>
     </div>
   )
-}
-
-const btnStyle: React.CSSProperties = {
-  padding: '0.3rem 0.6rem', backgroundColor: '#2a2a2a',
-  border: '1px solid #444', borderRadius: '4px',
-  color: '#fff', cursor: 'pointer', fontSize: '0.85rem',
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  wrapper: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1a1a1a', overflow: 'hidden' },
-  canvas: { width: '960px', height: '540px', backgroundColor: '#2d2d2d', position: 'relative', borderRadius: '8px', boxShadow: '0 0 40px rgba(0,0,0,0.5)', overflow: 'hidden' },
 }
