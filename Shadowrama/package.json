@@ -1,6 +1,6 @@
 {
   "name": "Shadowrama",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
@@ -26,11 +26,15 @@
       "output": "release"
     },
     "win": {
-      "target": "nsis",
-      "icon": "public/icon.ico",
-      "arch": [
-        "x64"
-      ]
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.ico"
     },
     "mac": {
       "target": "dmg",
