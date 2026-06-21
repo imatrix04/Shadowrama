@@ -93,23 +93,21 @@ export default function Editor() {
     const config = BLOCKS_CONFIG.find(c => c.type === block.type)
     if (!config) return
     saveSnapshot()
-    const newBlock: BlockData = {
+    const newBlock= {
       x: 100, y: 100, width: 200, height: 60,
       ...config.defaultProps, ...block,
       id: Date.now(),
       properties: config.properties,
-    }
+    } as BlockData
     setSlides(prev => prev.map((s, i) =>
       i === currentSlide ? { ...s, blocks: [...s.blocks, newBlock] } : s
     ))
   }
 
   const updateBlock = (id: number, changes: Partial<BlockData>) => {
-    // Pas de snapshot pendant le drag (trop fréquent)
-    // Le snapshot est pris uniquement sur les actions discrètes
     setSlides(prev => prev.map((s, i) =>
       i === currentSlide
-        ? { ...s, blocks: s.blocks.map(b => b.id === id ? { ...b, ...changes } : b) }
+        ? { ...s, blocks: s.blocks.map(b => b.id === id ? ({ ...b, ...changes } as BlockData) : b) }
         : s
     ))
   }

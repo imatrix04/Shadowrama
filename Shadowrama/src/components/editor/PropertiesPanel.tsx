@@ -1,4 +1,5 @@
 import type { BlockData, BlockProperty } from '../../types'
+import { getBlockField, setBlockField } from '../../types'
 
 interface Props {
   block: BlockData | null
@@ -15,13 +16,13 @@ export default function PropertiesPanel({ block, onUpdateBlock }: Props) {
   const renderField = (prop: BlockProperty) => {
     switch (prop.type) {
       case 'textarea':
-        return <textarea key={prop.key} style={styles.textarea} value={block[prop.key] ?? ''} onChange={e => onUpdateBlock(block.id, { [prop.key]: e.target.value })} />
+        return <textarea key={prop.key} style={styles.textarea} value={String(getBlockField(block, prop.key) ?? '')} onChange={e => onUpdateBlock(block.id, setBlockField(block, prop.key, e.target.value))} />
       case 'number':
-        return <input key={prop.key} style={styles.input} type="number" value={block[prop.key] ?? 0} onChange={e => onUpdateBlock(block.id, { [prop.key]: Number(e.target.value) })} />
+        return <input key={prop.key} style={styles.input} type="number" value={Number(getBlockField(block, prop.key) ?? 0)} onChange={e => onUpdateBlock(block.id, setBlockField(block, prop.key, Number(e.target.value)))} />
       case 'color':
-        return <input key={prop.key} style={styles.inputColor} type="color" value={block[prop.key] ?? '#ffffff'} onChange={e => onUpdateBlock(block.id, { [prop.key]: e.target.value })} />
+        return <input key={prop.key} style={styles.inputColor} type="color" value={String(getBlockField(block, prop.key) ?? '#ffffff')} onChange={e => onUpdateBlock(block.id, setBlockField(block, prop.key, e.target.value))} />
       case 'text':
-        return <input key={prop.key} style={styles.input} type="text" value={block[prop.key] ?? ''} onChange={e => onUpdateBlock(block.id, { [prop.key]: e.target.value })} />
+        return <input key={prop.key} style={styles.input} type="text" value={String(getBlockField(block, prop.key) ?? '')} onChange={e => onUpdateBlock(block.id, setBlockField(block, prop.key, e.target.value))} />
       default:
         return null
     }

@@ -1,15 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
-import type { BlockData } from '../../types'
+import type { BlockComponentProps, TitleBlockData } from '../../types'
 
-interface Props {
-  block: BlockData
-  onUpdate?: (id: number, changes: Partial<BlockData>) => void
-  isEditing?: boolean
-  onStartEdit?: () => void
-  onStopEdit?: () => void
-}
-
-export default function TitleBlock({ block, onUpdate, isEditing, onStartEdit, onStopEdit }: Props) {
+export default function TitleBlock({ block, onUpdate, isEditing, onStartEdit, onStopEdit }: BlockComponentProps<TitleBlockData>) {
   const ref = useRef<HTMLDivElement>(null)
   const [savedContent, setSavedContent] = useState(block.content)
 

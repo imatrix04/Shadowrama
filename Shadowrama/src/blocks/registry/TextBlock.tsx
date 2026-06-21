@@ -1,15 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
-import type { BlockData } from '../../types'
+import type { BlockComponentProps, TextBlockData } from '../../types'
 
-interface Props {
-  block: BlockData
-  onUpdate?: (id: number, changes: Partial<BlockData>) => void  // optional
-  isEditing?: boolean
-  onStartEdit?: () => void
-  onStopEdit?: () => void
-}
-
-export default function TextBlock({ block, onUpdate, isEditing, onStartEdit, onStopEdit }: Props) {
+export default function TextBlock({ block, onUpdate, isEditing, onStartEdit, onStopEdit }: BlockComponentProps<TextBlockData>) {
   const ref = useRef<HTMLDivElement>(null)
   const [savedContent, setSavedContent] = useState(block.content)
   

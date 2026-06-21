@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { BlockData, BlockProperty } from '../../types'
+import { getBlockField, setBlockField } from '../../types'
 
 interface Props {
   block: BlockData
@@ -55,8 +56,8 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
         <input
           type="number"
           style={inputStyle}
-          value={block[prop.key] ?? 0}
-          onChange={e => onUpdate(block.id, { [prop.key]: Number(e.target.value) })}
+          value={Number(getBlockField(block, prop.key) ?? 0)}
+          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, Number(e.target.value)))}
         />
       )
     case 'color':
@@ -64,8 +65,8 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
         <input
           type="color"
           style={{ ...inputStyle, height: '32px', padding: '2px', cursor: 'pointer' }}
-          value={block[prop.key] ?? '#ffffff'}
-          onChange={e => onUpdate(block.id, { [prop.key]: e.target.value })}
+          value={String(getBlockField(block, prop.key) ?? '#ffffff')}
+          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, e.target.value))}
         />
       )
     case 'text':
@@ -73,16 +74,16 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
         <input
           type="text"
           style={inputStyle}
-          value={block[prop.key] ?? ''}
-          onChange={e => onUpdate(block.id, { [prop.key]: e.target.value })}
+          value={String(getBlockField(block, prop.key) ?? '')}
+          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, e.target.value))}
         />
       )
     case 'select':
       return (
         <select
           style={{ ...inputStyle, cursor: 'pointer' }}
-          value={block[prop.key] ?? ''}
-          onChange={e => onUpdate(block.id, { [prop.key]: e.target.value })}
+          value={String(getBlockField(block, prop.key) ?? '')}
+          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, e.target.value))}
         >
           {prop.options?.map(opt => (
             <option key={opt.value} value={opt.value}>
@@ -96,11 +97,11 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
         <input
           type="number"
           style={inputStyle}
-          value={block[prop.key] ?? 1}
+          value={Number(getBlockField(block, prop.key) ?? 1)}
           min={0}
           max={1}
           step={0.05}
-          onChange={e => onUpdate(block.id, { [prop.key]: parseFloat(e.target.value) })}
+          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, parseFloat(e.target.value)))}
         />
       )
     default:
