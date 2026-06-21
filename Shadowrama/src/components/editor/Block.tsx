@@ -6,7 +6,7 @@ import ContextMenu from './ContextMenu'
 interface Props {
   block: BlockData
   isSelected: boolean
-  onSelect: (block: BlockData) => void
+  onSelect: (block: BlockData, isMultiSelect: boolean) => void
   onUpdate: (id: number, changes: Partial<BlockData>) => void
   onDelete: (id: number) => void
   onMove: (id: number, x: number, y: number) => void
@@ -47,7 +47,8 @@ export default function Block({ block, isSelected, onSelect, onUpdate, onDelete,
   const handleMouseDown = (e: React.MouseEvent) => {
     if (isEditing) return
     e.stopPropagation()
-    onSelect(block)
+    const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey
+    onSelect(block, isMultiSelect)
     isDragging.current = true
     offset.current = { x: e.clientX - block.x, y: e.clientY - block.y }
 

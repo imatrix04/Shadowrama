@@ -11,7 +11,7 @@ import SlidePanel from '../components/editor/SlidePanel'
 
 export default function Editor() {
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [selectedBlockId, setSelectedBlockId] = useState<number | null>(null)
+  const [selectedBlockIds, setSelectedBlockIds] = useState<number[]>([])
   const [initialDraft] = useState(() => loadDraft())
   const [projectName, setProjectName] = useState<string | null>(initialDraft?.projectName ?? null)
 
@@ -40,7 +40,7 @@ export default function Editor() {
     saveDraft(projectName, slides)
   }, [slides, projectName])
 
-  const selectedBlock = slides[currentSlide].blocks.find(b => b.id === selectedBlockId) ?? null
+
 
   // ── Slides
   const addSlide = () => {
@@ -95,20 +95,20 @@ export default function Editor() {
     setSlides([{ id: Date.now(), blocks: [] }])
     setProjectName(null)
     setCurrentSlide(0)
-    setSelectedBlockId(null)
+    setSelectedBlockIds([])
   }
 
   const handleBlockDragEnd = useCallback(() => {
     commit(prev => prev)
   }, [commit])
 
-  const handleDeleteBlock = (id: number) => {
+  const handleDeleteBlocks = (ids: number[]) => {
     commit(prev => prev.map((slide, i) =>
       i === currentSlide
-        ? { ...slide, blocks: slide.blocks.filter(b => b.id !== id) }
+        ? { ...slide, blocks: slide.blocks.filter(b => !ids.includes(b.id)) }
         : slide
     ))
-    setSelectedBlockId(null)
+    setSelectedBlockIds([])
   }
 
   return (
@@ -117,17 +117,17 @@ export default function Editor() {
         slides={slides}
         projectName={projectName}
         setProjectName={setProjectName}
-        onLoad={(loaded, name) => { setSlides(loaded); setSelectedBlockId(null); setProjectName(name) }}
+        onLoad={(loaded, name) => { setSlides(loaded); setSelectedBlockIds([]); setProjectName(name) }}
         onNew={handleNewProject}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar onAddBlock={addBlock} />
         <Canvas
           blocks={slides[currentSlide].blocks}
-          selectedBlock={selectedBlock}
-          onSelectBlock={(block) => setSelectedBlockId(block?.id ?? null)}
+          selectedBlockIds={selectedBlockIds}
+          onSelectBlocks={setSelectedBlockIds}
           onUpdateBlock={updateBlock}
-          onDeleteBlock={handleDeleteBlock}
+          onDeleteBlocks={handleDeleteBlocks}
           onBlockDragEnd={handleBlockDragEnd}
         />
         <SlidePanel
