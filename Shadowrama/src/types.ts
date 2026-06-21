@@ -29,7 +29,7 @@ export interface ImageBlockData extends BaseBlockData {
 
 export interface ShapeBlockData extends BaseBlockData {
   type: 'shape'
-  shape: 'rectangle' | 'circle' | 'triangle'
+  shape: 'rectangle' | 'circle' | 'triangle' | 'arrow-up' | 'arrow-down' | 'arrow-left' | 'arrow-right'
   backgroundColor: string
   borderRadius?: number
   borderColor?: string

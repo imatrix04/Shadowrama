@@ -14,14 +14,14 @@ interface SnapLine {
 
 interface Props {
   blocks: BlockData[]
-  selectedBlock: BlockData | null
-  onSelectBlock: (block: BlockData | null) => void
+  selectedBlockIds: number[]
+  onSelectBlocks: (ids: number[]) => void
   onUpdateBlock: (id: number, changes: Partial<BlockData>) => void
-  onDeleteBlock: (id: number) => void
+  onDeleteBlocks: (ids: number[]) => void
   onBlockDragEnd: () => void
 }
 
-export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateBlock, onDeleteBlock, onBlockDragEnd }: Props) {
+export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpdateBlock, onDeleteBlocks, onBlockDragEnd }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [view, setView] = useState({ zoom: 1, offset: { x: 0, y: 0 } })
@@ -29,16 +29,62 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
   const isPanning = useRef(false)
   const panStart = useRef({ x: 0, y: 0 })
   const [snapLines, setSnapLines] = useState<SnapLine[]>([])
+  
+  const [selectionRect, setSelectionRect] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null)
+  const isSelectingArea = useRef(false)
+  const selectionStart = useRef({ x: 0, y: 0 })
+  const hasDraggedSelection = useRef(false)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Delete' && selectedBlock) {
-        onDeleteBlock(selectedBlock.id)
+      if (
+        document.activeElement?.tagName === 'INPUT' || 
+        document.activeElement?.tagName === 'TEXTAREA' || 
+        document.activeElement?.getAttribute('contenteditable') === 'true'
+      ) {
+        return
+      }
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlockIds.length > 0) {
+        onDeleteBlocks(selectedBlockIds)
+        return
+      }
+
+      const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
+      if (arrowKeys.includes(e.key) && selectedBlockIds.length > 0) {
+        e.preventDefault()
+        const step = e.shiftKey ? 10 : 1
+        let dx = 0
+        let dy = 0
+
+        if (e.key === 'ArrowLeft') dx = -step
+        if (e.key === 'ArrowRight') dx = step
+        if (e.key === 'ArrowUp') dy = -step
+        if (e.key === 'ArrowDown') dy = step
+
+        selectedBlockIds.forEach(id => {
+          const block = blocks.find(b => b.id === id)
+          if (block) {
+            onUpdateBlock(id, { x: block.x + dx, y: block.y + dy })
+          }
+        })
       }
     }
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
+      if (arrowKeys.includes(e.key) && selectedBlockIds.length > 0) {
+        onBlockDragEnd()
+      }
+    }
+
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedBlock])
+    window.addEventListener('keyup', handleKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [selectedBlockIds, blocks, onDeleteBlocks, onUpdateBlock, onBlockDragEnd])
 
   useEffect(() => {
     const el = wrapperRef.current
@@ -85,35 +131,125 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
       e.preventDefault()
       isPanning.current = true
       panStart.current = { x: e.clientX - offset.x, y: e.clientY - offset.y }
+    } else if (e.button === 0 && (e.target === canvasRef.current || e.target === wrapperRef.current)) {
+      e.preventDefault()
+      isSelectingArea.current = true
+      hasDraggedSelection.current = false
+      const rect = canvasRef.current!.getBoundingClientRect()
+      const x = (e.clientX - rect.left) / zoom
+      const y = (e.clientY - rect.top) / zoom
+      selectionStart.current = { x, y }
+      setSelectionRect({ x1: x, y1: y, x2: x, y2: y })
+
+      if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        onSelectBlocks([])
+      }
     }
   }
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPanning.current) return
-    setView(prev => ({
-      ...prev,
-      offset: {
-        x: e.clientX - panStart.current.x,
-        y: e.clientY - panStart.current.y,
+    if (isPanning.current) {
+      setView(prev => ({
+        ...prev,
+        offset: {
+          x: e.clientX - panStart.current.x,
+          y: e.clientY - panStart.current.y,
+        }
+      }))
+    } else if (isSelectingArea.current && canvasRef.current) {
+      hasDraggedSelection.current = true
+      const rect = canvasRef.current.getBoundingClientRect()
+      const x = (e.clientX - rect.left) / zoom
+      const y = (e.clientY - rect.top) / zoom
+      setSelectionRect(prev => prev ? { ...prev, x2: x, y2: y } : null)
+
+      const x1 = Math.min(selectionStart.current.x, x)
+      const y1 = Math.min(selectionStart.current.y, y)
+      const x2 = Math.max(selectionStart.current.x, x)
+      const y2 = Math.max(selectionStart.current.y, y)
+
+      const intersectingIds = blocks
+        .filter(b => {
+          const bx1 = b.x
+          const by1 = b.y
+          const bx2 = b.x + b.width
+          const by2 = b.y + b.height
+          return bx1 < x2 && bx2 > x1 && by1 < y2 && by2 > y1
+        })
+        .map(b => b.id)
+
+      if (e.shiftKey || e.ctrlKey || e.metaKey) {
+        const combined = Array.from(new Set([...selectedBlockIds, ...intersectingIds]))
+        onSelectBlocks(combined)
+      } else {
+        onSelectBlocks(intersectingIds)
       }
-    }))
+    }
   }
 
   const handleMouseUp = (e: React.MouseEvent) => {
-    if (e.button === 1) isPanning.current = false
+    if (e.button === 1) {
+      isPanning.current = false
+    } else if (e.button === 0 && isSelectingArea.current) {
+      isSelectingArea.current = false
+      setSelectionRect(null)
+    }
   }
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    if (e.target === canvasRef.current) onSelectBlock(null)
+    if (hasDraggedSelection.current) {
+      hasDraggedSelection.current = false
+      return
+    }
+    if (e.target === canvasRef.current && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      onSelectBlocks([])
+    }
   }
 
   const handleReorder = (id: number, direction: 'front' | 'back' | 'forward' | 'backward') => {
-    onUpdateBlock(id, {
-      zIndex: direction === 'front' ? 999
-            : direction === 'back' ? 0
-            : direction === 'forward' ? ((blocks.find(b => b.id === id)?.zIndex ?? 0) + 1)
-            : Math.max(0, (blocks.find(b => b.id === id)?.zIndex ?? 0) - 1)
-    })
+    const sorted = [...blocks].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
+    const idx = sorted.findIndex(b => b.id === id)
+    if (idx === -1) return
+
+    const getZ = (b: BlockData, i: number) => b.zIndex ?? i
+
+    if (direction === 'front') {
+      const maxZ = Math.max(...blocks.map((b, i) => getZ(b, i)), 0)
+      onUpdateBlock(id, { zIndex: maxZ + 1 })
+    } else if (direction === 'back') {
+      const minZ = Math.min(...blocks.map((b, i) => getZ(b, i)), 0)
+      onUpdateBlock(id, { zIndex: minZ - 1 })
+    } else if (direction === 'forward') {
+      if (idx < sorted.length - 1) {
+        const nextBlock = sorted[idx + 1]
+        const val1 = getZ(sorted[idx], idx)
+        const val2 = getZ(nextBlock, idx + 1)
+        onUpdateBlock(sorted[idx].id, { zIndex: val2 === val1 ? val1 + 1 : val2 })
+        onUpdateBlock(nextBlock.id, { zIndex: val1 })
+      }
+    } else if (direction === 'backward') {
+      if (idx > 0) {
+        const prevBlock = sorted[idx - 1]
+        const val1 = getZ(sorted[idx], idx)
+        const val2 = getZ(prevBlock, idx - 1)
+        onUpdateBlock(sorted[idx].id, { zIndex: val2 === val1 ? val1 - 1 : val2 })
+        onUpdateBlock(prevBlock.id, { zIndex: val1 })
+      }
+    }
+  }
+
+  const handleBlockSelect = (block: BlockData, isMultiSelect: boolean) => {
+    if (isMultiSelect) {
+      if (selectedBlockIds.includes(block.id)) {
+        onSelectBlocks(selectedBlockIds.filter(id => id !== block.id))
+      } else {
+        onSelectBlocks([...selectedBlockIds, block.id])
+      }
+    } else {
+      if (!selectedBlockIds.includes(block.id)) {
+        onSelectBlocks([block.id])
+      }
+    }
   }
 
   const zoomAtCenter = (newZoom: number) => {
@@ -137,6 +273,11 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
     if (!block) return
 
     const others = blocks.filter(b => b.id !== id)
+    const isMultiDrag = selectedBlockIds.includes(id)
+    const nonSelectedOthers = isMultiDrag 
+      ? others.filter(b => !selectedBlockIds.includes(b.id))
+      : others
+
     let x = rawX
     let y = rawY
     const lines: SnapLine[] = []
@@ -160,11 +301,11 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
 
     const vTargets: number[] = [
       0, CANVAS_W / 2, CANVAS_W,
-      ...others.flatMap(b => [b.x, b.x + b.width / 2, b.x + b.width])
+      ...nonSelectedOthers.flatMap(b => [b.x, b.x + b.width / 2, b.x + b.width])
     ]
     const hTargets: number[] = [
       0, CANVAS_H / 2, CANVAS_H,
-      ...others.flatMap(b => [b.y, b.y + b.height / 2, b.y + b.height])
+      ...nonSelectedOthers.flatMap(b => [b.y, b.y + b.height / 2, b.y + b.height])
     ]
 
     for (const src of vSources) {
@@ -188,7 +329,21 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
     }
 
     setSnapLines(lines)
+
+    const dx = x - block.x
+    const dy = y - block.y
+
     onUpdateBlock(id, { x, y })
+
+    if (isMultiDrag) {
+      selectedBlockIds.forEach(selId => {
+        if (selId === id) return
+        const selBlock = blocks.find(b => b.id === selId)
+        if (selBlock) {
+          onUpdateBlock(selId, { x: selBlock.x + dx, y: selBlock.y + dy })
+        }
+      })
+    }
   }
 
   const handleBlockDragEnd = () => {
@@ -219,19 +374,35 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
             />
           ))}
 
-          {blocks.map(block => (
-            <Block
-              key={block.id}
-              block={block}
-              isSelected={selectedBlock?.id === block.id}
-              onSelect={onSelectBlock}
-              onUpdate={onUpdateBlock}
-              onMove={handleBlockMove}
-              onDragEnd={handleBlockDragEnd}
-              onDelete={onDeleteBlock}
-              onReorder={handleReorder}
-            />
-          ))}
+          {[...blocks]
+            .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
+            .map(block => (
+              <Block
+                key={block.id}
+                block={block}
+                isSelected={selectedBlockIds.includes(block.id)}
+                onSelect={handleBlockSelect}
+                onUpdate={onUpdateBlock}
+                onMove={handleBlockMove}
+                onDragEnd={handleBlockDragEnd}
+                onDelete={(id) => onDeleteBlocks([id])}
+                onReorder={handleReorder}
+              />
+            ))}
+
+          {selectionRect && (
+            <div style={{
+              position: 'absolute',
+              left: Math.min(selectionRect.x1, selectionRect.x2),
+              top: Math.min(selectionRect.y1, selectionRect.y2),
+              width: Math.abs(selectionRect.x1 - selectionRect.x2),
+              height: Math.abs(selectionRect.y1 - selectionRect.y2),
+              border: '1.5px dashed #6c63ff',
+              backgroundColor: 'rgba(108, 99, 255, 0.12)',
+              pointerEvents: 'none',
+              zIndex: 10000,
+            }} />
+          )}
         </div>
       </div>
 

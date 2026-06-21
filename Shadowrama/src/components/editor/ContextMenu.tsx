@@ -26,13 +26,40 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
         />
       )
     case 'color':
+      const colorVal = String(getBlockField(block, prop.key) ?? '')
+      const isTransparent = !colorVal || colorVal === 'transparent'
+
       return (
-        <input
-          type="color"
-          className={`${styles.input} ${styles.inputColor}`}
-          value={String(getBlockField(block, prop.key) ?? '#ffffff')}
-          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, e.target.value))}
-        />
+        <div style={{ position: 'relative', width: '100%' }}>
+          <input
+            type="color"
+            className={styles.input}
+            style={{ 
+              height: '32px', 
+              padding: '2px', 
+              cursor: 'pointer',
+              opacity: isTransparent ? 0.6 : 1 
+            }}
+            value={isTransparent ? '#ffffff' : colorVal}
+            onChange={e => onUpdate(block.id, setBlockField(block, prop.key, e.target.value))}
+          />
+          {isTransparent && (
+            <div style={{
+              position: 'absolute',
+              inset: '1px',
+              pointerEvents: 'none', 
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ffffff',
+              fontSize: '0.85rem',
+              backgroundColor: '#2A2A2A',
+              borderRadius: '4px'
+            }}>
+              transparent
+            </div>
+          )}
+        </div>
       )
     case 'text':
       return (

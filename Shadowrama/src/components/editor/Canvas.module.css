@@ -12,6 +12,7 @@
   height: 540px;
   background-color: var(--editor-bg-canvas);
   position: relative;
+  z-index: 1;
   border-radius: 8px;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
   overflow: hidden;
