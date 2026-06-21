@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog } from 'electron'
 import { autoUpdater } from 'electron-updater'
+import log from 'electron-log'
 import { join } from 'path'
 
 function createWindow() {
@@ -22,6 +23,8 @@ function createWindow() {
 }
 
 function setupAutoUpdater() {
+  log.transports.file.level = 'info'
+  autoUpdater.logger = log
   autoUpdater.checkForUpdatesAndNotify()
 
   autoUpdater.on('update-available', () => {
