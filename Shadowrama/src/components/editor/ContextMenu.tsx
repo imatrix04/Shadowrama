@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { BlockData, BlockProperty } from '../../types'
+import type { BlockData, BlockProperty, AnimationType } from '../../types'
 import { getBlockField, setBlockField } from '../../types'
 import styles from './ContextMenu.module.css'
 
@@ -125,6 +125,24 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
             {renderField(prop, block, onUpdate)}
           </div>
         ))}
+
+        <div className={styles.field}>
+          <label className={styles.fieldLabel}>Animation d'entrée</label>
+          <select
+            className={styles.input}
+            value={block.animation?.type ?? 'none'}
+            onChange={e => onUpdate(block.id, setBlockField(
+              block, 'animation', { ...block.animation, type: e.target.value as AnimationType }
+            ))}
+          >
+            <option value="none">Aucune</option>
+            <option value="fadeIn">Fondu</option>
+            <option value="slideInLeft">Glisse depuis la gauche</option>
+            <option value="slideInRight">Glisse depuis la droite</option>
+            <option value="slideInUp">Glisse depuis le bas</option>
+            <option value="zoomIn">Zoom</option>
+          </select>
+        </div>
 
         <div className={styles.deleteSection}>
           <button

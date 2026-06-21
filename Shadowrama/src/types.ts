@@ -52,6 +52,26 @@ export interface TitleBlockData extends BaseBlockData {
   textAlign?: 'left' | 'center' | 'right'
 }
 
+export type AnimationType = 'fadeIn' | 'slideInLeft' | 'slideInRight' | 'slideInUp' | 'zoomIn' | 'none'
+
+export interface AnimationConfig {
+  type: AnimationType
+  duration?: number   // secondes, défaut 0.6
+  delay?: number      // secondes, défaut 0
+  ease?: string       // ex: 'power2.out', défaut 'power2.out'
+}
+
+export interface BaseBlockData {
+  id: number
+  x: number
+  y: number
+  width: number
+  height: number
+  zIndex?: number
+  properties?: BlockProperty[]
+  animation?: AnimationConfig   // ← nouveau champ optionnel, commun à tous les blocs
+}
+
 // Futurs blocs : vidéo, graphique, carrousel...
 // export interface VideoBlockData extends BaseBlockData {
 //   type: 'video'

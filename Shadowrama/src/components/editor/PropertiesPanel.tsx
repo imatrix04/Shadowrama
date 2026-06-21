@@ -1,4 +1,4 @@
-import type { BlockData, BlockProperty } from '../../types'
+import type { BlockData, BlockProperty, AnimationType } from '../../types'
 import { getBlockField, setBlockField } from '../../types'
 import styles from './PropertiesPanel.module.css'
 
@@ -70,6 +70,23 @@ export default function PropertiesPanel({ block, onUpdateBlock }: Props) {
           {renderField(prop)}
         </div>
       ))}
+      <div className={styles.field}>
+        <label className={styles.label}>Animation d'entrée</label>
+        <select
+          className={styles.input}
+          value={block.animation?.type ?? 'none'}
+          onChange={e => onUpdateBlock(block.id, setBlockField(
+            block, 'animation', { ...block.animation, type: e.target.value as AnimationType }
+          ))}
+        >
+          <option value="none">Aucune</option>
+          <option value="fadeIn">Fondu</option>
+          <option value="slideInLeft">Glisse depuis la gauche</option>
+          <option value="slideInRight">Glisse depuis la droite</option>
+          <option value="slideInUp">Glisse depuis le bas</option>
+          <option value="zoomIn">Zoom</option>
+        </select>
+      </div>
       <div className={styles.position}>
         <span>X: {Math.round(block.x)}px</span>
         <span>Y: {Math.round(block.y)}px</span>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import type { Slide } from '../../types'
+import { useBlockAnimation } from '../../hooks/useBlockAnimation'
+import type { Slide, BlockData } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
 import styles from './PresentationMode.module.css'
 
@@ -10,6 +11,23 @@ interface Props {
 
 const CONTROLS_REVEAL_ZONE_PX = 80 // distance depuis le bas de l'écran qui révèle les contrôles
 const CONTROLS_HIDE_DELAY_MS = 1500
+
+// Petit composant wrapper qui applique le hook par bloc
+function AnimatedBlockWrapper({ block, isActive }: { block: BlockData; isActive: boolean }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useBlockAnimation(ref, block.animation, isActive)
+  const BlockComponent = BLOCKS_REGISTRY[block.type]
+  if (!BlockComponent) return null
+  return (
+    <div
+      ref={ref}
+      className={styles.blockWrapper}
+      style={{ left: block.x, top: block.y, width: block.width, height: block.height, zIndex: block.zIndex ?? 0 }}
+    >
+      <BlockComponent block={block} onUpdate={() => {}} isEditing={false} onStartEdit={() => {}} onStopEdit={() => {}} />
+    </div>
+  )
+}
 
 export default function PresentationMode({ slides, onClose }: Props) {
   const [current, setCurrent] = useState(0)
@@ -97,25 +115,7 @@ export default function PresentationMode({ slides, onClose }: Props) {
           {slide.blocks
             .slice()
             .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
-            .map(block => {
-              const BlockComponent = BLOCKS_REGISTRY[block.type]
-              if (!BlockComponent) return null
-              return (
-                <div
-                  key={block.id}
-                  className={styles.blockWrapper}
-                  style={{ left: block.x, top: block.y, width: block.width, height: block.height, zIndex: block.zIndex ?? 0 }}
-                >
-                  <BlockComponent
-                    block={block}
-                    onUpdate={() => {}}
-                    isEditing={false}
-                    onStartEdit={() => {}}
-                    onStopEdit={() => {}}
-                  />
-                </div>
-              )
-            })}
+            .map(block => <AnimatedBlockWrapper key={block.id} block={block} isActive={true} />)}
         </div>
       </div>
 
