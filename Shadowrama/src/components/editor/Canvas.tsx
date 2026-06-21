@@ -37,20 +37,54 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === 'INPUT' || 
+        document.activeElement?.tagName === 'TEXTAREA' || 
+        document.activeElement?.getAttribute('contenteditable') === 'true'
+      ) {
+        return
+      }
+
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlockIds.length > 0) {
-        if (
-          document.activeElement?.tagName === 'INPUT' || 
-          document.activeElement?.tagName === 'TEXTAREA' || 
-          document.activeElement?.getAttribute('contenteditable') === 'true'
-        ) {
-          return
-        }
         onDeleteBlocks(selectedBlockIds)
+        return
+      }
+
+      const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
+      if (arrowKeys.includes(e.key) && selectedBlockIds.length > 0) {
+        e.preventDefault()
+        const step = e.shiftKey ? 10 : 1
+        let dx = 0
+        let dy = 0
+
+        if (e.key === 'ArrowLeft') dx = -step
+        if (e.key === 'ArrowRight') dx = step
+        if (e.key === 'ArrowUp') dy = -step
+        if (e.key === 'ArrowDown') dy = step
+
+        selectedBlockIds.forEach(id => {
+          const block = blocks.find(b => b.id === id)
+          if (block) {
+            onUpdateBlock(id, { x: block.x + dx, y: block.y + dy })
+          }
+        })
       }
     }
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
+      if (arrowKeys.includes(e.key) && selectedBlockIds.length > 0) {
+        onBlockDragEnd()
+      }
+    }
+
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedBlockIds, onDeleteBlocks])
+    window.addEventListener('keyup', handleKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [selectedBlockIds, blocks, onDeleteBlocks, onUpdateBlock, onBlockDragEnd])
 
   useEffect(() => {
     const el = wrapperRef.current
