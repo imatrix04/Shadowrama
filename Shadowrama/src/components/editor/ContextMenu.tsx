@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { BlockData, BlockProperty } from '../../types'
+import type { BlockData, BlockProperty, AnimationType } from '../../types'
+import { getBlockField, setBlockField } from '../../types'
+import styles from './ContextMenu.module.css'
 
 interface Props {
   block: BlockData
@@ -12,51 +14,15 @@ interface Props {
   onClose: () => void
 }
 
-const inputStyle: React.CSSProperties = {
-  padding: '0.35rem',
-  backgroundColor: '#2a2a2a',
-  border: '1px solid #444',
-  borderRadius: '4px',
-  color: '#fff',
-  fontSize: '0.82rem',
-  width: '100%',
-  boxSizing: 'border-box',
-}
-
-const sectionStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.3rem',
-  borderBottom: '1px solid #333',
-  paddingBottom: '0.5rem',
-}
-
-const labelStyle: React.CSSProperties = {
-  fontSize: '0.7rem',
-  color: '#555',
-  textTransform: 'uppercase',
-  letterSpacing: '1px',
-}
-
-const btnStyle: React.CSSProperties = {
-  padding: '0.25rem 0.5rem',
-  backgroundColor: '#2a2a2a',
-  border: '1px solid #444',
-  borderRadius: '4px',
-  color: '#fff',
-  fontSize: '0.75rem',
-  cursor: 'pointer',
-}
-
 function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: number, changes: Partial<BlockData>) => void) {
   switch (prop.type) {
     case 'number':
       return (
         <input
           type="number"
-          style={inputStyle}
-          value={block[prop.key] ?? 0}
-          onChange={e => onUpdate(block.id, { [prop.key]: Number(e.target.value) })}
+          className={styles.input}
+          value={Number(getBlockField(block, prop.key) ?? 0)}
+          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, Number(e.target.value)))}
         />
       )
     case 'color':
@@ -98,17 +64,17 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
       return (
         <input
           type="text"
-          style={inputStyle}
-          value={block[prop.key] ?? ''}
-          onChange={e => onUpdate(block.id, { [prop.key]: e.target.value })}
+          className={styles.input}
+          value={String(getBlockField(block, prop.key) ?? '')}
+          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, e.target.value))}
         />
       )
     case 'select':
       return (
         <select
-          style={{ ...inputStyle, cursor: 'pointer' }}
-          value={block[prop.key] ?? ''}
-          onChange={e => onUpdate(block.id, { [prop.key]: e.target.value })}
+          className={styles.input}
+          value={String(getBlockField(block, prop.key) ?? '')}
+          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, e.target.value))}
         >
           {prop.options?.map(opt => (
             <option key={opt.value} value={opt.value}>
@@ -121,12 +87,12 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
       return (
         <input
           type="number"
-          style={inputStyle}
-          value={block[prop.key] ?? 1}
+          className={styles.input}
+          value={Number(getBlockField(block, prop.key) ?? 1)}
           min={0}
           max={1}
           step={0.05}
-          onChange={e => onUpdate(block.id, { [prop.key]: parseFloat(e.target.value) })}
+          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, parseFloat(e.target.value)))}
         />
       )
     default:
@@ -150,36 +116,18 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
 
   return createPortal(
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 99 }} />
+      <div onClick={onClose} className={styles.backdrop} />
       <div
         ref={menuRef}
         onWheel={e => e.stopPropagation()}
-        style={{
-          position: 'fixed',
-          left: pos.x,
-          top: pos.y,
-          zIndex: 100,
-          backgroundColor: '#1e1e2e',
-          border: '1px solid #333',
-          borderRadius: '8px',
-          padding: '0.75rem',
-          width: '180px',
-          maxHeight: '320px',
-          overflowY: 'auto', 
-          minWidth: '200px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.5rem',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-        }}
+        className={styles.menu}
+        style={{ left: pos.x, top: pos.y }}
       >
-        {/* Type */}
-        <p style={{ margin: 0, ...labelStyle }}>{block.type}</p>
+        <p className={styles.typeLabel}>{block.type}</p>
 
-        {/* Section ordre */}
-        <div style={sectionStyle}>
-          <span style={labelStyle}>Ordre</span>
-          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+        <div className={styles.section}>
+          <span className={styles.sectionLabel}>Ordre</span>
+          <div className={styles.orderButtons}>
             {([
               { label: '⬆️ Premier plan', dir: 'front' },
               { label: '⬇️ Arrière plan', dir: 'back' },
@@ -188,7 +136,7 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
             ] as const).map(({ label, dir }) => (
               <button
                 key={dir}
-                style={btnStyle}
+                className={styles.smallBtn}
                 onClick={() => { onReorder(block.id, dir); onClose() }}
               >
                 {label}
@@ -197,23 +145,39 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
           </div>
         </div>
 
-        {/* Propriétés */}
         {properties.map(prop => (
-          <div key={prop.key} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-            <label style={labelStyle}>{prop.label}</label>
+          <div key={prop.key} className={styles.field}>
+            <label className={styles.fieldLabel}>{prop.label}</label>
             {renderField(prop, block, onUpdate)}
           </div>
         ))}
 
-        <div style={{ borderTop: '1px solid #333', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
+        <div className={styles.field}>
+          <label className={styles.fieldLabel}>Animation d'entrée</label>
+          <select
+            className={styles.input}
+            value={block.animation?.type ?? 'none'}
+            onChange={e => onUpdate(block.id, setBlockField(
+              block, 'animation', { ...block.animation, type: e.target.value as AnimationType }
+            ))}
+          >
+            <option value="none">Aucune</option>
+            <option value="fadeIn">Fondu</option>
+            <option value="slideInLeft">Glisse depuis la gauche</option>
+            <option value="slideInRight">Glisse depuis la droite</option>
+            <option value="slideInUp">Glisse depuis le bas</option>
+            <option value="zoomIn">Zoom</option>
+          </select>
+        </div>
+
+        <div className={styles.deleteSection}>
           <button
-            style={{ ...btnStyle, color: '#ff4d4d', width: '100%' }}
+            className={`${styles.smallBtn} ${styles.deleteBtn}`}
             onClick={() => { onDelete(block.id); onClose() }}
           >
             🗑 Supprimer
           </button>
         </div>
-
       </div>
     </>,
     document.body

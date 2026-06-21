@@ -1,0 +1,25 @@
+:root {
+  /* Éditeur — fond et structure */
+  --editor-bg: #1a1a2e;
+  --editor-bg-panel: #111111;
+  --editor-bg-canvas: #2d2d2d;
+  --editor-border: #333333;
+  --editor-border-light: #444444;
+
+  /* Boutons */
+  --editor-btn-bg: #2a2a3e;
+  --editor-btn-bg-hover: #3a3a5e;
+  --editor-text: #ffffff;
+  --editor-text-muted: #888888;
+  --editor-text-dim: #555555;
+
+  /* Accent (reprend la même teinte que index.css mais dédiée éditeur) */
+  --accent: #6c63ff;
+  --accent-hover: #8b84ff;
+  --accent-border: #8b84ff;
+  --accent-bg-soft: rgba(108, 99, 255, 0.15);
+
+  /* États */
+  --danger: #ff4d4d;
+  --warning: #ffb84d;
+}

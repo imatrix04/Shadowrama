@@ -1,14 +1,6 @@
-import type { BlockData } from '../../types'
+import type { BlockComponentProps, ShapeBlockData } from '../../types'
 
-interface Props {
-  block: BlockData
-  onUpdate?: (id: number, changes: Partial<BlockData>) => void
-  isEditing?: boolean
-  onStartEdit?: () => void
-  onStopEdit?: () => void
-}
-
-export default function ShapeBlock({ block }: Props) {
+export default function ShapeBlock({ block }: BlockComponentProps<ShapeBlockData>) {
   const borderWidth = block.borderColor ? (block.borderWidth ?? 2) : 0
   const offset = -borderWidth / 2
 

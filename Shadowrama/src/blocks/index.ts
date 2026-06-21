@@ -19,8 +19,8 @@ export const BLOCKS_CONFIG: BlockConfig[] = [
 ]
 
 export const BLOCKS_REGISTRY: Record<string, ComponentType<BlockComponentProps>> = {
-  text: TextBlock,
-  title: TitleBlock,
-  image: ImageBlock,
-  shape: ShapeBlock,
+  text: TextBlock as ComponentType<BlockComponentProps>,
+  title: TitleBlock as ComponentType<BlockComponentProps>,
+  image: ImageBlock as ComponentType<BlockComponentProps>,
+  shape: ShapeBlock as ComponentType<BlockComponentProps>,
 }

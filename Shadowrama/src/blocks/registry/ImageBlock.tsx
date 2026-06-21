@@ -1,14 +1,6 @@
-import type { BlockData } from '../../types'
+import type { BlockComponentProps, ImageBlockData } from '../../types'
 
-interface Props {
-  block: BlockData
-  onUpdate?: (id: number, changes: Partial<BlockData>) => void
-  isEditing?: boolean
-  onStartEdit?: () => void
-  onStopEdit?: () => void
-}
-
-export default function ImageBlock({ block }: Props) {
+export default function ImageBlock({ block }: BlockComponentProps<ImageBlockData>) {
   return block.src
     ? <img src={block.src} style={{ width: '100%', height: '100%', objectFit: block.objectFit ?? 'cover' }} alt={block.alt ?? ''} />
     : (

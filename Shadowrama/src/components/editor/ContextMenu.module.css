@@ -1,0 +1,114 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
+
+.menu {
+  position: fixed;
+  z-index: 100;
+  background-color: #1e1e2e;
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  width: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.typeLabel {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--editor-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  border-bottom: 1px solid var(--editor-border);
+  padding-bottom: 0.5rem;
+}
+
+.sectionLabel {
+  font-size: 0.7rem;
+  color: var(--editor-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.orderButtons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.smallBtn {
+  padding: 0.25rem 0.5rem;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: 4px;
+  color: var(--editor-text);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.smallBtn:hover {
+  background-color: var(--editor-btn-bg-hover);
+  border-color: var(--accent);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.fieldLabel {
+  font-size: 0.7rem;
+  color: var(--editor-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.input {
+  padding: 0.35rem;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: 4px;
+  color: var(--editor-text);
+  font-size: 0.82rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.inputColor {
+  height: 32px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.deleteSection {
+  border-top: 1px solid var(--editor-border);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.deleteBtn {
+  color: var(--danger);
+  width: 100%;
+}
