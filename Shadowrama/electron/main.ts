@@ -1,4 +1,5 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, dialog } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import { join } from 'path'
 
 function createWindow() {
@@ -16,9 +17,42 @@ function createWindow() {
   } else {
     win.loadFile(join(__dirname, '../dist/index.html'))
   }
+
+  return win
 }
 
-app.whenReady().then(createWindow)
+function setupAutoUpdater() {
+  autoUpdater.checkForUpdatesAndNotify()
+
+  autoUpdater.on('update-available', () => {
+    console.log('Mise à jour disponible, téléchargement en cours...')
+  })
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Mise à jour disponible',
+      message: 'Une nouvelle version de Shadowrama a été téléchargée.',
+      detail: "L'application va redémarrer pour appliquer la mise à jour.",
+      buttons: ['Redémarrer maintenant', 'Plus tard'],
+    }).then(({ response }) => {
+      if (response === 0) {
+        autoUpdater.quitAndInstall()
+      }
+    })
+  })
+
+  autoUpdater.on('error', (err) => {
+    console.error('Erreur de mise à jour:', err)
+  })
+}
+
+app.whenReady().then(() => {
+  createWindow()
+  if (process.env.NODE_ENV !== 'development') {
+    setupAutoUpdater()
+  }
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
