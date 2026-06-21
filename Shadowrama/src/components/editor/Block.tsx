@@ -130,6 +130,7 @@ export default function Block({ block, isSelected, onSelect, onUpdate, onDelete,
         cursor: isEditing ? 'text' : 'grab',
         userSelect: isEditing ? 'text' : 'none',
         boxSizing: 'border-box',
+        zIndex: block.zIndex,
       }}
     >
       {BlockComponent && (

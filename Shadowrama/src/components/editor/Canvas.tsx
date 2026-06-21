@@ -108,12 +108,35 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
   }
 
   const handleReorder = (id: number, direction: 'front' | 'back' | 'forward' | 'backward') => {
-    onUpdateBlock(id, {
-      zIndex: direction === 'front' ? 999
-            : direction === 'back' ? 0
-            : direction === 'forward' ? ((blocks.find(b => b.id === id)?.zIndex ?? 0) + 1)
-            : Math.max(0, (blocks.find(b => b.id === id)?.zIndex ?? 0) - 1)
-    })
+    const sorted = [...blocks].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
+    const idx = sorted.findIndex(b => b.id === id)
+    if (idx === -1) return
+
+    const getZ = (b: BlockData, i: number) => b.zIndex ?? i
+
+    if (direction === 'front') {
+      const maxZ = Math.max(...blocks.map((b, i) => getZ(b, i)), 0)
+      onUpdateBlock(id, { zIndex: maxZ + 1 })
+    } else if (direction === 'back') {
+      const minZ = Math.min(...blocks.map((b, i) => getZ(b, i)), 0)
+      onUpdateBlock(id, { zIndex: minZ - 1 })
+    } else if (direction === 'forward') {
+      if (idx < sorted.length - 1) {
+        const nextBlock = sorted[idx + 1]
+        const val1 = getZ(sorted[idx], idx)
+        const val2 = getZ(nextBlock, idx + 1)
+        onUpdateBlock(sorted[idx].id, { zIndex: val2 === val1 ? val1 + 1 : val2 })
+        onUpdateBlock(nextBlock.id, { zIndex: val1 })
+      }
+    } else if (direction === 'backward') {
+      if (idx > 0) {
+        const prevBlock = sorted[idx - 1]
+        const val1 = getZ(sorted[idx], idx)
+        const val2 = getZ(prevBlock, idx - 1)
+        onUpdateBlock(sorted[idx].id, { zIndex: val2 === val1 ? val1 - 1 : val2 })
+        onUpdateBlock(prevBlock.id, { zIndex: val1 })
+      }
+    }
   }
 
   const zoomAtCenter = (newZoom: number) => {
@@ -219,19 +242,21 @@ export default function Canvas({ blocks, selectedBlock, onSelectBlock, onUpdateB
             />
           ))}
 
-          {blocks.map(block => (
-            <Block
-              key={block.id}
-              block={block}
-              isSelected={selectedBlock?.id === block.id}
-              onSelect={onSelectBlock}
-              onUpdate={onUpdateBlock}
-              onMove={handleBlockMove}
-              onDragEnd={handleBlockDragEnd}
-              onDelete={onDeleteBlock}
-              onReorder={handleReorder}
-            />
-          ))}
+          {[...blocks]
+            .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
+            .map(block => (
+              <Block
+                key={block.id}
+                block={block}
+                isSelected={selectedBlock?.id === block.id}
+                onSelect={onSelectBlock}
+                onUpdate={onUpdateBlock}
+                onMove={handleBlockMove}
+                onDragEnd={handleBlockDragEnd}
+                onDelete={onDeleteBlock}
+                onReorder={handleReorder}
+              />
+            ))}
         </div>
       </div>
 
