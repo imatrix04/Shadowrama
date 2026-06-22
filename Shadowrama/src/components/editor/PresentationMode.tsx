@@ -9,7 +9,7 @@ interface Props {
   onClose: () => void
 }
 
-const CONTROLS_REVEAL_ZONE_PX = 80 // distance depuis le bas de l'écran qui révèle les contrôles
+const CONTROLS_REVEAL_ZONE_PX = 80
 const CONTROLS_HIDE_DELAY_MS = 1500
 
 // Petit composant wrapper qui applique le hook par bloc
@@ -35,6 +35,13 @@ export default function PresentationMode({ slides, onClose }: Props) {
   const [controlsVisible, setControlsVisible] = useState(true)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    window.electronAPI?.setFullScreen(true)
+    return () => {
+      window.electronAPI?.setFullScreen(false)
+    }
+  }, [])
 
   // ── Scale automatique selon la taille de l'écran
   useEffect(() => {

@@ -1,0 +1,223 @@
+.page {
+  --bg: #0b0b14;
+  --bg-raised: #14131f;
+  --ink: #f5f3fa;
+  --muted: #8d88a3;
+  --violet: #8b3bff;
+  --blue: #47bfff;
+  --line: rgba(255, 255, 255, 0.08);
+
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.01em;
+  overflow-x: hidden;
+}
+
+/* ── Nav ── */
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem clamp(1.5rem, 5vw, 4rem);
+}
+
+.logo {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+}
+
+.logoDot {
+  color: var(--violet);
+}
+
+/* ── Hero ── */
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: center;
+  padding: clamp(2rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem) clamp(3rem, 8vw, 6rem);
+  max-width: 1320px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.title {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.25rem 0;
+  opacity: 0;
+  animation: rise 0.6s ease 0.08s forwards;
+}
+
+.titleAccent {
+  color: var(--violet);
+}
+
+.lead {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 30rem;
+  margin: 0 0 2rem 0;
+  opacity: 0;
+  animation: rise 0.6s ease 0.16s forwards;
+}
+
+.ctaRow {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  opacity: 0;
+  animation: rise 0.6s ease 0.24s forwards;
+}
+
+.ctaPrimary {
+  padding: 0.8rem 1.5rem;
+  background: var(--violet);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.ctaPrimary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(139, 59, 255, 0.35);
+}
+
+/* ── Mock canvas (signature element) ── */
+
+.mockStage {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px -20px rgba(139, 59, 255, 0.25);
+}
+
+.mockBlock {
+  position: absolute;
+  opacity: 0;
+}
+
+.mockShape {
+  top: 12%;
+  left: 8%;
+  width: 26%;
+  height: 36%;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--violet), #5a1fc7);
+  animation:
+    blockIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards,
+    floatShape 5s ease-in-out 1.2s infinite;
+}
+
+.mockImage {
+  top: 18%;
+  right: 8%;
+  width: 32%;
+  height: 30%;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  animation:
+    blockIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.7s forwards,
+    floatImage 4.5s ease-in-out 1.4s infinite;
+}
+
+.mockImage::before {
+  content: '';
+  position: absolute;
+  inset: 18%;
+  border: 1.5px dashed var(--blue);
+  border-radius: 6px;
+  animation: pulseDash 3s ease-in-out 1.6s infinite;
+}
+
+.mockText {
+  bottom: 14%;
+  left: 8%;
+  width: 50%;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--line);
+  animation:
+    blockIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.9s forwards,
+    floatText 4s ease-in-out 1.6s infinite;
+}
+
+.mockTextSmall {
+  bottom: 22%;
+  left: 8%;
+  width: 30%;
+  height: 10px;
+  border-radius: 4px;
+  background: var(--blue);
+  opacity: 0.4;
+  animation:
+    blockIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 1.05s forwards,
+    floatText 4s ease-in-out 1.75s infinite;
+}
+
+/* ── Animations ── */
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blockIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes floatShape {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-7px) rotate(1.5deg); }
+}
+
+@keyframes floatImage {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes floatText {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes pulseDash {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.75; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title, .lead, .ctaRow, .mockBlock, .mockImage::before {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+}

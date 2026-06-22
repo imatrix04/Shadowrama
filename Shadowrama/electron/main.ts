@@ -1,17 +1,29 @@
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog, Menu, ipcMain } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import log from 'electron-log'
 import { join } from 'path'
 
+let mainWindow: BrowserWindow | null = null
+
 function createWindow() {
+
+  if (process.env.NODE_ENV !== 'development') {
+    Menu.setApplicationMenu(null)
+  }
+
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      preload: join(__dirname, 'preload.js'),
     },
   })
+
+  win.maximize()
+  win.show()
 
   if (process.env.NODE_ENV === 'development') {
     win.loadURL('http://localhost:5173')
@@ -19,8 +31,13 @@ function createWindow() {
     win.loadFile(join(__dirname, '../dist/index.html'))
   }
 
+  mainWindow = win
   return win
 }
+
+ipcMain.on('set-fullscreen', (_event, value: boolean) => {
+  mainWindow?.setFullScreen(value)
+})
 
 function setupAutoUpdater() {
   log.transports.file.level = 'info'

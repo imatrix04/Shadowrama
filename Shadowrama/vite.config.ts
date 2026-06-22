@@ -10,6 +10,12 @@ export default defineConfig({
       {
         entry: 'electron/main.ts',
       },
+      {
+        entry: 'electron/preload.ts',
+        onstart(args) {
+          args.reload()
+        },
+      },
     ]),
     renderer(),
   ],
