@@ -16,6 +16,9 @@ export default defineConfig({
           args.reload()
         },
       },
+      {
+        entry: 'electron/update-window/updatePreload.ts',
+      },
     ]),
     renderer(),
   ],

@@ -1,7 +1,8 @@
-import { app, BrowserWindow, dialog, Menu, ipcMain } from 'electron'
+import { app, BrowserWindow, Menu, ipcMain } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import log from 'electron-log'
 import { join } from 'path'
+import { showUpdateDialog } from './update-window/updateWindow'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -48,19 +49,12 @@ function setupAutoUpdater() {
     console.log('Mise à jour disponible, téléchargement en cours...')
   })
 
-  autoUpdater.on('update-downloaded', () => {
-    dialog.showMessageBox({
-      type: 'info',
-      title: 'Mise à jour disponible',
-      message: 'Une nouvelle version de Shadowrama a été téléchargée.',
-      detail: "L'application va redémarrer pour appliquer la mise à jour.",
-      buttons: ['Redémarrer maintenant', 'Plus tard'],
-    }).then(({ response }) => {
-      if (response === 0) {
-        autoUpdater.quitAndInstall()
-      }
-    })
-  })
+  autoUpdater.on('update-downloaded', async () => {
+  const choice = await showUpdateDialog()
+  if (choice === 'restart') {
+    autoUpdater.quitAndInstall()
+  }
+})
 
   autoUpdater.on('error', (err) => {
     console.error('Erreur de mise à jour:', err)
