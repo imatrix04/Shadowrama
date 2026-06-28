@@ -1,13 +1,12 @@
-import { app, BrowserWindow, Menu, ipcMain } from 'electron'
+import { app, BrowserWindow, Menu, ipcMain, globalShortcut } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import log from 'electron-log'
 import { join } from 'path'
-import { showUpdateDialog } from './update-window/updateWindow'
+import { openUpdateDialog } from './update-window/updateWindow'
 
 let mainWindow: BrowserWindow | null = null
 
 function createWindow() {
-
   if (process.env.NODE_ENV !== 'development') {
     Menu.setApplicationMenu(null)
   }
@@ -43,29 +42,32 @@ ipcMain.on('set-fullscreen', (_event, value: boolean) => {
 function setupAutoUpdater() {
   log.transports.file.level = 'info'
   autoUpdater.logger = log
-  autoUpdater.checkForUpdatesAndNotify()
+  autoUpdater.checkForUpdates()
 
   autoUpdater.on('update-available', () => {
-    console.log('Mise à jour disponible, téléchargement en cours...')
+    log.info('Mise à jour disponible')
+    openUpdateDialog()
   })
 
-  autoUpdater.on('update-downloaded', async () => {
-  const choice = await showUpdateDialog()
-  if (choice === 'restart') {
-    autoUpdater.quitAndInstall()
-  }
-})
-
   autoUpdater.on('error', (err) => {
-    console.error('Erreur de mise à jour:', err)
+    log.error('Erreur de mise à jour:', err)
   })
 }
 
 app.whenReady().then(() => {
   createWindow()
+
   if (process.env.NODE_ENV !== 'development') {
     setupAutoUpdater()
+  } else {
+    globalShortcut.register('CommandOrControl+Shift+U', () => {
+      openUpdateDialog()
+    })
   }
+})
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
 })
 
 app.on('window-all-closed', () => {
