@@ -1,4 +1,5 @@
 import type { Slide } from '../types'
+import { registerMedia, getAllMediaForSave, clearMediaStore } from './mediaStore'
 
 const DRAFT_KEY = 'shadowrama-draft'
 
@@ -33,39 +34,48 @@ export function clearDraft() {
 declare global {
   interface Window {
     fileAPI: {
-      saveProjectAs: (json: string, defaultName: string) => Promise<string | null>
-      saveProject: (filePath: string, json: string) => Promise<string>
-      openProject: () => Promise<{ filePath: string; content: string } | null>
+      saveProjectAs: (manifestJson: string, media: { key: string; data: string }[], defaultName: string) => Promise<string | null>
+      saveProject: (filePath: string, manifestJson: string, media: { key: string; data: string }[]) => Promise<string>
+      openProject: () => Promise<{ filePath: string; manifestJson: string; media: { key: string; data: string }[] } | null>
     }
   }
 }
 
-function serializeProject(slides: Slide[]): string {
-  return JSON.stringify({ version: 1, slides })
+function serializeManifest(slides: Slide[]): string {
+  return JSON.stringify({ version: 2, slides })
 }
 
-// Premier save (ou "Enregistrer sous...") : ouvre le dialog, retourne le chemin choisi
 export async function saveProjectAs(slides: Slide[], defaultName: string): Promise<string | null> {
-  const json = serializeProject(slides)
-  return window.fileAPI.saveProjectAs(json, defaultName)
+  const manifestJson = serializeManifest(slides)
+  const media = getAllMediaForSave()
+  return window.fileAPI.saveProjectAs(manifestJson, media, defaultName)
 }
 
-// Save suivants : écrase directement, pas de dialog
 export async function saveProjectToPath(slides: Slide[], filePath: string): Promise<string> {
-  const json = serializeProject(slides)
-  return window.fileAPI.saveProject(filePath, json)
-}
-
-function parseProjectContent(raw: string): Slide[] {
-  const parsed = JSON.parse(raw)
-  if (parsed.version && parsed.slides) return parsed.slides
-  if (Array.isArray(parsed)) return parsed
-  throw new Error('Fichier invalide')
+  const manifestJson = serializeManifest(slides)
+  const media = getAllMediaForSave()
+  return window.fileAPI.saveProject(filePath, manifestJson, media)
 }
 
 export async function openProject(): Promise<{ slides: Slide[]; filePath: string } | null> {
   const result = await window.fileAPI.openProject()
   if (!result) return null
-  const slides = parseProjectContent(result.content)
+
+  clearMediaStore()
+  for (const m of result.media) {
+    const mimeType = guessMimeType(m.key)
+    registerMedia(m.key, m.data, mimeType)
+  }
+
+  const parsed = JSON.parse(result.manifestJson)
+  const slides: Slide[] = parsed.version && parsed.slides ? parsed.slides : parsed
   return { slides, filePath: result.filePath }
+}
+
+function guessMimeType(filename: string): string {
+  if (filename.endsWith('.png')) return 'image/png'
+  if (filename.endsWith('.jpg') || filename.endsWith('.jpeg')) return 'image/jpeg'
+  if (filename.endsWith('.webp')) return 'image/webp'
+  if (filename.endsWith('.gif')) return 'image/gif'
+  return 'application/octet-stream'
 }

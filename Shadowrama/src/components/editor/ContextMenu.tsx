@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type { BlockData, BlockProperty, AnimationType } from '../../types'
 import { getBlockField, setBlockField } from '../../types'
 import styles from './ContextMenu.module.css'
+import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
 
 interface Props {
   block: BlockData
@@ -96,6 +97,40 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
           onChange={e => onUpdate(block.id, setBlockField(block, prop.key, parseFloat(e.target.value)))}
         />
       )
+    case 'file': {
+      const currentKey = String(getBlockField(block, prop.key) ?? '')
+      const previewSrc = currentKey.startsWith('media/') ? resolveMedia(currentKey) : currentKey
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {previewSrc && (
+            <img
+              src={previewSrc}
+              style={{ width: '100%', height: '60px', objectFit: 'cover', borderRadius: '4px' }}
+              alt=""
+            />
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            className={styles.input}
+            onChange={async e => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              const reader = new FileReader()
+              reader.onload = () => {
+                const dataUrl = reader.result as string
+                const base64 = dataUrl.split(',')[1]
+                const key = generateMediaKey(file.name)
+                registerMedia(key, base64, file.type)
+                onUpdate(block.id, setBlockField(block, prop.key, key))
+              }
+              reader.readAsDataURL(file)
+            }}
+          />
+        </div>
+      )
+    }
     default:
       return null
   }

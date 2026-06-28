@@ -5,10 +5,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 })
 
 contextBridge.exposeInMainWorld('fileAPI', {
-  saveProjectAs: (json: string, defaultName: string): Promise<string | null> =>
-    ipcRenderer.invoke('save-project-as', json, defaultName),
-  saveProject: (filePath: string, json: string): Promise<string> =>
-    ipcRenderer.invoke('save-project', filePath, json),
-  openProject: (): Promise<{ filePath: string; content: string } | null> =>
-    ipcRenderer.invoke('open-project'),
+  saveProjectAs: (manifestJson: string, media: { key: string; data: string }[], defaultName: string) =>
+    ipcRenderer.invoke('save-project-as', manifestJson, media, defaultName),
+  saveProject: (filePath: string, manifestJson: string, media: { key: string; data: string }[]) =>
+    ipcRenderer.invoke('save-project', filePath, manifestJson, media),
+  openProject: () => ipcRenderer.invoke('open-project'),
 })
