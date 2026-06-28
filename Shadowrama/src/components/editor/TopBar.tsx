@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Slide } from '../../types'
-import { saveProject, loadProject, clearDraft } from '../../utils/fileManager'
+import { saveProjectAs, saveProjectToPath, openProject, clearDraft } from '../../utils/fileManager'
 import PresentationMode from './PresentationMode'
 import styles from './TopBar.module.css'
 
@@ -8,53 +8,59 @@ interface Props {
   slides: Slide[]
   projectName: string | null
   setProjectName: (name: string) => void
+  filePath: string | null
+  setFilePath: (path: string | null) => void
   onLoad: (slides: Slide[], name: string) => void
   onNew: () => void
 }
 
-export default function TopBar({ slides, projectName, setProjectName, onLoad, onNew }: Props) {
+export default function TopBar({ slides, projectName, setProjectName, filePath, setFilePath, onLoad, onNew }: Props) {
   const [presenting, setPresenting] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const [nameDialogOpen, setNameDialogOpen] = useState(false)
   const [nameInput, setNameInput] = useState('mon-projet')
-  const lastSavedRef = useRef<string | null>(null)
+  const lastSavedRef = useRef<string | null>(filePath ? JSON.stringify(slides) : null)
 
   useEffect(() => {
     const current = JSON.stringify(slides)
     setIsDirty(lastSavedRef.current !== current)
   }, [slides])
 
-  const handleLoad = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    try {
-      const loaded = await loadProject(file)
-      const name = file.name.replace('.shma', '')
-      onLoad(loaded, name)
-      lastSavedRef.current = JSON.stringify(loaded)
-      setIsDirty(false)
-    } catch {
-      alert('Impossible de lire ce fichier .shma')
-    }
-    e.target.value = ''
-  }
-
-  const handleSave = () => {
-    if (projectName) {
-      saveProject(slides, projectName)
+  const handleSave = async () => {
+    if (filePath) {
+      await saveProjectToPath(slides, filePath)
       lastSavedRef.current = JSON.stringify(slides)
       setIsDirty(false)
     } else {
-      setNameInput('mon-projet')
+      setNameInput(projectName ?? 'mon-projet')
       setNameDialogOpen(true)
     }
   }
 
-  const confirmSaveWithName = () => {
+  const handleOpen = async () => {
+    try {
+      const result = await openProject()
+      if (!result) return
+      const name = result.filePath.split(/[\\/]/).pop()!.replace('.shma', '')
+      onLoad(result.slides, name)
+      setFilePath(result.filePath)
+      lastSavedRef.current = JSON.stringify(result.slides)
+      setIsDirty(false)
+    } catch {
+      alert('Impossible de lire ce fichier .shma')
+    }
+  }
+
+  const confirmSaveWithName = async () => {
     const name = nameInput.trim()
     if (!name) return
+    const path = await saveProjectAs(slides, name)
+    if (!path) {
+      setNameDialogOpen(false)
+      return
+    }
     setProjectName(name)
-    saveProject(slides, name)
+    setFilePath(path)
     lastSavedRef.current = JSON.stringify(slides)
     setIsDirty(false)
     setNameDialogOpen(false)
@@ -67,6 +73,7 @@ export default function TopBar({ slides, projectName, setProjectName, onLoad, on
     if (!proceed) return
     clearDraft()
     lastSavedRef.current = null
+    setFilePath(null)
     setIsDirty(false)
     onNew()
   }
@@ -90,15 +97,9 @@ export default function TopBar({ slides, projectName, setProjectName, onLoad, on
           <button className={styles.btn} onClick={handleSave}>
             💾 Sauvegarder
           </button>
-          <label className={styles.fileLabel}>
+          <button className={styles.btn} onClick={handleOpen}>
             📂 Ouvrir
-            <input
-              type="file"
-              accept=".shma"
-              className={styles.hiddenInput}
-              onChange={handleLoad}
-            />
-          </label>
+          </button>
           <button className={`${styles.btn} ${styles.btnAccent}`}
             onClick={() => setPresenting(true)}>
             ▶ Présenter

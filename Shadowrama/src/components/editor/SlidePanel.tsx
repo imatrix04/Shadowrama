@@ -10,10 +10,43 @@ interface Props {
   onAddSlide: () => void
   onDuplicateSlide: (index: number) => void
   onDeleteSlide: (index: number) => void
+  onReorderSlides: (fromIndex: number, toIndex: number) => void
 }
 
-export default function SlidePanel({ slides, currentSlide, onSelectSlide, onAddSlide, onDuplicateSlide, onDeleteSlide }: Props) {
+export default function SlidePanel({
+  slides,
+  currentSlide,
+  onSelectSlide,
+  onAddSlide,
+  onDuplicateSlide,
+  onDeleteSlide,
+  onReorderSlides,
+}: Props) {
   const [open, setOpen] = useState(false)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+  function handleDragStart(i: number) {
+    setDragIndex(i)
+  }
+
+  function handleDragOver(e: React.DragEvent, i: number) {
+    e.preventDefault()
+    if (i !== dragOverIndex) setDragOverIndex(i)
+  }
+
+  function handleDrop(i: number) {
+    if (dragIndex !== null && dragIndex !== i) {
+      onReorderSlides(dragIndex, i)
+    }
+    setDragIndex(null)
+    setDragOverIndex(null)
+  }
+
+  function handleDragEnd() {
+    setDragIndex(null)
+    setDragOverIndex(null)
+  }
 
   return (
     <div className={styles.wrapper}>
@@ -31,7 +64,12 @@ export default function SlidePanel({ slides, currentSlide, onSelectSlide, onAddS
             {slides.map((slide, i) => (
               <div
                 key={slide.id}
-                className={`${styles.thumb} ${i === currentSlide ? styles.thumbSelected : ''}`}
+                draggable
+                onDragStart={() => handleDragStart(i)}
+                onDragOver={e => handleDragOver(e, i)}
+                onDrop={() => handleDrop(i)}
+                onDragEnd={handleDragEnd}
+                className={`${styles.thumb} ${i === currentSlide ? styles.thumbSelected : ''} ${dragIndex === i ? styles.thumbDragging : ''} ${dragOverIndex === i && dragIndex !== i ? styles.thumbDragOver : ''}`}
                 onClick={() => onSelectSlide(i)}
               >
                 <div className={styles.thumbPreviewBox}>

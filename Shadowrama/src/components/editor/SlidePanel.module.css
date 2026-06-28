@@ -122,6 +122,15 @@
   position: absolute;
 }
 
+.thumbDragging {
+  opacity: 0.4;
+}
+
+.thumbDragOver {
+  outline: 2px dashed var(--accent, #7c5cff);
+  outline-offset: 2px;
+}
+
 .previewText {
   color: var(--editor-text-muted);
   font-size: 0.7rem;

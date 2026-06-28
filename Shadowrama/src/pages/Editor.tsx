@@ -14,6 +14,7 @@ export default function Editor() {
   const [selectedBlockIds, setSelectedBlockIds] = useState<number[]>([])
   const [initialDraft] = useState(() => loadDraft())
   const [projectName, setProjectName] = useState<string | null>(initialDraft?.projectName ?? null)
+  const [filePath, setFilePath] = useState<string | null>(initialDraft?.filePath ?? null)
 
   const { slides, commit, patch, undo, redo, setSlides } = useEditorHistory(
    initialDraft?.slides ?? [{ id: 1, blocks: [] }]
@@ -37,8 +38,8 @@ export default function Editor() {
 
   // ── Autosave
   useEffect(() => {
-    saveDraft(projectName, slides)
-  }, [slides, projectName])
+  saveDraft(projectName, filePath, slides)
+  }, [slides, projectName, filePath])
 
 
 
@@ -66,6 +67,21 @@ export default function Editor() {
     commit(prev => prev.filter((_, i) => i !== index))
     setCurrentSlide(prev => Math.min(prev, slides.length - 2))
   }
+  const onReorderSlides = useCallback((fromIndex: number, toIndex: number) => {
+  commit(prev => {
+    const updated = [...prev]
+    const [moved] = updated.splice(fromIndex, 1)
+    updated.splice(toIndex, 0, moved)
+    return updated
+  })
+
+  setCurrentSlide(prevCurrent => {
+    if (prevCurrent === fromIndex) return toIndex
+    if (fromIndex < prevCurrent && toIndex >= prevCurrent) return prevCurrent - 1
+    if (fromIndex > prevCurrent && toIndex <= prevCurrent) return prevCurrent + 1
+    return prevCurrent
+  })
+}, [commit])
 
   // ── Blocks
   const addBlock = (block: Partial<BlockData> & { type: string }) => {
@@ -94,6 +110,7 @@ export default function Editor() {
   const handleNewProject = () => {
     setSlides([{ id: Date.now(), blocks: [] }])
     setProjectName(null)
+    setFilePath(null)
     setCurrentSlide(0)
     setSelectedBlockIds([])
   }
@@ -117,6 +134,8 @@ export default function Editor() {
         slides={slides}
         projectName={projectName}
         setProjectName={setProjectName}
+        filePath={filePath}
+        setFilePath={setFilePath}
         onLoad={(loaded, name) => { setSlides(loaded); setSelectedBlockIds([]); setProjectName(name) }}
         onNew={handleNewProject}
       />
@@ -137,6 +156,7 @@ export default function Editor() {
           onAddSlide={addSlide}
           onDuplicateSlide={duplicateSlide}
           onDeleteSlide={deleteSlide}
+          onReorderSlides={onReorderSlides}
         />
       </div>
     </div>

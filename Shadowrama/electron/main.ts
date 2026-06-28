@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, ipcMain, globalShortcut } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import log from 'electron-log'
 import { join } from 'path'
+import './fileHandlers'
 import { openUpdateDialog } from './update-window/updateWindow'
 
 let mainWindow: BrowserWindow | null = null
