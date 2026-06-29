@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { BLOCKS_CONFIG } from '../blocks'
-import type { BlockData, Slide } from '../types'
+import type { AnimationType, BlockData, Slide } from '../types'
 import { useEditorHistory } from '../hooks/useEditorHistory'
 import { loadDraft, saveDraft } from '../utils/fileManager'
 import Canvas from '../components/editor/Canvas'
+import LeftSidebars from '../components/editor/LeftSidebars'
 import Sidebar from '../components/editor/Sidebar'
+import AnimationsSidebar from '../components/editor/AnimationsSidebar'
 import TopBar from '../components/editor/TopBar'
 import SlidePanel from '../components/editor/SlidePanel'
 
@@ -128,6 +130,23 @@ export default function Editor() {
     setSelectedBlockIds([])
   }
 
+  // ── Animations
+  const handleSelectAnimation = (type: AnimationType) => {
+    if (selectedBlockIds.length === 0) return
+    commit(prev => prev.map((slide, i) =>
+      i === currentSlide
+        ? {
+            ...slide,
+            blocks: slide.blocks.map(b =>
+              selectedBlockIds.includes(b.id)
+                ? { ...b, animation: { ...b.animation, type } }
+                : b
+            ),
+          }
+        : slide
+    ))
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#1a1a2e', color: '#fff' }}>
       <TopBar
@@ -145,7 +164,7 @@ export default function Editor() {
         onNew={handleNewProject}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <Sidebar onAddBlock={addBlock} />
+        <LeftSidebars onAddBlock={addBlock} onSelectAnimation={handleSelectAnimation} />
         <Canvas
           blocks={slides[currentSlide].blocks}
           selectedBlockIds={selectedBlockIds}

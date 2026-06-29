@@ -90,12 +90,21 @@
 }
 
 .orderButtons {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 5px;
-  flex-wrap: wrap;
+}
+
+.orderButtons .smallBtn {
+  width: 100%;
+  text-align: center;
+  justify-content: center;
 }
 
 .smallBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0.32rem 0.55rem;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);

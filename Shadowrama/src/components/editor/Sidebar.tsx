@@ -7,6 +7,20 @@ interface Props {
   onAddBlock: (block: Partial<BlockConfig['defaultProps']> & { type: string }) => void
 }
 
+function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+      <path
+        d={direction === 'left' ? 'M7 1L2.5 5L7 9' : 'M3 1L7.5 5L3 9'}
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export default function Sidebar({ onAddBlock }: Props) {
   const [open, setOpen] = useState(false)
 
@@ -19,8 +33,10 @@ export default function Sidebar({ onAddBlock }: Props) {
       <button
         onClick={() => setOpen(o => !o)}
         className={`${styles.toggleBtn} ${open ? styles.toggleBtnOpen : ''}`}
+        title={open ? 'Fermer Blocs' : 'Ouvrir Blocs'}
       >
-        {open ? '◀' : '▶'}
+        <span>{open ? '◀' : '▶'}</span>
+        <span className={styles.toggleLabel}>Blocs</span>
       </button>
 
       <div className={`${styles.panel} ${open ? styles.panelOpen : ''}`}>
