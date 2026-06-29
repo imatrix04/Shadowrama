@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Slide } from '../../types'
 import { saveProjectAs, saveProjectToPath, openProject, clearDraft } from '../../utils/fileManager'
+import { clearMediaStore } from '../../utils/mediaStore'
 import PresentationMode from './PresentationMode'
 import styles from './TopBar.module.css'
 
@@ -116,6 +117,7 @@ export default function TopBar({ slides, projectName, setProjectName, filePath, 
       : true
     if (!proceed) return
     clearDraft()
+    clearMediaStore()
     lastSavedRef.current = null
     setFilePath(null)
     setIsDirty(false)

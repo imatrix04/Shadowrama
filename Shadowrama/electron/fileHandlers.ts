@@ -34,15 +34,16 @@ ipcMain.handle('open-project', async () => {
   if (!manifestFile) throw new Error('manifest.json manquant')
   const manifestJson = await manifestFile.async('string')
 
+  // ⚠️ zip.folder('media').files renvoie TOUS les fichiers du zip (manifest.json inclus),
+  // pas seulement ceux du dossier media/. On filtre donc explicitement sur le préfixe "media/".
+  // Sans ça, manifest.json est chargé comme un "média" puis réécrit par-dessus le manifest
+  // à la sauvegarde suivante → les modifications sont perdues.
   const media: MediaEntry[] = []
-  const mediaFolder = zip.folder('media')
-  if (mediaFolder) {
-    const entries = Object.values(mediaFolder.files).filter(f => !f.dir)
-    for (const entry of entries) {
-      const base64 = await entry.async('base64')
-      const key = entry.name // ex: "media/img-123.png"
-      media.push({ key, data: base64 })
-    }
+  const entries = Object.values(zip.files).filter(f => !f.dir && f.name.startsWith('media/'))
+  for (const entry of entries) {
+    const base64 = await entry.async('base64')
+    const key = entry.name // ex: "media/img-123.png"
+    media.push({ key, data: base64 })
   }
 
   return { filePath, manifestJson, media }
@@ -52,6 +53,8 @@ async function writeZip(filePath: string, manifestJson: string, media: MediaEntr
   const zip = new JSZip()
   zip.file('manifest.json', manifestJson)
   for (const m of media) {
+    // Garde-fou : un média ne doit jamais pouvoir écraser le manifest.
+    if (m.key === 'manifest.json' || !m.key.startsWith('media/')) continue
     zip.file(m.key, m.data, { base64: true })
   }
   const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
