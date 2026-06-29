@@ -7,6 +7,7 @@ const imageConfig: BlockConfig = {
     properties: [
     { key: 'src', label: 'Image', type: 'file' },
     { key: 'alt', label: 'Description', type: 'text' },
+    { key: 'borderRadius', label: 'arrondi', type: 'number' },
   ]
 }
 

@@ -8,6 +8,11 @@ const textConfig: BlockConfig = {
     { key: 'content', label: 'Contenu', type: 'textarea' },
     { key: 'fontSize', label: 'Taille police', type: 'number' },
     { key: 'color', label: 'Couleur', type: 'color' },
+    { key: 'textAlign', label: 'Alignement', type: 'select', options: [
+      { label: 'Gauche', value: 'left' },
+      { label: 'Centré', value: 'center' },
+      { label: 'Droite', value: 'right' },
+    ] },
   ]
 }
 

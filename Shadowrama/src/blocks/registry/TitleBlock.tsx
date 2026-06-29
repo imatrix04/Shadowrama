@@ -60,7 +60,7 @@ export default function TitleBlock({ block, onUpdate, isEditing, onStartEdit, on
         margin: 0,
         fontSize: block.fontSize ?? 40,
         color: block.color,
-        textAlign: block.textAlign || 'left',
+        textAlign: block.textAlign || 'center',
         wordBreak: 'break-word',
         whiteSpace: 'pre-wrap',
         outline: isEditing ? '2px solid #6c63ff' : 'none',

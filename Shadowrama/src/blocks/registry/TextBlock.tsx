@@ -61,6 +61,7 @@ export default function TextBlock({ block, onUpdate, isEditing, onStartEdit, onS
         margin: 0,
         fontSize: block.fontSize,
         color: block.color,
+        textAlign: block.textAlign || 'center',
         wordBreak: 'break-word',
         whiteSpace: 'pre-wrap',
         outline: isEditing ? '2px solid #6c63ff' : 'none',

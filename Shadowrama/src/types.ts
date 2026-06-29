@@ -24,6 +24,7 @@ export interface ImageBlockData extends BaseBlockData {
   type: 'image'
   src: string
   alt?: string
+  borderRadius?: number
   objectFit?: 'cover' | 'contain' | 'fill'
 }
 
@@ -42,6 +43,7 @@ export interface TextBlockData extends BaseBlockData {
   content: string
   fontSize?: number
   color?: string
+  textAlign?: 'left' | 'center' | 'right'
 }
 
 export interface TitleBlockData extends BaseBlockData {

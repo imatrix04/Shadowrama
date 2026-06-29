@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type { BlockData, BlockProperty, AnimationType } from '../../types'
 import { getBlockField, setBlockField } from '../../types'
 import styles from './ContextMenu.module.css'
+import CustomSelect from '../../styles/CustomSelect'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
 
 interface Props {
@@ -73,17 +74,11 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
       )
     case 'select':
       return (
-        <select
-          className={styles.input}
+        <CustomSelect
           value={String(getBlockField(block, prop.key) ?? '')}
-          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, e.target.value))}
-        >
-          {prop.options?.map(opt => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          options={prop.options ?? []}
+          onChange={v => onUpdate(block.id, setBlockField(block, prop.key, v))}
+        />
       )
     case 'float':
       return (
@@ -190,22 +185,21 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
 
         <div className={styles.field}>
           <label className={styles.fieldLabel}>Animation d'entrée</label>
-          <select
-            className={styles.input}
+          <CustomSelect
             value={block.animation?.type ?? 'none'}
-            onChange={e => onUpdate(block.id, setBlockField(
-              block, 'animation', { ...block.animation, type: e.target.value as AnimationType }
+            options={[
+              { label: 'Aucune', value: 'none' },
+              { label: 'Fondu', value: 'fadeIn' },
+              { label: 'Glisse depuis la gauche', value: 'slideInLeft' },
+              { label: 'Glisse depuis la droite', value: 'slideInRight' },
+              { label: 'Glisse depuis le bas', value: 'slideInUp' },
+              { label: 'Zoom', value: 'zoomIn' },
+            ]}
+            onChange={v => onUpdate(block.id, setBlockField(
+              block, 'animation', { ...block.animation, type: v as AnimationType }
             ))}
-          >
-            <option value="none">Aucune</option>
-            <option value="fadeIn">Fondu</option>
-            <option value="slideInLeft">Glisse depuis la gauche</option>
-            <option value="slideInRight">Glisse depuis la droite</option>
-            <option value="slideInUp">Glisse depuis le bas</option>
-            <option value="zoomIn">Zoom</option>
-          </select>
+          />
         </div>
-
         <div className={styles.deleteSection}>
           <button
             className={`${styles.smallBtn} ${styles.deleteBtn}`}
