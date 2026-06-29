@@ -4,7 +4,7 @@ import type { BlockComponentProps, TextBlockData } from '../../types'
 export default function TextBlock({ block, onUpdate, isEditing, onStartEdit, onStopEdit }: BlockComponentProps<TextBlockData>) {
   const ref = useRef<HTMLDivElement>(null)
   const [savedContent, setSavedContent] = useState(block.content)
-  
+
   useEffect(() => {
     if (!isEditing && ref.current) {
       ref.current.innerText = block.content
@@ -24,6 +24,12 @@ export default function TextBlock({ block, onUpdate, isEditing, onStartEdit, onS
     }, 0)
   }
 
+  // Propage chaque frappe en direct dans le state (pas de snapshot history à chaque caractère)
+  const handleInput = () => {
+    const newContent = ref.current?.innerText ?? ''
+    onUpdate?.(block.id, { content: newContent })
+  }
+
   const handleBlur = () => {
     const newContent = ref.current?.innerText ?? ''
     setSavedContent(newContent)
@@ -36,7 +42,6 @@ export default function TextBlock({ block, onUpdate, isEditing, onStartEdit, onS
       if (ref.current) ref.current.innerText = savedContent
       ref.current?.blur()
     }
-    // Shift+Enter = saut de ligne naturel, Enter simple = valide
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       ref.current?.blur()
@@ -49,6 +54,7 @@ export default function TextBlock({ block, onUpdate, isEditing, onStartEdit, onS
       contentEditable={isEditing}
       suppressContentEditableWarning
       onDoubleClick={handleDoubleClick}
+      onInput={handleInput}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       style={{

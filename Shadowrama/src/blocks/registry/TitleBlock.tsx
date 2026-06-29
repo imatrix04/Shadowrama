@@ -24,6 +24,11 @@ export default function TitleBlock({ block, onUpdate, isEditing, onStartEdit, on
     }, 0)
   }
 
+  const handleInput = () => {
+    const newContent = ref.current?.innerText ?? ''
+    onUpdate?.(block.id, { content: newContent })
+  }
+
   const handleBlur = () => {
     const newContent = ref.current?.innerText ?? ''
     setSavedContent(newContent)
@@ -48,6 +53,7 @@ export default function TitleBlock({ block, onUpdate, isEditing, onStartEdit, on
       contentEditable={isEditing}
       suppressContentEditableWarning
       onDoubleClick={handleDoubleClick}
+      onInput={handleInput}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       style={{

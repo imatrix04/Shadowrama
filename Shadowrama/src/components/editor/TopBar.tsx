@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Slide } from '../../types'
 import { saveProjectAs, saveProjectToPath, openProject, clearDraft } from '../../utils/fileManager'
 import PresentationMode from './PresentationMode'
@@ -21,21 +21,58 @@ export default function TopBar({ slides, projectName, setProjectName, filePath, 
   const [nameInput, setNameInput] = useState('mon-projet')
   const lastSavedRef = useRef<string | null>(filePath ? JSON.stringify(slides) : null)
 
+  // Refs synchronisées à chaque render — handleSave lit depuis ces refs (jamais stale)
+  const slidesRef = useRef(slides)
+  slidesRef.current = slides
+  const filePathRef = useRef(filePath)
+  filePathRef.current = filePath
+  const projectNameRef = useRef(projectName)
+  projectNameRef.current = projectName
+
   useEffect(() => {
     const current = JSON.stringify(slides)
     setIsDirty(lastSavedRef.current !== current)
   }, [slides])
 
-  const handleSave = async () => {
-    if (filePath) {
-      await saveProjectToPath(slides, filePath)
-      lastSavedRef.current = JSON.stringify(slides)
-      setIsDirty(false)
+  // Dépendances [] : handleSave est créé une seule fois et lit tout depuis les refs.
+  // Le listener Ctrl+S n'est donc jamais périmé.
+  const handleSave = useCallback(async () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+
+    // Laisse React traiter les setState en attente avant de lire les refs
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    const currentSlides = slidesRef.current
+    const currentFilePath = filePathRef.current
+    const currentProjectName = projectNameRef.current
+
+    if (currentFilePath) {
+      try {
+        await saveProjectToPath(currentSlides, currentFilePath)
+        lastSavedRef.current = JSON.stringify(currentSlides)
+        setIsDirty(false)
+      } catch (err) {
+        console.error('[save] erreur:', err)
+        alert(`Erreur lors de la sauvegarde :\n${err}`)
+      }
     } else {
-      setNameInput(projectName ?? 'mon-projet')
+      setNameInput(currentProjectName ?? 'mon-projet')
       setNameDialogOpen(true)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        handleSave()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleSave])
 
   const handleOpen = async () => {
     try {
@@ -46,7 +83,8 @@ export default function TopBar({ slides, projectName, setProjectName, filePath, 
       setFilePath(result.filePath)
       lastSavedRef.current = JSON.stringify(result.slides)
       setIsDirty(false)
-    } catch {
+    } catch (err) {
+      console.error('[open] ERREUR:', err)
       alert('Impossible de lire ce fichier .shma')
     }
   }
@@ -54,16 +92,22 @@ export default function TopBar({ slides, projectName, setProjectName, filePath, 
   const confirmSaveWithName = async () => {
     const name = nameInput.trim()
     if (!name) return
-    const path = await saveProjectAs(slides, name)
-    if (!path) {
+    const currentSlides = slidesRef.current
+    try {
+      const path = await saveProjectAs(currentSlides, name)
+      if (!path) {
+        setNameDialogOpen(false)
+        return
+      }
+      setProjectName(name)
+      setFilePath(path)
+      lastSavedRef.current = JSON.stringify(currentSlides)
+      setIsDirty(false)
       setNameDialogOpen(false)
-      return
+    } catch (err) {
+      console.error('[saveAs] ERREUR:', err)
+      alert(`Erreur lors de la sauvegarde : ${err}`)
     }
-    setProjectName(name)
-    setFilePath(path)
-    lastSavedRef.current = JSON.stringify(slides)
-    setIsDirty(false)
-    setNameDialogOpen(false)
   }
 
   const handleNew = () => {

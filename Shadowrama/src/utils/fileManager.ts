@@ -61,6 +61,9 @@ export async function openProject(): Promise<{ slides: Slide[]; filePath: string
   const result = await window.fileAPI.openProject()
   if (!result) return null
 
+  console.log('[openProject] chemin lu:', result.filePath, '— taille manifest lu:', result.manifestJson.length)
+  console.log('[openProject] contenu manifest:', result.manifestJson)
+
   clearMediaStore()
   for (const m of result.media) {
     const mimeType = guessMimeType(m.key)

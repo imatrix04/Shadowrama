@@ -56,4 +56,14 @@ async function writeZip(filePath: string, manifestJson: string, media: MediaEntr
   }
   const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
   await writeFile(filePath, buffer)
+
+  // Vérifie que l'écriture a bien eu lieu (Windows Controlled Folder Access peut bloquer
+  // silencieusement en retournant succès sans écrire)
+  const verify = await readFile(filePath)
+  if (verify.length !== buffer.length) {
+    throw new Error(
+      `Échec d'écriture silencieux : ${verify.length} octets sur disque au lieu de ${buffer.length}. ` +
+      `Vérifiez que Windows n'a pas bloqué l'accès (Accès contrôlé aux dossiers / Antivirus).`
+    )
+  }
 }

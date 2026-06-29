@@ -16,7 +16,7 @@ export default function Editor() {
   const [projectName, setProjectName] = useState<string | null>(initialDraft?.projectName ?? null)
   const [filePath, setFilePath] = useState<string | null>(initialDraft?.filePath ?? null)
 
-  const { slides, commit, patch, undo, redo, setSlides } = useEditorHistory(
+  const { slides, commit, patch, undo, redo, reset } = useEditorHistory(
    initialDraft?.slides ?? [{ id: 1, blocks: [] }]
   )
 
@@ -38,7 +38,7 @@ export default function Editor() {
 
   // ── Autosave
   useEffect(() => {
-  saveDraft(projectName, filePath, slides)
+    saveDraft(projectName, filePath, slides)
   }, [slides, projectName, filePath])
 
 
@@ -67,21 +67,22 @@ export default function Editor() {
     commit(prev => prev.filter((_, i) => i !== index))
     setCurrentSlide(prev => Math.min(prev, slides.length - 2))
   }
-  const onReorderSlides = useCallback((fromIndex: number, toIndex: number) => {
-  commit(prev => {
-    const updated = [...prev]
-    const [moved] = updated.splice(fromIndex, 1)
-    updated.splice(toIndex, 0, moved)
-    return updated
-  })
 
-  setCurrentSlide(prevCurrent => {
-    if (prevCurrent === fromIndex) return toIndex
-    if (fromIndex < prevCurrent && toIndex >= prevCurrent) return prevCurrent - 1
-    if (fromIndex > prevCurrent && toIndex <= prevCurrent) return prevCurrent + 1
-    return prevCurrent
-  })
-}, [commit])
+  const onReorderSlides = useCallback((fromIndex: number, toIndex: number) => {
+    commit(prev => {
+      const updated = [...prev]
+      const [moved] = updated.splice(fromIndex, 1)
+      updated.splice(toIndex, 0, moved)
+      return updated
+    })
+
+    setCurrentSlide(prevCurrent => {
+      if (prevCurrent === fromIndex) return toIndex
+      if (fromIndex < prevCurrent && toIndex >= prevCurrent) return prevCurrent - 1
+      if (fromIndex > prevCurrent && toIndex <= prevCurrent) return prevCurrent + 1
+      return prevCurrent
+    })
+  }, [commit])
 
   // ── Blocks
   const addBlock = (block: Partial<BlockData> & { type: string }) => {
@@ -99,7 +100,6 @@ export default function Editor() {
   }
 
   const updateBlock = (id: number, changes: Partial<BlockData>) => {
-    // Pas de snapshot pendant le drag/resize continu
     patch(prev => prev.map((s, i) =>
       i === currentSlide
         ? { ...s, blocks: s.blocks.map(b => b.id === id ? ({ ...b, ...changes } as BlockData) : b) }
@@ -108,7 +108,7 @@ export default function Editor() {
   }
 
   const handleNewProject = () => {
-    setSlides([{ id: Date.now(), blocks: [] }])
+    reset([{ id: Date.now(), blocks: [] }])
     setProjectName(null)
     setFilePath(null)
     setCurrentSlide(0)
@@ -136,7 +136,12 @@ export default function Editor() {
         setProjectName={setProjectName}
         filePath={filePath}
         setFilePath={setFilePath}
-        onLoad={(loaded, name) => { setSlides(loaded); setSelectedBlockIds([]); setProjectName(name) }}
+        onLoad={(loaded, name) => {
+          reset(loaded)
+          setCurrentSlide(0)
+          setSelectedBlockIds([])
+          setProjectName(name)
+        }}
         onNew={handleNewProject}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>

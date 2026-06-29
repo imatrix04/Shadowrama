@@ -9,9 +9,6 @@ export function useEditorHistory(initial: Slide[]) {
   const past = useRef<Slide[][]>([])
   const future = useRef<Slide[][]>([])
 
-  // Toute modification "commit" passe par ici : elle pousse l'état ACTUEL
-  // dans le passé avant de l'écraser, et vide le futur (on ne peut plus redo
-  // après une nouvelle action).
   const commit = useCallback((updater: (prev: Slide[]) => Slide[]) => {
     setSlidesState(prev => {
       past.current.push(prev)
@@ -21,7 +18,6 @@ export function useEditorHistory(initial: Slide[]) {
     })
   }, [])
 
-  // Mise à jour SANS snapshot (ex: pendant un drag continu)
   const patch = useCallback((updater: (prev: Slide[]) => Slide[]) => {
     setSlidesState(updater)
   }, [])
@@ -44,8 +40,15 @@ export function useEditorHistory(initial: Slide[]) {
     })
   }, [])
 
+  // Reset complet : nouvel état + vidage de l'historique (nouveau projet / ouverture fichier)
+  const reset = useCallback((newSlides: Slide[]) => {
+    past.current = []
+    future.current = []
+    setSlidesState(newSlides)
+  }, [])
+
   const canUndo = () => past.current.length > 0
   const canRedo = () => future.current.length > 0
 
-  return { slides, commit, patch, undo, redo, canUndo, canRedo, setSlides: setSlidesState }
+  return { slides, commit, patch, undo, redo, canUndo, canRedo, setSlides: setSlidesState, reset }
 }
