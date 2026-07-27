@@ -18,18 +18,24 @@ interface Props {
   onSelectBlocks: (ids: number[]) => void
   onUpdateBlock: (id: number, changes: Partial<BlockData>) => void
   onDeleteBlocks: (ids: number[]) => void
-  onBlockDragEnd: () => void
+  /** Ouvre une entrée d'historique avant la première modification d'un geste. */
+  onGestureStart: () => void
 }
 
-export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpdateBlock, onDeleteBlocks, onBlockDragEnd }: Props) {
+export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpdateBlock, onDeleteBlocks, onGestureStart }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [view, setView] = useState({ zoom: 1, offset: { x: 0, y: 0 } })
   const { zoom, offset } = view
-  const isPanning = useRef(false)
+  // État (et non ref) : la transition CSS du canvas en dépend, or lire une
+  // ref pendant le rendu ne déclenche aucune mise à jour.
+  const [isPanning, setIsPanning] = useState(false)
   const panStart = useRef({ x: 0, y: 0 })
   const [snapLines, setSnapLines] = useState<SnapLine[]>([])
-  
+  // Un appui prolongé sur une flèche émet des dizaines de keydown : une seule
+  // entrée d'historique pour toute la rafale, refermée au keyup.
+  const arrowGestureOpen = useRef(false)
+
   const [selectionRect, setSelectionRect] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null)
   const isSelectingArea = useRef(false)
   const selectionStart = useRef({ x: 0, y: 0 })
@@ -53,6 +59,10 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
       const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
       if (arrowKeys.includes(e.key) && selectedBlockIds.length > 0) {
         e.preventDefault()
+        if (!arrowGestureOpen.current) {
+          arrowGestureOpen.current = true
+          onGestureStart()
+        }
         const step = e.shiftKey ? 10 : 1
         let dx = 0
         let dy = 0
@@ -73,9 +83,7 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
-      if (arrowKeys.includes(e.key) && selectedBlockIds.length > 0) {
-        onBlockDragEnd()
-      }
+      if (arrowKeys.includes(e.key)) arrowGestureOpen.current = false
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -84,7 +92,21 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [selectedBlockIds, blocks, onDeleteBlocks, onUpdateBlock, onBlockDragEnd])
+  }, [selectedBlockIds, blocks, onDeleteBlocks, onUpdateBlock, onGestureStart])
+
+  // Un mouseup relâché hors de la fenêtre laissait le panoramique actif
+  // indéfiniment : on écoute donc aussi au niveau du document.
+  useEffect(() => {
+    const stopGestures = () => {
+      setIsPanning(false)
+      if (isSelectingArea.current) {
+        isSelectingArea.current = false
+        setSelectionRect(null)
+      }
+    }
+    window.addEventListener('mouseup', stopGestures)
+    return () => window.removeEventListener('mouseup', stopGestures)
+  }, [])
 
   useEffect(() => {
     const el = wrapperRef.current
@@ -129,7 +151,7 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button === 1) {
       e.preventDefault()
-      isPanning.current = true
+      setIsPanning(true)
       panStart.current = { x: e.clientX - offset.x, y: e.clientY - offset.y }
     } else if (e.button === 0 && (e.target === canvasRef.current || e.target === wrapperRef.current)) {
       e.preventDefault()
@@ -148,7 +170,7 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
   }
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isPanning.current) {
+    if (isPanning) {
       setView(prev => ({
         ...prev,
         offset: {
@@ -184,15 +206,6 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
       } else {
         onSelectBlocks(intersectingIds)
       }
-    }
-  }
-
-  const handleMouseUp = (e: React.MouseEvent) => {
-    if (e.button === 1) {
-      isPanning.current = false
-    } else if (e.button === 0 && isSelectingArea.current) {
-      isSelectingArea.current = false
-      setSelectionRect(null)
     }
   }
 
@@ -252,20 +265,27 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
     }
   }
 
-  const zoomAtCenter = (newZoom: number) => {
+  // Le pas est appliqué au zoom courant lu dans le setter : calculer
+  // `zoom + 0.1` à l'extérieur repartait de la valeur du dernier rendu, et
+  // plusieurs clics rapprochés se écrasaient les uns les autres.
+  const zoomByStep = (step: number) => {
     const el = wrapperRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
     const cx = rect.width / 2
     const cy = rect.height / 2
 
-    setView(prev => ({
-      zoom: newZoom,
-      offset: {
-        x: cx - (cx - prev.offset.x) * (newZoom / prev.zoom),
-        y: cy - (cy - prev.offset.y) * (newZoom / prev.zoom),
+    setView(prev => {
+      const newZoom = Math.min(3, Math.max(0.25, prev.zoom + step))
+      if (newZoom === prev.zoom) return prev
+      return {
+        zoom: newZoom,
+        offset: {
+          x: cx - (cx - prev.offset.x) * (newZoom / prev.zoom),
+          y: cy - (cy - prev.offset.y) * (newZoom / prev.zoom),
+        }
       }
-    }))
+    })
   }
 
   const handleBlockMove = (id: number, rawX: number, rawY: number) => {
@@ -348,7 +368,6 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
 
   const handleBlockDragEnd = () => {
     setSnapLines([])
-    onBlockDragEnd()
   }
 
   return (
@@ -357,12 +376,11 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
       className={styles.wrapper}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
     >
       <div style={{
         transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
         transformOrigin: '0 0',
-        transition: isPanning.current ? 'none' : 'transform 0.05s',
+        transition: isPanning ? 'none' : 'transform 0.05s',
       }}>
         <div ref={canvasRef} className={styles.canvas} onClick={handleCanvasClick}>
 
@@ -381,10 +399,12 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
                 key={block.id}
                 block={block}
                 isSelected={selectedBlockIds.includes(block.id)}
+                zoom={zoom}
                 onSelect={handleBlockSelect}
                 onUpdate={onUpdateBlock}
                 onMove={handleBlockMove}
                 onDragEnd={handleBlockDragEnd}
+                onGestureStart={onGestureStart}
                 onDelete={(id) => onDeleteBlocks([id])}
                 onReorder={handleReorder}
               />
@@ -407,9 +427,9 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
       </div>
 
       <div className={styles.zoomControls}>
-        <button onClick={() => zoomAtCenter(Math.max(0.25, zoom - 0.1))} className={styles.zoomBtn}>−</button>
+        <button onClick={() => zoomByStep(-0.1)} className={styles.zoomBtn}>−</button>
         <span className={styles.zoomLabel}>{Math.round(zoom * 100)}%</span>
-        <button onClick={() => zoomAtCenter(Math.min(3, zoom + 0.1))} className={styles.zoomBtn}>+</button>
+        <button onClick={() => zoomByStep(0.1)} className={styles.zoomBtn}>+</button>
         <button onClick={() => setView({ zoom: 1, offset: { x: 0, y: 0 } })} className={styles.zoomBtn}>↺</button>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import type { Slide } from '../types'
-import { registerMedia, getAllMediaForSave, clearMediaStore } from './mediaStore'
+import { registerMedia, getAllMediaForSave, clearMediaStore, pruneMedia } from './mediaStore'
 
 const DRAFT_KEY = 'shadowrama-draft'
 
@@ -31,43 +31,42 @@ export function clearDraft() {
   localStorage.removeItem(DRAFT_KEY)
 }
 
-declare global {
-  interface Window {
-    fileAPI: {
-      saveProjectAs: (manifestJson: string, media: { key: string; data: string }[], defaultName: string) => Promise<string | null>
-      saveProject: (filePath: string, manifestJson: string, media: { key: string; data: string }[]) => Promise<string>
-      openProject: () => Promise<{ filePath: string; manifestJson: string; media: { key: string; data: string }[] } | null>
-    }
-  }
-}
-
 function serializeManifest(slides: Slide[]): string {
   return JSON.stringify({ version: 2, slides })
 }
 
+// Médias réellement référencés par un bloc image : tout le reste est du déchet
+// laissé par un bloc supprimé ou une image remplacée.
+function collectUsedMediaKeys(slides: Slide[]): Set<string> {
+  const keys = new Set<string>()
+  for (const slide of slides) {
+    for (const block of slide.blocks) {
+      if (block.type === 'image' && block.src?.startsWith('media/')) keys.add(block.src)
+    }
+  }
+  return keys
+}
+
+function mediaToWrite(slides: Slide[]) {
+  pruneMedia(collectUsedMediaKeys(slides))
+  return getAllMediaForSave()
+}
+
 export async function saveProjectAs(slides: Slide[], defaultName: string): Promise<string | null> {
-  const manifestJson = serializeManifest(slides)
-  const media = getAllMediaForSave()
-  return window.fileAPI.saveProjectAs(manifestJson, media, defaultName)
+  return window.fileAPI.saveProjectAs(serializeManifest(slides), mediaToWrite(slides), defaultName)
 }
 
 export async function saveProjectToPath(slides: Slide[], filePath: string): Promise<string> {
-  const manifestJson = serializeManifest(slides)
-  const media = getAllMediaForSave()
-  return window.fileAPI.saveProject(filePath, manifestJson, media)
+  return window.fileAPI.saveProject(filePath, serializeManifest(slides), mediaToWrite(slides))
 }
 
 export async function openProject(): Promise<{ slides: Slide[]; filePath: string } | null> {
   const result = await window.fileAPI.openProject()
   if (!result) return null
 
-  console.log('[openProject] chemin lu:', result.filePath, '— taille manifest lu:', result.manifestJson.length)
-  console.log('[openProject] contenu manifest:', result.manifestJson)
-
   clearMediaStore()
   for (const m of result.media) {
-    const mimeType = guessMimeType(m.key)
-    registerMedia(m.key, m.data, mimeType)
+    registerMedia(m.key, m.data, guessMimeType(m.key))
   }
 
   const parsed = JSON.parse(result.manifestJson)

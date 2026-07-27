@@ -17,50 +17,50 @@ interface Props {
 
 export default function TopBar({ slides, projectName, setProjectName, filePath, setFilePath, onLoad, onNew }: Props) {
   const [presenting, setPresenting] = useState(false)
-  const [isDirty, setIsDirty] = useState(false)
   const [nameDialogOpen, setNameDialogOpen] = useState(false)
   const [nameInput, setNameInput] = useState('mon-projet')
-  const lastSavedRef = useRef<string | null>(filePath ? JSON.stringify(slides) : null)
+  // Dernier état sauvegardé, comparé par référence : les diapos étant
+  // immuables, une simple égalité de référence remplace le JSON.stringify de
+  // toutes les diapos à chaque frappe. Bonus : un Ctrl+Z ramenant à l'état
+  // sauvegardé restaure la même référence, donc le projet redevient « propre ».
+  const [savedSlides, setSavedSlides] = useState<Slide[] | null>(filePath ? slides : null)
+  const isDirty = savedSlides !== slides
 
-  // Refs synchronisées à chaque render — handleSave lit depuis ces refs (jamais stale)
+  // handleSave est stable ([] en dépendances) et lit tout depuis ces refs, mises
+  // à jour après chaque rendu — le raccourci Ctrl+S n'est donc jamais périmé.
   const slidesRef = useRef(slides)
-  slidesRef.current = slides
   const filePathRef = useRef(filePath)
-  filePathRef.current = filePath
   const projectNameRef = useRef(projectName)
-  projectNameRef.current = projectName
-
   useEffect(() => {
-    const current = JSON.stringify(slides)
-    setIsDirty(lastSavedRef.current !== current)
-  }, [slides])
+    slidesRef.current = slides
+    filePathRef.current = filePath
+    projectNameRef.current = projectName
+  })
 
-  // Dépendances [] : handleSave est créé une seule fois et lit tout depuis les refs.
-  // Le listener Ctrl+S n'est donc jamais périmé.
   const handleSave = useCallback(async () => {
+    // Un bloc de texte en cours d'édition n'a pas encore propagé son contenu :
+    // on le fait perdre le focus, puis on laisse React appliquer les mises à
+    // jour en attente avant de lire les refs.
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()
     }
-
-    // Laisse React traiter les setState en attente avant de lire les refs
     await new Promise(resolve => setTimeout(resolve, 0))
 
     const currentSlides = slidesRef.current
     const currentFilePath = filePathRef.current
-    const currentProjectName = projectNameRef.current
 
-    if (currentFilePath) {
-      try {
-        await saveProjectToPath(currentSlides, currentFilePath)
-        lastSavedRef.current = JSON.stringify(currentSlides)
-        setIsDirty(false)
-      } catch (err) {
-        console.error('[save] erreur:', err)
-        alert(`Erreur lors de la sauvegarde :\n${err}`)
-      }
-    } else {
-      setNameInput(currentProjectName ?? 'mon-projet')
+    if (!currentFilePath) {
+      setNameInput(projectNameRef.current ?? 'mon-projet')
       setNameDialogOpen(true)
+      return
+    }
+
+    try {
+      await saveProjectToPath(currentSlides, currentFilePath)
+      setSavedSlides(currentSlides)
+    } catch (err) {
+      console.error('[save] erreur:', err)
+      alert(`Erreur lors de la sauvegarde :\n${err}`)
     }
   }, [])
 
@@ -82,8 +82,7 @@ export default function TopBar({ slides, projectName, setProjectName, filePath, 
       const name = result.filePath.split(/[\\/]/).pop()!.replace('.shma', '')
       onLoad(result.slides, name)
       setFilePath(result.filePath)
-      lastSavedRef.current = JSON.stringify(result.slides)
-      setIsDirty(false)
+      setSavedSlides(result.slides)
     } catch (err) {
       console.error('[open] ERREUR:', err)
       alert('Impossible de lire ce fichier .shma')
@@ -102,8 +101,7 @@ export default function TopBar({ slides, projectName, setProjectName, filePath, 
       }
       setProjectName(name)
       setFilePath(path)
-      lastSavedRef.current = JSON.stringify(currentSlides)
-      setIsDirty(false)
+      setSavedSlides(currentSlides)
       setNameDialogOpen(false)
     } catch (err) {
       console.error('[saveAs] ERREUR:', err)
@@ -118,9 +116,8 @@ export default function TopBar({ slides, projectName, setProjectName, filePath, 
     if (!proceed) return
     clearDraft()
     clearMediaStore()
-    lastSavedRef.current = null
+    setSavedSlides(null)
     setFilePath(null)
-    setIsDirty(false)
     onNew()
   }
 

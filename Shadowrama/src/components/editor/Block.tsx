@@ -6,11 +6,16 @@ import ContextMenu from './ContextMenu'
 interface Props {
   block: BlockData
   isSelected: boolean
+  /** Facteur de zoom du canvas : les deltas souris sont en pixels écran,
+   *  les coordonnées des blocs en pixels canvas. */
+  zoom: number
   onSelect: (block: BlockData, isMultiSelect: boolean) => void
   onUpdate: (id: number, changes: Partial<BlockData>) => void
   onDelete: (id: number) => void
   onMove: (id: number, x: number, y: number) => void
   onDragEnd: () => void
+  /** Ouvre une entrée d'historique avant la première modification d'un geste. */
+  onGestureStart: () => void
   onReorder: (id: number, direction: 'front' | 'back' | 'forward' | 'backward') => void
 }
 
@@ -27,16 +32,27 @@ const HANDLES: { dir: ResizeHandle; style: React.CSSProperties }[] = [
   { dir: 'sw', style: { bottom: -4, left: -4, cursor: 'sw-resize', width: 8, height: 8 } },
 ]
 
-export default function Block({ block, isSelected, onSelect, onUpdate, onDelete, onMove, onDragEnd, onReorder }: Props) {
+export default function Block({
+  block, isSelected, zoom, onSelect, onUpdate, onDelete, onMove, onDragEnd, onGestureStart, onReorder,
+}: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const isDragging = useRef(false)
   const isResizing = useRef(false)
+  // L'entrée d'historique n'est ouverte qu'au premier mouvement réel : un simple
+  // clic de sélection ne doit pas produire un « annuler » qui ne change rien.
+  const gestureOpened = useRef(false)
   const resizeDir = useRef<ResizeHandle | null>(null)
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0, bx: 0, by: 0 })
   const offset = useRef({ x: 0, y: 0 })
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   const BlockComponent = BLOCKS_REGISTRY[block.type]
+
+  const openGestureOnce = () => {
+    if (gestureOpened.current) return
+    gestureOpened.current = true
+    onGestureStart()
+  }
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -50,19 +66,20 @@ export default function Block({ block, isSelected, onSelect, onUpdate, onDelete,
     const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey
     onSelect(block, isMultiSelect)
     isDragging.current = true
-    offset.current = { x: e.clientX - block.x, y: e.clientY - block.y }
+    gestureOpened.current = false
+    // On divise par le zoom pour repasser en coordonnées canvas : sans ça, un
+    // bloc suit la souris à la mauvaise vitesse dès que le zoom n'est pas à 100 %.
+    offset.current = { x: e.clientX / zoom - block.x, y: e.clientY / zoom - block.y }
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging.current) return
-      onMove(block.id,
-        e.clientX - offset.current.x,
-        e.clientY - offset.current.y,
-      )
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return
+      openGestureOnce()
+      onMove(block.id, e.clientX / zoom - offset.current.x, e.clientY / zoom - offset.current.y)
     }
 
-  const handleMouseUp = () => {
-    isDragging.current = false
-    onDragEnd()  // ← efface les lignes
+    const handleMouseUp = () => {
+      isDragging.current = false
+      onDragEnd()
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
@@ -75,6 +92,7 @@ export default function Block({ block, isSelected, onSelect, onUpdate, onDelete,
     e.preventDefault()
     e.stopPropagation()
     isResizing.current = true
+    gestureOpened.current = false
     resizeDir.current = dir
     resizeStart.current = {
       x: e.clientX,
@@ -87,8 +105,9 @@ export default function Block({ block, isSelected, onSelect, onUpdate, onDelete,
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing.current) return
-      const dx = e.clientX - resizeStart.current.x
-      const dy = e.clientY - resizeStart.current.y
+      openGestureOnce()
+      const dx = (e.clientX - resizeStart.current.x) / zoom
+      const dy = (e.clientY - resizeStart.current.y) / zoom
       const dir = resizeDir.current!
       const changes: Partial<BlockData> = {}
 
@@ -109,6 +128,7 @@ export default function Block({ block, isSelected, onSelect, onUpdate, onDelete,
     const handleMouseUp = () => {
       isResizing.current = false
       resizeDir.current = null
+      onDragEnd()
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
@@ -139,7 +159,11 @@ export default function Block({ block, isSelected, onSelect, onUpdate, onDelete,
           block={block}
           onUpdate={onUpdate}
           isEditing={isEditing}
-          onStartEdit={() => setIsEditing(true)}
+          onStartEdit={() => {
+            // Toute la session de saisie ne forme qu'une seule entrée d'historique.
+            onGestureStart()
+            setIsEditing(true)
+          }}
           onStopEdit={() => setIsEditing(false)}
         />
       )}
@@ -167,6 +191,7 @@ export default function Block({ block, isSelected, onSelect, onUpdate, onDelete,
           x={contextMenu.x}
           y={contextMenu.y}
           onUpdate={onUpdate}
+          onGestureStart={onGestureStart}
           onReorder={onReorder}
           onDelete={onDelete}
           onClose={() => setContextMenu(null)}

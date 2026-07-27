@@ -2,10 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&display=swap" rel="stylesheet">
 <style>
+  /* Cette fenêtre est chargée via loadFile, hors bundle Vite : elle ne peut pas
+     importer les polices @fontsource et ne doit pas dépendre du réseau. */
   :root {
     --bg: rgba(20, 20, 26, 0.92);
     --border: rgba(255, 255, 255, 0.08);
@@ -24,7 +23,7 @@
     height: 100%;
     background: transparent;
     overflow: hidden;
-    font-family: 'Bricolage Grotesque', sans-serif;
+    font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
     -webkit-app-region: drag;
     user-select: none;
   }

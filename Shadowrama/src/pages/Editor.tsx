@@ -3,13 +3,14 @@ import { BLOCKS_CONFIG } from '../blocks'
 import type { AnimationType, BlockData, Slide } from '../types'
 import { useEditorHistory } from '../hooks/useEditorHistory'
 import { loadDraft, saveDraft } from '../utils/fileManager'
+import { hydrateMediaStore } from '../utils/mediaStore'
+import { nextId } from '../utils/ids'
 import Canvas from '../components/editor/Canvas'
 import LeftSidebars from '../components/editor/LeftSidebars'
-import Sidebar from '../components/editor/Sidebar'
-import AnimationsSidebar from '../components/editor/AnimationsSidebar'
 import TopBar from '../components/editor/TopBar'
 import SlidePanel from '../components/editor/SlidePanel'
 
+const AUTOSAVE_DELAY_MS = 500
 
 export default function Editor() {
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -17,10 +18,18 @@ export default function Editor() {
   const [initialDraft] = useState(() => loadDraft())
   const [projectName, setProjectName] = useState<string | null>(initialDraft?.projectName ?? null)
   const [filePath, setFilePath] = useState<string | null>(initialDraft?.filePath ?? null)
+  // Les blocs image lisent le store média pendant leur rendu : il doit être
+  // rechargé depuis IndexedDB avant le premier affichage, sinon les images du
+  // brouillon restauré apparaissent vides.
+  const [mediaReady, setMediaReady] = useState(false)
 
-  const { slides, commit, patch, undo, redo, reset } = useEditorHistory(
-   initialDraft?.slides ?? [{ id: 1, blocks: [] }]
+  const { slides, begin, commit, patch, undo, redo, reset } = useEditorHistory(
+    initialDraft?.slides ?? [{ id: nextId(), blocks: [] }]
   )
+
+  useEffect(() => {
+    hydrateMediaStore().finally(() => setMediaReady(true))
+  }, [])
 
   // ── Ctrl+Z / Ctrl+Shift+Z (redo)
   useEffect(() => {
@@ -38,23 +47,23 @@ export default function Editor() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [undo, redo])
 
-  // ── Autosave
+  // ── Autosave différé : un déplacement émet une mise à jour par frame, et
+  //    sérialiser toutes les diapos à chaque frame saccadait l'édition.
   useEffect(() => {
-    saveDraft(projectName, filePath, slides)
+    const timer = setTimeout(() => saveDraft(projectName, filePath, slides), AUTOSAVE_DELAY_MS)
+    return () => clearTimeout(timer)
   }, [slides, projectName, filePath])
-
-
 
   // ── Slides
   const addSlide = () => {
-    commit(prev => [...prev, { id: Date.now(), blocks: [] }])
+    commit(prev => [...prev, { id: nextId(), blocks: [] }])
     setCurrentSlide(slides.length)
   }
 
   const duplicateSlide = (index: number) => {
     const copy: Slide = {
-      id: Date.now(),
-      blocks: slides[index].blocks.map(b => ({ ...b, id: Date.now() + Math.random() }))
+      id: nextId(),
+      blocks: slides[index].blocks.map(b => ({ ...b, id: nextId() })),
     }
     commit(prev => {
       const next = [...prev]
@@ -67,7 +76,11 @@ export default function Editor() {
   const deleteSlide = (index: number) => {
     if (slides.length === 1) return
     commit(prev => prev.filter((_, i) => i !== index))
-    setCurrentSlide(prev => Math.min(prev, slides.length - 2))
+    setCurrentSlide(prev => {
+      // Supprimer une diapo située avant la courante décale l'index de celle-ci.
+      if (index < prev) return prev - 1
+      return Math.min(prev, slides.length - 2)
+    })
   }
 
   const onReorderSlides = useCallback((fromIndex: number, toIndex: number) => {
@@ -93,7 +106,7 @@ export default function Editor() {
     const newBlock = {
       x: 100, y: 100, width: 200, height: 60,
       ...config.defaultProps, ...block,
-      id: Date.now(),
+      id: nextId(),
       properties: config.properties,
     } as BlockData
     commit(prev => prev.map((s, i) =>
@@ -101,34 +114,32 @@ export default function Editor() {
     ))
   }
 
-  const updateBlock = (id: number, changes: Partial<BlockData>) => {
+  // État intermédiaire d'un geste : l'entrée d'historique a déjà été ouverte
+  // par `begin` au début du geste (voir useEditorHistory).
+  const updateBlock = useCallback((id: number, changes: Partial<BlockData>) => {
     patch(prev => prev.map((s, i) =>
       i === currentSlide
         ? { ...s, blocks: s.blocks.map(b => b.id === id ? ({ ...b, ...changes } as BlockData) : b) }
         : s
     ))
-  }
+  }, [patch, currentSlide])
 
   const handleNewProject = () => {
-    reset([{ id: Date.now(), blocks: [] }])
+    reset([{ id: nextId(), blocks: [] }])
     setProjectName(null)
     setFilePath(null)
     setCurrentSlide(0)
     setSelectedBlockIds([])
   }
 
-  const handleBlockDragEnd = useCallback(() => {
-    commit(prev => prev)
-  }, [commit])
-
-  const handleDeleteBlocks = (ids: number[]) => {
+  const handleDeleteBlocks = useCallback((ids: number[]) => {
     commit(prev => prev.map((slide, i) =>
       i === currentSlide
         ? { ...slide, blocks: slide.blocks.filter(b => !ids.includes(b.id)) }
         : slide
     ))
     setSelectedBlockIds([])
-  }
+  }, [commit, currentSlide])
 
   // ── Animations
   const handleSelectAnimation = (type: AnimationType) => {
@@ -165,14 +176,16 @@ export default function Editor() {
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <LeftSidebars onAddBlock={addBlock} onSelectAnimation={handleSelectAnimation} />
-        <Canvas
-          blocks={slides[currentSlide].blocks}
-          selectedBlockIds={selectedBlockIds}
-          onSelectBlocks={setSelectedBlockIds}
-          onUpdateBlock={updateBlock}
-          onDeleteBlocks={handleDeleteBlocks}
-          onBlockDragEnd={handleBlockDragEnd}
-        />
+        {mediaReady && (
+          <Canvas
+            blocks={slides[currentSlide].blocks}
+            selectedBlockIds={selectedBlockIds}
+            onSelectBlocks={setSelectedBlockIds}
+            onUpdateBlock={updateBlock}
+            onDeleteBlocks={handleDeleteBlocks}
+            onGestureStart={begin}
+          />
+        )}
         <SlidePanel
           slides={slides}
           currentSlide={currentSlide}

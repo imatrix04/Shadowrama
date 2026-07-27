@@ -13,6 +13,8 @@ interface Props {
   onUpdate: (id: number, changes: Partial<BlockData>) => void
   onDelete: (id: number) => void
   onReorder: (id: number, direction: 'front' | 'back' | 'forward' | 'backward') => void
+  /** Ouvre une entrée d'historique avant la première modification d'un champ. */
+  onGestureStart: () => void
   onClose: () => void
 }
 
@@ -27,7 +29,7 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
           onChange={e => onUpdate(block.id, setBlockField(block, prop.key, Number(e.target.value)))}
         />
       )
-    case 'color':
+    case 'color': {
       const colorVal = String(getBlockField(block, prop.key) ?? '')
       const isTransparent = !colorVal || colorVal === 'transparent'
 
@@ -63,6 +65,7 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
           )}
         </div>
       )
+    }
     case 'text':
       return (
         <input
@@ -131,7 +134,7 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
   }
 }
 
-export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder, onClose }: Props) {
+export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder, onGestureStart, onClose }: Props) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ x, y })
 
@@ -176,14 +179,22 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
           </div>
         </div>
 
+        {/* `onPointerDown`/`onFocus` ouvrent l'entrée d'historique avant la
+            première modification : glisser un sélecteur de couleur ne produit
+            ainsi qu'un seul « annuler ». */}
         {properties.map(prop => (
-          <div key={prop.key} className={styles.field}>
+          <div
+            key={prop.key}
+            className={styles.field}
+            onPointerDown={onGestureStart}
+            onFocus={onGestureStart}
+          >
             <label className={styles.fieldLabel}>{prop.label}</label>
             {renderField(prop, block, onUpdate)}
           </div>
         ))}
 
-        <div className={styles.field}>
+        <div className={styles.field} onPointerDown={onGestureStart}>
           <label className={styles.fieldLabel}>Animation d'entrée</label>
           <CustomSelect
             value={block.animation?.type ?? 'none'}

@@ -7,6 +7,15 @@ export interface BlockProperty {
   options?: { label: string; value: string }[]
 }
 
+export type AnimationType = 'fadeIn' | 'slideInLeft' | 'slideInRight' | 'slideInUp' | 'zoomIn' | 'none'
+
+export interface AnimationConfig {
+  type: AnimationType
+  duration?: number   // secondes, défaut 0.6
+  delay?: number      // secondes, défaut 0
+  ease?: string       // ex: 'power2.out', défaut 'power2.out'
+}
+
 // Champs communs à TOUS les blocs, quel que soit leur type
 export interface BaseBlockData {
   id: number
@@ -16,6 +25,7 @@ export interface BaseBlockData {
   height: number
   zIndex?: number
   properties?: BlockProperty[]
+  animation?: AnimationConfig
 }
 
 // ── Un type par bloc, avec SES props spécifiques ──
@@ -52,26 +62,6 @@ export interface TitleBlockData extends BaseBlockData {
   fontSize?: number
   color?: string
   textAlign?: 'left' | 'center' | 'right'
-}
-
-export type AnimationType = 'fadeIn' | 'slideInLeft' | 'slideInRight' | 'slideInUp' | 'zoomIn' | 'none'
-
-export interface AnimationConfig {
-  type: AnimationType
-  duration?: number   // secondes, défaut 0.6
-  delay?: number      // secondes, défaut 0
-  ease?: string       // ex: 'power2.out', défaut 'power2.out'
-}
-
-export interface BaseBlockData {
-  id: number
-  x: number
-  y: number
-  width: number
-  height: number
-  zIndex?: number
-  properties?: BlockProperty[]
-  animation?: AnimationConfig   // ← nouveau champ optionnel, commun à tous les blocs
 }
 
 // Futurs blocs : vidéo, graphique, carrousel...

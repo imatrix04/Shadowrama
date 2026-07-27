@@ -4,7 +4,13 @@ import { join } from 'path'
 
 let updateWin: BrowserWindow | null = null
 
-function send(channel: string, data: any) {
+export type UpdateStatus =
+  | { state: 'available'; info: unknown }
+  | { state: 'downloading'; percent: number; transferred: number; total: number; bytesPerSecond: number }
+  | { state: 'downloaded' }
+  | { state: 'error'; message: string }
+
+function send(channel: string, data: UpdateStatus) {
   if (updateWin && !updateWin.isDestroyed()) {
     updateWin.webContents.send(channel, data)
   }
