@@ -2,6 +2,14 @@
   "_comment": "Source unique des notes de version. Alimente (1) l'écran « Nouveautés » embarqué dans l'application, (2) le corps de la release GitHub — donc les notes affichées AVANT la mise à jour — et (3) la section Changelog du README. Régénérer avec : npm run changelog. Les versions sont listées de la plus récente à la plus ancienne.",
   "releases": [
     {
+      "version": "0.13.1",
+      "date": "2026-07-28",
+      "summary": "Correction d'un bug dans l'affichage des notes de version.",
+      "fixed": [
+        "Le texte des notes de version n'était pas affiché dans la fenêtre de mise à jour, qui restait sur un texte générique."
+      ]
+    },
+    {
       "version": "0.13.0",
       "date": "2026-07-28",
       "summary": "Notes de version avant la mise à jour, et présentation des nouveautés après.",

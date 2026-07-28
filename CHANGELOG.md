@@ -2,6 +2,11 @@
 
 <!-- Généré depuis changelog.json par `npm run changelog`. Ne pas éditer à la main. -->
 
+## 0.13.1 — 2026-07-28
+
+### Corrections
+- Le texte des notes de version n'était pas affiché dans la fenêtre de mise à jour, qui restait sur un texte générique.
+
 ## 0.13.0 — 2026-07-28
 
 **Savoir ce qu'on installe** — La fenêtre de mise à jour affiche désormais le numéro de version et le détail des changements avant que vous ne décidiez de télécharger.
