@@ -32,3 +32,5 @@ dist-electron/
 
 
 .claude/
+# Notes de release générées depuis changelog.json (voir scripts/changelog.mjs)
+release-notes.md

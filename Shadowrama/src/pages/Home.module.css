@@ -24,6 +24,34 @@
   padding: 1.5rem clamp(1.5rem, 5vw, 4rem);
 }
 
+/* Point d'entrée permanent vers les nouveautés : sans lui, l'information
+   n'est consultable qu'une fois, au lancement suivant une mise à jour. */
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+
+.navLink:hover {
+  color: var(--ink);
+  border-color: var(--line);
+  background-color: rgba(139, 59, 255, 0.08);
+}
+
+.navVersion {
+  font-size: 0.72rem;
+  color: var(--violet);
+}
+
 .logo {
   font-family: 'Bricolage Grotesque', sans-serif;
   font-weight: 700;

@@ -7,6 +7,8 @@ import {
 import type { RecentProject } from '../utils/fileManager'
 import type { Slide } from '../types'
 import Dialog from '../components/ui/Dialog'
+import WhatsNew from '../components/ui/WhatsNew'
+import { useWhatsNew } from '../hooks/useWhatsNew'
 import styles from './Home.module.css'
 
 function formatDate(timestamp: number): string {
@@ -21,6 +23,7 @@ export default function Home() {
   // inutile de passer par un effet et un rendu supplémentaire.
   const [recents, setRecents] = useState<RecentProject[]>(loadRecents)
   const [error, setError] = useState<string | null>(null)
+  const whatsNew = useWhatsNew()
 
   const goToEditor = () => navigate('/editor')
 
@@ -72,6 +75,14 @@ export default function Home() {
         <span className={styles.logo}>
           Shadowrama<span className={styles.logoDot}>.</span>
         </span>
+        {whatsNew.hasChangelog && (
+          <button className={styles.navLink} onClick={whatsNew.open}>
+            Nouveautés
+            {whatsNew.currentVersion && (
+              <span className={styles.navVersion}>v{whatsNew.currentVersion}</span>
+            )}
+          </button>
+        )}
       </nav>
 
       <section className={styles.hero}>
@@ -121,6 +132,15 @@ export default function Home() {
           <div className={`${styles.mockBlock} ${styles.mockTextSmall}`} />
         </div>
       </section>
+
+      {whatsNew.isOpen && (
+        <WhatsNew
+          releases={whatsNew.releases}
+          mode={whatsNew.mode}
+          currentVersion={whatsNew.currentVersion}
+          onClose={whatsNew.close}
+        />
+      )}
 
       {error && (
         <Dialog

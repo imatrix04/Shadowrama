@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   setFullScreen: (value: boolean) => ipcRenderer.send('set-fullscreen', value),
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
 })
 
 contextBridge.exposeInMainWorld('fileAPI', {

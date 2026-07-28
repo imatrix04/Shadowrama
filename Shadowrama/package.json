@@ -1,15 +1,16 @@
 {
   "name": "Shadowrama",
-  "version": "0.12.2",
+  "version": "0.13.0",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && npm run copy:electron-assets",
     "copy:electron-assets": "node -e \"const fs=require('fs');fs.mkdirSync('dist-electron/update-window',{recursive:true});fs.copyFileSync('electron/update-window/update-dialog.html','dist-electron/update-window/update-dialog.html')\"",
     "lint": "eslint .",
+    "changelog": "node scripts/changelog.mjs all",
     "preview": "vite preview",
     "dist": "npm run build && electron-builder",
-    "release": "dotenv -- electron-builder --publish always"
+    "release": "npm run changelog && dotenv -- electron-builder --publish always"
   },
   "build": {
     "appId": "com.shadowrama.desktop",
@@ -18,6 +19,9 @@
       "provider": "github",
       "owner": "imatrix04",
       "repo": "Shadowrama"
+    },
+    "releaseInfo": {
+      "releaseNotesFile": "release-notes.md"
     },
     "files": [
       "dist/**/*",

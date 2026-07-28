@@ -6,9 +6,17 @@ interface MediaPayload {
   data: string
 }
 
+type UpdateCheckResult =
+  | { status: 'available'; version: string }
+  | { status: 'up-to-date' }
+  | { status: 'dev' }
+  | { status: 'error'; message: string }
+
 interface Window {
   electronAPI?: {
     setFullScreen: (value: boolean) => void
+    getAppVersion: () => Promise<string>
+    checkForUpdates: () => Promise<UpdateCheckResult>
   }
   fileAPI: {
     saveProjectAs: (manifestJson: string, media: MediaPayload[], defaultName: string) => Promise<string | null>

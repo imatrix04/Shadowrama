@@ -140,6 +140,41 @@
     -webkit-app-region: no-drag;
   }
 
+  /* Zone des notes de version. La fenêtre est petite : le contenu défile. */
+  .notes {
+    margin-top: 14px;
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 6px;
+    -webkit-app-region: no-drag;
+    user-select: text;
+  }
+
+  .notes::-webkit-scrollbar { width: 6px; }
+  .notes::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.14);
+    border-radius: 3px;
+  }
+
+  .note-version {
+    margin: 12px 0 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .notes > .note-version:first-child { margin-top: 0; }
+
+  .note-body {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-dim);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
   .actions {
     display: flex;
     gap: 8px;
@@ -191,7 +226,9 @@
           </div>
           <h2 id="title">Mise à jour disponible</h2>
         </div>
-        <p id="subtitle">Une nouvelle version de Shadowrama est prête à être téléchargée.</p>
+        <p id="subtitle">Recherche des informations de version…</p>
+
+        <div id="notes" class="notes" style="display:none;"></div>
 
         <div id="progress-container" style="display:none;">
           <div class="progress-track">
@@ -202,6 +239,7 @@
       </div>
 
       <div class="actions" id="actions">
+        <button class="secondary" id="btn-skip" style="display:none;">Ignorer cette version</button>
         <button class="secondary" id="btn-later">Plus tard</button>
         <button class="primary" id="btn-download">Télécharger</button>
       </div>
@@ -212,43 +250,124 @@
   const title = document.getElementById('title')
   const subtitle = document.getElementById('subtitle')
   const actions = document.getElementById('actions')
+  const notesEl = document.getElementById('notes')
   const progressContainer = document.getElementById('progress-container')
   const progressFill = document.getElementById('progress-fill')
   const progressLabel = document.getElementById('progress-label')
+  const btnSkip = document.getElementById('btn-skip')
+  const btnLater = document.getElementById('btn-later')
+  const btnDownload = document.getElementById('btn-download')
 
-  document.getElementById('btn-later').addEventListener('click', () => {
-    window.updateAPI.later()
+  let availableVersion = null
+
+  btnLater.addEventListener('click', () => window.updateAPI.later())
+
+  btnSkip.addEventListener('click', () => {
+    if (availableVersion) window.updateAPI.skipVersion(availableVersion)
   })
 
-  document.getElementById('btn-download').addEventListener('click', () => {
+  btnDownload.addEventListener('click', () => {
     window.updateAPI.startDownload()
     subtitle.textContent = 'Téléchargement en cours…'
     progressContainer.style.display = 'block'
-    actions.innerHTML = ''
+    actions.replaceChildren()
   })
 
-  window.updateAPI.onStatus((data) => {
+  /**
+   * Les notes viennent du corps de la release GitHub, donc du réseau, et
+   * contiennent du HTML. On les insère en texte : `innerHTML` donnerait à
+   * quiconque contrôle la release une exécution de code dans une fenêtre dont
+   * le preload expose quitAndInstall.
+   */
+  function renderNotes(notes) {
+    notesEl.replaceChildren()
+    if (!notes || notes.length === 0) {
+      notesEl.style.display = 'none'
+      return
+    }
+
+    for (const { version, note } of notes) {
+      const heading = document.createElement('p')
+      heading.className = 'note-version'
+      heading.textContent = 'Version ' + version
+      notesEl.appendChild(heading)
+
+      const body = document.createElement('p')
+      body.className = 'note-body'
+      body.textContent = htmlToText(note)
+      notesEl.appendChild(body)
+    }
+    notesEl.style.display = 'block'
+  }
+
+  /** Réduit le HTML de la release à du texte lisible, sans jamais l'interpréter. */
+  function htmlToText(html) {
+    const NL = String.fromCharCode(10)
+    return html
+      // Contenu des balises exécutables retiré avec les balises : sans ça, le
+      // corps d'un <script> réapparaîtrait sous forme de texte dans la fenêtre.
+      .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+      .replace(/<\/(p|div|li|h[1-6])>/gi, NL)
+      .replace(/<li[^>]*>/gi, '• ')
+      .replace(/<br\s*\/?>/gi, NL)
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&')
+      .replace(/\n{3,}/g, NL + NL)
+      .trim()
+  }
+
+  function apply(data) {
+    if (!data) return
+
+    if (data.state === 'available') {
+      availableVersion = data.version
+      title.textContent = 'Mise à jour disponible'
+      subtitle.textContent = 'Version ' + data.version + ' — voici ce qui change :'
+      btnSkip.style.display = ''
+      renderNotes(data.notes)
+    }
+
     if (data.state === 'downloading') {
+      progressContainer.style.display = 'block'
       progressFill.style.width = data.percent + '%'
       const speed = (data.bytesPerSecond / 1024 / 1024).toFixed(1)
-      progressLabel.textContent = `${data.percent}% — ${speed} Mo/s`
+      progressLabel.textContent = data.percent + '% — ' + speed + ' Mo/s'
     }
 
     if (data.state === 'downloaded') {
       title.textContent = 'Mise à jour prête'
-      subtitle.textContent = 'Redémarre l\'application pour l\'installer.'
+      subtitle.textContent = "Redémarre l'application pour l'installer."
       progressContainer.style.display = 'none'
-      actions.innerHTML = '<button class="primary" id="btn-install">Redémarrer maintenant</button>'
-      document.getElementById('btn-install').addEventListener('click', () => {
-        window.updateAPI.installNow()
-      })
+
+      const install = document.createElement('button')
+      install.className = 'primary'
+      install.textContent = 'Redémarrer maintenant'
+      install.addEventListener('click', () => window.updateAPI.installNow())
+
+      const later = document.createElement('button')
+      later.className = 'secondary'
+      later.textContent = 'Plus tard'
+      later.addEventListener('click', () => window.updateAPI.later())
+
+      actions.replaceChildren(later, install)
     }
 
     if (data.state === 'error') {
       subtitle.textContent = 'Erreur : ' + data.message
       progressContainer.style.display = 'none'
     }
-  })
+  }
+
+  window.updateAPI.onStatus(apply)
+
+  // Le statut « available » est émis avant le chargement de ce script : on le
+  // réclame au montage plutôt que d'espérer arriver à temps pour l'écouter.
+  window.updateAPI.requestStatus().then(apply)
 </script>
 
 </body>
