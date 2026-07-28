@@ -23,7 +23,35 @@ embarquées en base64).
 
 ### v0.11.0
 
-Passe de correctifs sur l'éditeur, à la suite d'un audit du code existant.
+Passe de correctifs et d'améliorations sur l'éditeur, à la suite d'un audit du
+code existant.
+
+**Nouveautés et améliorations**
+- **Réglages d'animation** : la durée, le délai et la courbe d'accélération
+  sont désormais modifiables par bloc (jusqu'ici figés à 0,6 s / 0 s /
+  `power2.out`). Le délai permet de faire apparaître les blocs d'une diapo
+  en cascade.
+- **Cadrage des images** : choix entre remplir (rogne), contenir ou étirer.
+- **Boutons Annuler / Rétablir** dans la barre du haut, désactivés quand il
+  n'y a rien à annuler.
+- **Raccourcis** : `Ctrl+D` duplique la sélection, `Ctrl+A` sélectionne tous
+  les blocs de la diapositive.
+- **Page d'accueil** : bouton « Ouvrir un projet » et liste des projets
+  récents ; une entrée dont le fichier a disparu est retirée automatiquement.
+- **Magnétisme au redimensionnement** : les bords tirés s'alignent sur les
+  autres blocs et sur la diapositive, comme c'était déjà le cas au
+  déplacement.
+- **Ajuster à l'écran** : le bouton ↺ centre et ajuste la diapositive au lieu
+  de revenir à 100 % dans le coin haut-gauche ; la vue s'ouvre également
+  ajustée.
+- **Molette** : `Ctrl`+molette zoome, la molette seule fait défiler et
+  `Maj`+molette défile horizontalement (convention usuelle des éditeurs).
+- **Blocs de texte** : la hauteur du bloc s'ajuste au contenu en fin de saisie
+  au lieu de laisser le texte déborder sous le cadre.
+- **Contenu texte éditable depuis le menu contextuel**, en plus du
+  double-clic.
+- Les boîtes `alert()` / `confirm()` du navigateur sont remplacées par un
+  dialogue intégré à la charte graphique.
 
 **Corrections**
 - Le build de production (`tsc -b`) ne compilait plus à cause d'imports morts
@@ -59,6 +87,18 @@ Passe de correctifs sur l'éditeur, à la suite d'un audit du code existant.
 - Les polices (Google Fonts) étaient chargées par le réseau, ce qui les
   rendait invisibles dans l'application packagée hors ligne — elles sont
   maintenant embarquées dans le build.
+- **Les champs éditables d'un bloc étaient recopiés dans le fichier `.shma`**
+  au lieu d'être résolus depuis la configuration de son type. Un projet
+  enregistré restait donc figé sur l'ancienne liste de champs et ne voyait
+  jamais ceux ajoutés par les versions suivantes. Ils sont désormais résolus à
+  l'affichage, et les copies héritées sont nettoyées à l'ouverture.
+- **L'ouverture d'un `.shma` ne validait rien** : un fichier corrompu ou plus
+  récent provoquait un plantage rattrapé par un message générique. Le contenu
+  est maintenant vérifié, les blocs d'un type inconnu sont ignorés plutôt que
+  de faire échouer toute la présentation, et l'erreur affichée est explicite.
+- **L'échec de la sauvegarde automatique du brouillon** (espace de stockage du
+  navigateur saturé) faisait tomber l'éditeur ; il est désormais signalé
+  discrètement dans la barre du haut sans interrompre le travail.
 
 **Nettoyage**
 - Suppression de composants obsolètes et non utilisés (`Sidebar`,

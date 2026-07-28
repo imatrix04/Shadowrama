@@ -13,6 +13,8 @@ interface Props {
   onUpdate: (id: number, changes: Partial<BlockData>) => void
   onDelete: (id: number) => void
   onMove: (id: number, x: number, y: number) => void
+  /** Redimensionnement : passe par le Canvas, qui applique le magnétisme. */
+  onResize: (id: number, changes: Partial<BlockData>) => void
   onDragEnd: () => void
   /** Ouvre une entrée d'historique avant la première modification d'un geste. */
   onGestureStart: () => void
@@ -33,7 +35,7 @@ const HANDLES: { dir: ResizeHandle; style: React.CSSProperties }[] = [
 ]
 
 export default function Block({
-  block, isSelected, zoom, onSelect, onUpdate, onDelete, onMove, onDragEnd, onGestureStart, onReorder,
+  block, isSelected, zoom, onSelect, onUpdate, onDelete, onMove, onResize, onDragEnd, onGestureStart, onReorder,
 }: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const isDragging = useRef(false)
@@ -122,7 +124,7 @@ export default function Block({
         changes.y      = resizeStart.current.by + resizeStart.current.h - changes.height
       }
 
-      onUpdate(block.id, changes)
+      onResize(block.id, changes)
     }
 
     const handleMouseUp = () => {

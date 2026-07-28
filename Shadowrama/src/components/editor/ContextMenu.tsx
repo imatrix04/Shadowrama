@@ -2,9 +2,29 @@ import { useRef, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { BlockData, BlockProperty, AnimationType } from '../../types'
 import { getBlockField, setBlockField } from '../../types'
+import { getBlockProperties } from '../../blocks'
 import styles from './ContextMenu.module.css'
 import CustomSelect from '../../styles/CustomSelect'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
+
+// Doivent rester alignés sur les valeurs par défaut de useBlockAnimation.
+const DEFAULT_DURATION = 0.6
+const DEFAULT_EASE = 'power2.out'
+
+const EASE_OPTIONS = [
+  { label: 'Douce (sortie)', value: 'power2.out' },
+  { label: 'Douce (entrée/sortie)', value: 'power2.inOut' },
+  { label: 'Linéaire', value: 'none' },
+  { label: 'Rebond', value: 'back.out(1.7)' },
+  { label: 'Élastique', value: 'elastic.out(1, 0.5)' },
+]
+
+// Les champs numériques acceptent une saisie vide ou aberrante : on retombe
+// sur la valeur par défaut plutôt que d'écrire NaN dans le projet.
+function clamp(value: number, min: number, max: number, fallback: number): number {
+  if (Number.isNaN(value)) return fallback
+  return Math.min(max, Math.max(min, value))
+}
 
 interface Props {
   block: BlockData
@@ -20,6 +40,16 @@ interface Props {
 
 function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: number, changes: Partial<BlockData>) => void) {
   switch (prop.type) {
+    case 'textarea':
+      return (
+        <textarea
+          className={styles.input}
+          rows={3}
+          style={{ resize: 'vertical', fontFamily: 'inherit' }}
+          value={String(getBlockField(block, prop.key) ?? '')}
+          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, e.target.value))}
+        />
+      )
     case 'number':
       return (
         <input
@@ -146,7 +176,18 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
     setPos({ x: newX, y: newY })
   }, [x, y])
 
-  const properties = block.properties?.filter(p => p.key !== 'content') ?? []
+  // Résolues depuis la config du type, pas depuis le bloc : voir BaseBlockData.
+  const properties = getBlockProperties(block.type)
+  const animation = block.animation
+  const hasAnimation = !!animation && animation.type !== 'none'
+
+  const updateAnimation = (changes: Partial<NonNullable<BlockData['animation']>>) => {
+    onUpdate(block.id, setBlockField(block, 'animation', {
+      type: animation?.type ?? 'none',
+      ...animation,
+      ...changes,
+    }))
+  }
 
   return createPortal(
     <>
@@ -197,7 +238,7 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
         <div className={styles.field} onPointerDown={onGestureStart}>
           <label className={styles.fieldLabel}>Animation d'entrée</label>
           <CustomSelect
-            value={block.animation?.type ?? 'none'}
+            value={animation?.type ?? 'none'}
             options={[
               { label: 'Aucune', value: 'none' },
               { label: 'Fondu', value: 'fadeIn' },
@@ -206,11 +247,50 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
               { label: 'Glisse depuis le bas', value: 'slideInUp' },
               { label: 'Zoom', value: 'zoomIn' },
             ]}
-            onChange={v => onUpdate(block.id, setBlockField(
-              block, 'animation', { ...block.animation, type: v as AnimationType }
-            ))}
+            onChange={v => updateAnimation({ type: v as AnimationType })}
           />
         </div>
+
+        {/* Réglages fins : seulement quand une animation est choisie, sinon ils
+            n'ont aucun effet visible. Le délai est ce qui permet de faire
+            apparaître les blocs d'une diapo en cascade. */}
+        {hasAnimation && (
+          <>
+            <div className={styles.field} onPointerDown={onGestureStart} onFocus={onGestureStart}>
+              <label className={styles.fieldLabel}>Durée (s)</label>
+              <input
+                type="number"
+                className={styles.input}
+                min={0.1}
+                max={5}
+                step={0.1}
+                value={animation.duration ?? DEFAULT_DURATION}
+                onChange={e => updateAnimation({ duration: clamp(parseFloat(e.target.value), 0.1, 5, DEFAULT_DURATION) })}
+              />
+            </div>
+            <div className={styles.field} onPointerDown={onGestureStart} onFocus={onGestureStart}>
+              <label className={styles.fieldLabel}>Délai (s)</label>
+              <input
+                type="number"
+                className={styles.input}
+                min={0}
+                max={10}
+                step={0.1}
+                value={animation.delay ?? 0}
+                onChange={e => updateAnimation({ delay: clamp(parseFloat(e.target.value), 0, 10, 0) })}
+              />
+            </div>
+            <div className={styles.field} onPointerDown={onGestureStart}>
+              <label className={styles.fieldLabel}>Courbe</label>
+              <CustomSelect
+                value={animation.ease ?? DEFAULT_EASE}
+                options={EASE_OPTIONS}
+                onChange={v => updateAnimation({ ease: v })}
+              />
+            </div>
+          </>
+        )}
+
         <div className={styles.deleteSection}>
           <button
             className={`${styles.smallBtn} ${styles.deleteBtn}`}

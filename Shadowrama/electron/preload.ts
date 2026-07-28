@@ -10,4 +10,5 @@ contextBridge.exposeInMainWorld('fileAPI', {
   saveProject: (filePath: string, manifestJson: string, media: { key: string; data: string }[]) =>
     ipcRenderer.invoke('save-project', filePath, manifestJson, media),
   openProject: () => ipcRenderer.invoke('open-project'),
+  openProjectAt: (filePath: string) => ipcRenderer.invoke('open-project-at', filePath),
 })

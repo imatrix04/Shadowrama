@@ -11,6 +11,7 @@ import TopBar from '../components/editor/TopBar'
 import SlidePanel from '../components/editor/SlidePanel'
 
 const AUTOSAVE_DELAY_MS = 500
+const DUPLICATE_OFFSET = 16
 
 export default function Editor() {
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -22,8 +23,11 @@ export default function Editor() {
   // rechargé depuis IndexedDB avant le premier affichage, sinon les images du
   // brouillon restauré apparaissent vides.
   const [mediaReady, setMediaReady] = useState(false)
+  // L'autosauvegarde peut échouer (quota du navigateur saturé) : on le signale
+  // dans la barre plutôt que de laisser croire que tout est enregistré.
+  const [draftFailed, setDraftFailed] = useState(false)
 
-  const { slides, begin, commit, patch, undo, redo, reset } = useEditorHistory(
+  const { slides, begin, commit, patch, undo, redo, reset, canUndo, canRedo } = useEditorHistory(
     initialDraft?.slides ?? [{ id: nextId(), blocks: [] }]
   )
 
@@ -31,26 +35,12 @@ export default function Editor() {
     hydrateMediaStore().finally(() => setMediaReady(true))
   }, [])
 
-  // ── Ctrl+Z / Ctrl+Shift+Z (redo)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault()
-        undo()
-      }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-        e.preventDefault()
-        redo()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [undo, redo])
-
   // ── Autosave différé : un déplacement émet une mise à jour par frame, et
   //    sérialiser toutes les diapos à chaque frame saccadait l'édition.
   useEffect(() => {
-    const timer = setTimeout(() => saveDraft(projectName, filePath, slides), AUTOSAVE_DELAY_MS)
+    const timer = setTimeout(() => {
+      setDraftFailed(!saveDraft(projectName, filePath, slides))
+    }, AUTOSAVE_DELAY_MS)
     return () => clearTimeout(timer)
   }, [slides, projectName, filePath])
 
@@ -107,7 +97,6 @@ export default function Editor() {
       x: 100, y: 100, width: 200, height: 60,
       ...config.defaultProps, ...block,
       id: nextId(),
-      properties: config.properties,
     } as BlockData
     commit(prev => prev.map((s, i) =>
       i === currentSlide ? { ...s, blocks: [...s.blocks, newBlock] } : s
@@ -141,6 +130,57 @@ export default function Editor() {
     setSelectedBlockIds([])
   }, [commit, currentSlide])
 
+  // Duplique la sélection avec un léger décalage, pour que les copies ne se
+  // superposent pas exactement aux originaux.
+  const duplicateBlocks = useCallback((ids: number[]) => {
+    if (ids.length === 0) return
+    const copies: BlockData[] = []
+    commit(prev => prev.map((slide, i) => {
+      if (i !== currentSlide) return slide
+      for (const block of slide.blocks) {
+        if (!ids.includes(block.id)) continue
+        copies.push({ ...block, id: nextId(), x: block.x + DUPLICATE_OFFSET, y: block.y + DUPLICATE_OFFSET })
+      }
+      return { ...slide, blocks: [...slide.blocks, ...copies] }
+    }))
+    setSelectedBlockIds(copies.map(b => b.id))
+  }, [commit, currentSlide])
+
+  const selectAllBlocks = useCallback(() => {
+    setSelectedBlockIds(slides[currentSlide]?.blocks.map(b => b.id) ?? [])
+  }, [slides, currentSlide])
+
+  // ── Raccourcis clavier globaux de l'éditeur
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey
+      if (!mod) return
+
+      // Pendant une saisie, les raccourcis d'édition de texte du navigateur
+      // (tout sélectionner, etc.) doivent l'emporter.
+      const el = document.activeElement
+      const isTyping = el instanceof HTMLElement && (
+        el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable
+      )
+
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+      } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+        e.preventDefault()
+        redo()
+      } else if (e.key === 'd' && !isTyping) {
+        e.preventDefault()
+        duplicateBlocks(selectedBlockIds)
+      } else if (e.key === 'a' && !isTyping) {
+        e.preventDefault()
+        selectAllBlocks()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [undo, redo, duplicateBlocks, selectAllBlocks, selectedBlockIds])
+
   // ── Animations
   const handleSelectAnimation = (type: AnimationType) => {
     if (selectedBlockIds.length === 0) return
@@ -173,6 +213,11 @@ export default function Editor() {
           setProjectName(name)
         }}
         onNew={handleNewProject}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        draftFailed={draftFailed}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <LeftSidebars onAddBlock={addBlock} onSelectAnimation={handleSelectAnimation} />

@@ -53,7 +53,14 @@ export function createTextualBlock(defaultFontSize: number, extraStyle: CSSPrope
     }
 
     const handleBlur = () => {
-      onUpdate?.(block.id, { content: ref.current?.innerText ?? '' })
+      const el = ref.current
+      const content = el?.innerText ?? ''
+
+      // Le bloc a une hauteur fixe : un texte plus long débordait silencieusement
+      // sous le cadre. On agrandit le bloc à la fin de la saisie (pas pendant,
+      // pour éviter qu'il ne sautille à chaque caractère).
+      const overflow = el && el.scrollHeight > el.clientHeight
+      onUpdate?.(block.id, overflow ? { content, height: el.scrollHeight } : { content })
       onStopEdit?.()
     }
 

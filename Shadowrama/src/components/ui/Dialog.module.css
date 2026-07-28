@@ -1,0 +1,95 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.dialog {
+  background-color: #1e1e2e;
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  padding: 1rem;
+  width: 320px;
+  max-width: calc(100vw - 2rem);
+}
+
+.title {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--editor-text);
+}
+
+.body {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--editor-text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.input {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background-color: #2a2a2a;
+  border: 1px solid var(--editor-border-light);
+  border-radius: 4px;
+  color: var(--editor-text);
+  font-size: 0.9rem;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.btn {
+  padding: 0.4rem 0.75rem;
+  background-color: transparent;
+  border: 1px solid var(--editor-border-light);
+  border-radius: 4px;
+  color: var(--editor-text);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.btn:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.btnAccent {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btnAccent:hover {
+  filter: brightness(1.1);
+  background-color: var(--accent);
+}
+
+.btnDanger {
+  border-color: rgba(255, 107, 107, 0.5);
+  color: #ff8787;
+}
+
+.btnDanger:hover {
+  background-color: rgba(255, 107, 107, 0.12);
+}

@@ -32,6 +32,16 @@
   color: var(--warning);
 }
 
+.warning {
+  font-size: 0.75rem;
+  color: var(--warning);
+  border: 1px solid rgba(255, 184, 77, 0.35);
+  background-color: rgba(255, 184, 77, 0.1);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  cursor: help;
+}
+
 .actions {
   display: flex;
   gap: 0.5rem;
@@ -51,9 +61,14 @@
   transition: background-color 0.15s, border-color 0.15s;
 }
 
-.btn:hover {
+.btn:hover:not(:disabled) {
   background-color: var(--editor-btn-bg-hover);
   border-color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .btn:focus-visible {

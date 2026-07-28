@@ -16,7 +16,12 @@ export interface AnimationConfig {
   ease?: string       // ex: 'power2.out', défaut 'power2.out'
 }
 
-// Champs communs à TOUS les blocs, quel que soit leur type
+// Champs communs à TOUS les blocs, quel que soit leur type.
+// Les descripteurs de champs éditables ne sont volontairement PAS stockés ici :
+// ils sont résolus depuis BLOCKS_CONFIG via `getBlockProperties(block.type)`.
+// Les embarquer dans le bloc les figeait dans le fichier .shma, si bien qu'un
+// projet enregistré ne voyait jamais les champs ajoutés dans les versions
+// suivantes.
 export interface BaseBlockData {
   id: number
   x: number
@@ -24,7 +29,6 @@ export interface BaseBlockData {
   width: number
   height: number
   zIndex?: number
-  properties?: BlockProperty[]
   animation?: AnimationConfig
 }
 

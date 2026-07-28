@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import type { BlockData } from '../../types'
 import Block from './Block'
 import styles from './Canvas.module.css'
@@ -6,6 +6,12 @@ import styles from './Canvas.module.css'
 const CANVAS_W = 960
 const CANVAS_H = 540
 const SNAP_THRESHOLD = 5
+const MIN_ZOOM = 0.25
+const MAX_ZOOM = 3
+const FIT_PADDING = 48
+// Dimensions minimales d'un bloc, appliquées aussi après magnétisme.
+const MIN_BLOCK_W = 40
+const MIN_BLOCK_H = 20
 
 interface SnapLine {
   type: 'h' | 'v'
@@ -112,17 +118,19 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
     const el = wrapperRef.current
     if (!el) return
 
+    // Convention usuelle des éditeurs graphiques : Ctrl/⌘ + molette zoome,
+    // molette seule fait défiler (Maj pour défiler horizontalement).
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault()
 
-      if (!e.shiftKey) {
+      if (e.ctrlKey || e.metaKey) {
         const rect = el.getBoundingClientRect()
         const mouseX = e.clientX - rect.left
         const mouseY = e.clientY - rect.top
-        const delta = -e.deltaY * 0.001
+        const delta = -e.deltaY * 0.002
 
         setView(prev => {
-          const newZoom = Math.min(3, Math.max(0.25, prev.zoom + delta * prev.zoom))
+          const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev.zoom + delta * prev.zoom))
           if (newZoom === prev.zoom) return prev
           return {
             zoom: newZoom,
@@ -135,12 +143,12 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
         return
       }
 
+      // Maj inverse les axes, comme dans la plupart des navigateurs, pour
+      // permettre un défilement horizontal à la molette verticale.
+      const [dx, dy] = e.shiftKey ? [e.deltaY, e.deltaX] : [e.deltaX, e.deltaY]
       setView(prev => ({
         ...prev,
-        offset: {
-          x: prev.offset.x - e.deltaX,
-          y: prev.offset.y - e.deltaY,
-        }
+        offset: { x: prev.offset.x - dx, y: prev.offset.y - dy },
       }))
     }
 
@@ -267,7 +275,7 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
 
   // Le pas est appliqué au zoom courant lu dans le setter : calculer
   // `zoom + 0.1` à l'extérieur repartait de la valeur du dernier rendu, et
-  // plusieurs clics rapprochés se écrasaient les uns les autres.
+  // plusieurs clics rapprochés s'écrasaient les uns les autres.
   const zoomByStep = (step: number) => {
     const el = wrapperRef.current
     if (!el) return
@@ -276,7 +284,7 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
     const cy = rect.height / 2
 
     setView(prev => {
-      const newZoom = Math.min(3, Math.max(0.25, prev.zoom + step))
+      const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev.zoom + step))
       if (newZoom === prev.zoom) return prev
       return {
         zoom: newZoom,
@@ -287,6 +295,31 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
       }
     })
   }
+
+  // Le bouton de réinitialisation ramenait à 100 % en (0,0), c'est-à-dire au
+  // coin haut-gauche. On ajuste plutôt la diapo à la zone visible et on la
+  // centre, ce qui est le comportement attendu d'un « réinitialiser la vue ».
+  const fitToScreen = useCallback(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const { width, height } = el.getBoundingClientRect()
+    if (width === 0 || height === 0) return
+
+    const zoom = Math.min(
+      MAX_ZOOM,
+      Math.max(
+        MIN_ZOOM,
+        Math.min((width - FIT_PADDING) / CANVAS_W, (height - FIT_PADDING) / CANVAS_H)
+      )
+    )
+    setView({
+      zoom,
+      offset: { x: (width - CANVAS_W * zoom) / 2, y: (height - CANVAS_H * zoom) / 2 },
+    })
+  }, [])
+
+  // Vue ajustée dès l'ouverture, plutôt qu'une diapo collée au coin.
+  useEffect(() => { fitToScreen() }, [fitToScreen])
 
   const handleBlockMove = (id: number, rawX: number, rawY: number) => {
     const block = blocks.find(b => b.id === id)
@@ -366,6 +399,72 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
     }
   }
 
+  /**
+   * Magnétisme au redimensionnement : seuls les bords effectivement tirés sont
+   * aimantés. Le déplacement en bénéficiait déjà, pas le redimensionnement, ce
+   * qui rendait impossible d'aligner proprement deux blocs par leurs bords.
+   */
+  const handleBlockResize = (id: number, changes: Partial<BlockData>) => {
+    const block = blocks.find(b => b.id === id)
+    if (!block) return
+
+    const others = blocks.filter(b => b.id !== id)
+    const vTargets = [
+      0, CANVAS_W / 2, CANVAS_W,
+      ...others.flatMap(b => [b.x, b.x + b.width / 2, b.x + b.width]),
+    ]
+    const hTargets = [
+      0, CANVAS_H / 2, CANVAS_H,
+      ...others.flatMap(b => [b.y, b.y + b.height / 2, b.y + b.height]),
+    ]
+
+    const snapTo = (value: number, targets: number[]): number | null => {
+      for (const target of targets) {
+        if (Math.abs(value - target) < SNAP_THRESHOLD) return target
+      }
+      return null
+    }
+
+    const next = { ...block, ...changes } as BlockData
+    const lines: SnapLine[] = []
+
+    // `x` modifié ⇒ le bord gauche bouge ; sinon c'est le bord droit.
+    if (changes.x !== undefined) {
+      const snapped = snapTo(next.x, vTargets)
+      if (snapped !== null) {
+        const right = next.x + next.width
+        next.x = Math.min(snapped, right - MIN_BLOCK_W)
+        next.width = right - next.x
+        lines.push({ type: 'v', pos: snapped })
+      }
+    } else if (changes.width !== undefined) {
+      const snapped = snapTo(next.x + next.width, vTargets)
+      if (snapped !== null) {
+        next.width = Math.max(MIN_BLOCK_W, snapped - next.x)
+        lines.push({ type: 'v', pos: snapped })
+      }
+    }
+
+    if (changes.y !== undefined) {
+      const snapped = snapTo(next.y, hTargets)
+      if (snapped !== null) {
+        const bottom = next.y + next.height
+        next.y = Math.min(snapped, bottom - MIN_BLOCK_H)
+        next.height = bottom - next.y
+        lines.push({ type: 'h', pos: snapped })
+      }
+    } else if (changes.height !== undefined) {
+      const snapped = snapTo(next.y + next.height, hTargets)
+      if (snapped !== null) {
+        next.height = Math.max(MIN_BLOCK_H, snapped - next.y)
+        lines.push({ type: 'h', pos: snapped })
+      }
+    }
+
+    setSnapLines(lines)
+    onUpdateBlock(id, { x: next.x, y: next.y, width: next.width, height: next.height })
+  }
+
   const handleBlockDragEnd = () => {
     setSnapLines([])
   }
@@ -402,6 +501,7 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
                 zoom={zoom}
                 onSelect={handleBlockSelect}
                 onUpdate={onUpdateBlock}
+                onResize={handleBlockResize}
                 onMove={handleBlockMove}
                 onDragEnd={handleBlockDragEnd}
                 onGestureStart={onGestureStart}
@@ -430,7 +530,7 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
         <button onClick={() => zoomByStep(-0.1)} className={styles.zoomBtn}>−</button>
         <span className={styles.zoomLabel}>{Math.round(zoom * 100)}%</span>
         <button onClick={() => zoomByStep(0.1)} className={styles.zoomBtn}>+</button>
-        <button onClick={() => setView({ zoom: 1, offset: { x: 0, y: 0 } })} className={styles.zoomBtn}>↺</button>
+        <button onClick={fitToScreen} className={styles.zoomBtn} title="Ajuster à l'écran">↺</button>
       </div>
     </div>
   )

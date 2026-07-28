@@ -25,8 +25,15 @@ ipcMain.handle('open-project', async () => {
     properties: ['openFile'],
   })
   if (canceled || !filePaths[0]) return null
+  return readProject(filePaths[0])
+})
 
-  const filePath = filePaths[0]
+// Ouverture sans boîte de dialogue, pour la liste des projets récents.
+ipcMain.handle('open-project-at', async (_e, filePath: string) => {
+  return readProject(filePath)
+})
+
+async function readProject(filePath: string) {
   const buffer = await readFile(filePath)
   const zip = await JSZip.loadAsync(buffer)
 
@@ -47,7 +54,7 @@ ipcMain.handle('open-project', async () => {
   }
 
   return { filePath, manifestJson, media }
-})
+}
 
 async function writeZip(filePath: string, manifestJson: string, media: MediaEntry[]) {
   const zip = new JSZip()

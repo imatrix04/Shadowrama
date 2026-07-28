@@ -14,5 +14,6 @@ interface Window {
     saveProjectAs: (manifestJson: string, media: MediaPayload[], defaultName: string) => Promise<string | null>
     saveProject: (filePath: string, manifestJson: string, media: MediaPayload[]) => Promise<string>
     openProject: () => Promise<{ filePath: string; manifestJson: string; media: MediaPayload[] } | null>
+    openProjectAt: (filePath: string) => Promise<{ filePath: string; manifestJson: string; media: MediaPayload[] }>
   }
 }

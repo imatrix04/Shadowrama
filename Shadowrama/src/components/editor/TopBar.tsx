@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Slide } from '../../types'
-import { saveProjectAs, saveProjectToPath, openProject, clearDraft } from '../../utils/fileManager'
+import {
+  saveProjectAs, saveProjectToPath, openProject, clearDraft,
+  rememberRecent, projectNameFromPath, ProjectFormatError,
+} from '../../utils/fileManager'
 import { clearMediaStore } from '../../utils/mediaStore'
+import Dialog from '../ui/Dialog'
 import PresentationMode from './PresentationMode'
 import styles from './TopBar.module.css'
 
@@ -13,12 +17,23 @@ interface Props {
   setFilePath: (path: string | null) => void
   onLoad: (slides: Slide[], name: string) => void
   onNew: () => void
+  onUndo: () => void
+  onRedo: () => void
+  canUndo: boolean
+  canRedo: boolean
+  /** Vrai quand la dernière autosauvegarde a échoué (quota du navigateur). */
+  draftFailed: boolean
 }
 
-export default function TopBar({ slides, projectName, setProjectName, filePath, setFilePath, onLoad, onNew }: Props) {
+export default function TopBar({
+  slides, projectName, setProjectName, filePath, setFilePath, onLoad, onNew,
+  onUndo, onRedo, canUndo, canRedo, draftFailed,
+}: Props) {
   const [presenting, setPresenting] = useState(false)
   const [nameDialogOpen, setNameDialogOpen] = useState(false)
   const [nameInput, setNameInput] = useState('mon-projet')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [confirmNewOpen, setConfirmNewOpen] = useState(false)
   // Dernier état sauvegardé, comparé par référence : les diapos étant
   // immuables, une simple égalité de référence remplace le JSON.stringify de
   // toutes les diapos à chaque frappe. Bonus : un Ctrl+Z ramenant à l'état
@@ -58,9 +73,10 @@ export default function TopBar({ slides, projectName, setProjectName, filePath, 
     try {
       await saveProjectToPath(currentSlides, currentFilePath)
       setSavedSlides(currentSlides)
+      rememberRecent(currentFilePath, projectNameFromPath(currentFilePath))
     } catch (err) {
       console.error('[save] erreur:', err)
-      alert(`Erreur lors de la sauvegarde :\n${err}`)
+      setErrorMessage(`La sauvegarde a échoué.\n\n${err instanceof Error ? err.message : String(err)}`)
     }
   }, [])
 
@@ -79,13 +95,18 @@ export default function TopBar({ slides, projectName, setProjectName, filePath, 
     try {
       const result = await openProject()
       if (!result) return
-      const name = result.filePath.split(/[\\/]/).pop()!.replace('.shma', '')
+      const name = projectNameFromPath(result.filePath)
       onLoad(result.slides, name)
       setFilePath(result.filePath)
       setSavedSlides(result.slides)
+      rememberRecent(result.filePath, name)
     } catch (err) {
       console.error('[open] ERREUR:', err)
-      alert('Impossible de lire ce fichier .shma')
+      setErrorMessage(
+        err instanceof ProjectFormatError
+          ? err.message
+          : "Impossible de lire ce fichier .shma. Il est peut-être corrompu ou inaccessible."
+      )
     }
   }
 
@@ -95,30 +116,31 @@ export default function TopBar({ slides, projectName, setProjectName, filePath, 
     const currentSlides = slidesRef.current
     try {
       const path = await saveProjectAs(currentSlides, name)
-      if (!path) {
-        setNameDialogOpen(false)
-        return
-      }
+      setNameDialogOpen(false)
+      if (!path) return // l'utilisateur a annulé la boîte système
       setProjectName(name)
       setFilePath(path)
       setSavedSlides(currentSlides)
-      setNameDialogOpen(false)
+      rememberRecent(path, name)
     } catch (err) {
       console.error('[saveAs] ERREUR:', err)
-      alert(`Erreur lors de la sauvegarde : ${err}`)
+      setNameDialogOpen(false)
+      setErrorMessage(`La sauvegarde a échoué.\n\n${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
-  const handleNew = () => {
-    const proceed = isDirty
-      ? confirm('Des modifications non sauvegardées seront perdues. Continuer ?')
-      : true
-    if (!proceed) return
+  const startNewProject = () => {
     clearDraft()
     clearMediaStore()
     setSavedSlides(null)
     setFilePath(null)
+    setConfirmNewOpen(false)
     onNew()
+  }
+
+  const handleNew = () => {
+    if (isDirty) setConfirmNewOpen(true)
+    else startNewProject()
   }
 
   return (
@@ -132,12 +154,26 @@ export default function TopBar({ slides, projectName, setProjectName, filePath, 
               {isDirty && <span className={styles.dirtyDot} title="Non sauvegardé"> ●</span>}
             </span>
           )}
+          {draftFailed && (
+            <span
+              className={styles.warning}
+              title="La sauvegarde automatique du brouillon a échoué (espace de stockage saturé). Enregistrez votre projet dans un fichier .shma."
+            >
+              ⚠ Brouillon non sauvegardé
+            </span>
+          )}
         </div>
         <div className={styles.actions}>
+          <button className={styles.btn} onClick={onUndo} disabled={!canUndo} title="Annuler (Ctrl+Z)">
+            ↶
+          </button>
+          <button className={styles.btn} onClick={onRedo} disabled={!canRedo} title="Rétablir (Ctrl+Y)">
+            ↷
+          </button>
           <button className={styles.btn} onClick={handleNew}>
             🆕 Nouveau
           </button>
-          <button className={styles.btn} onClick={handleSave}>
+          <button className={styles.btn} onClick={handleSave} title="Sauvegarder (Ctrl+S)">
             💾 Sauvegarder
           </button>
           <button className={styles.btn} onClick={handleOpen}>
@@ -151,27 +187,38 @@ export default function TopBar({ slides, projectName, setProjectName, filePath, 
       </div>
 
       {nameDialogOpen && (
-        <div className={styles.overlay} onClick={() => setNameDialogOpen(false)}>
-          <div className={styles.dialog} onClick={e => e.stopPropagation()}>
-            <p className={styles.dialogTitle}>Nom du projet</p>
-            <input
-              autoFocus
-              className={styles.dialogInput}
-              value={nameInput}
-              onChange={e => setNameInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') confirmSaveWithName()
-                if (e.key === 'Escape') setNameDialogOpen(false)
-              }}
-            />
-            <div className={styles.dialogActions}>
-              <button className={styles.btn} onClick={() => setNameDialogOpen(false)}>Annuler</button>
-              <button className={`${styles.btn} ${styles.btnAccent}`} onClick={confirmSaveWithName}>
-                Sauvegarder
-              </button>
-            </div>
-          </div>
-        </div>
+        <Dialog
+          title="Nom du projet"
+          inputValue={nameInput}
+          onInputChange={setNameInput}
+          onSubmit={confirmSaveWithName}
+          onDismiss={() => setNameDialogOpen(false)}
+          actions={[
+            { label: 'Annuler', onClick: () => setNameDialogOpen(false) },
+            { label: 'Sauvegarder', onClick: confirmSaveWithName, variant: 'accent' },
+          ]}
+        />
+      )}
+
+      {confirmNewOpen && (
+        <Dialog
+          title="Modifications non sauvegardées"
+          message="Les modifications en cours seront perdues. Créer un nouveau projet malgré tout ?"
+          onDismiss={() => setConfirmNewOpen(false)}
+          actions={[
+            { label: 'Annuler', onClick: () => setConfirmNewOpen(false) },
+            { label: 'Continuer', onClick: startNewProject, variant: 'danger' },
+          ]}
+        />
+      )}
+
+      {errorMessage && (
+        <Dialog
+          title="Erreur"
+          message={errorMessage}
+          onDismiss={() => setErrorMessage(null)}
+          actions={[{ label: 'Fermer', onClick: () => setErrorMessage(null), variant: 'accent' }]}
+        />
       )}
 
       {presenting && (
