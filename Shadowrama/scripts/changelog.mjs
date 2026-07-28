@@ -67,14 +67,19 @@ function renderRelease(release, { heading }) {
 
 // ── Commandes ───────────────────────────────────────────────────────────────
 
-function check(releases) {
-  const version = packageVersion()
+/**
+ * @param expected version à publier. Fournie par release.bat AVANT tout commit,
+ *   pour échouer pendant qu'il est encore temps ; sinon on contrôle package.json.
+ */
+function check(releases, expected) {
+  const version = expected ?? packageVersion()
   const versions = releases.map(r => r.version)
   const problems = []
 
   if (versions[0] !== version) {
     problems.push(
-      `package.json est en ${version} mais la version la plus récente de changelog.json est ${versions[0]}.`
+      `La version à publier est ${version}, mais la plus récente de changelog.json est ${versions[0]}.\n`
+      + `    Ajoutez une entrée « ${version} » en tête de changelog.json avant de publier.`
     )
   }
   const duplicates = versions.filter((v, i) => versions.indexOf(v) !== i)
@@ -92,7 +97,7 @@ function check(releases) {
     for (const p of problems) console.error(`  - ${p}`)
     process.exit(1)
   }
-  console.log(`changelog.json cohérent (version courante : ${version}).`)
+  console.log(`changelog.json cohérent (version : ${version}).`)
 }
 
 function writeReleaseNotes(releases) {
@@ -142,13 +147,14 @@ function writeReadme(releases) {
 }
 
 const command = process.argv[2] ?? 'all'
+const expectedVersion = process.argv[3]
 const releases = loadReleases()
 
-if (command === 'check') check(releases)
+if (command === 'check') check(releases, expectedVersion)
 else if (command === 'release-notes') writeReleaseNotes(releases)
 else if (command === 'readme') writeReadme(releases)
 else if (command === 'all') {
-  check(releases)
+  check(releases, expectedVersion)
   writeReleaseNotes(releases)
   writeReadme(releases)
 } else {
