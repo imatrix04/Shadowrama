@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 .env
+release.bat
+README.md
 
 #electron-builder
 release/
