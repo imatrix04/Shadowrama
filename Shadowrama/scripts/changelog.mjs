@@ -44,8 +44,15 @@ function packageVersion() {
 function renderBody(release) {
   const parts = []
 
-  for (const { title, body } of release.highlights ?? []) {
-    parts.push(`**${title}** — ${body}`)
+  // Les nouveautés du mode Ultra Design sont distinguées : en markdown on ne
+  // dispose pas des couleurs de l'écran « Nouveautés », le repère est donc
+  // typographique et explicite.
+  for (const { title, body, ultra } of release.highlights ?? []) {
+    parts.push(
+      ultra
+        ? `> **✦ ${title}** *(Ultra Design)*\n>\n> ${body}`
+        : `**${title}** — ${body}`
+    )
   }
 
   for (const [key, label] of SECTIONS) {

@@ -6,6 +6,8 @@ import { EffectLayer } from '../../ultra/effects'
 import { viewBlock } from '../../ultra/effectStyle'
 import { buildTimeline } from '../../ultra/timeline'
 import { getPreset, presetDuration } from '../../ultra/presets'
+import { getSlideTransition, transitionDuration } from '../../ultra/slideTransitions'
+import { runSlideTransition } from '../../ultra/slideTransitionRunner'
 import styles from './PresentationMode.module.css'
 
 interface Props {
@@ -102,6 +104,13 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
   // de basculer, sinon les blocs disparaîtraient d'un coup.
   const [exiting, setExiting] = useState(false)
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Pendant une transition, la diapositive sortante reste montée en même temps
+  // que l'entrante : les deux couches s'animent en sens inverse.
+  const [outgoing, setOutgoing] = useState<number | null>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const outgoingRef = useRef<HTMLDivElement>(null)
+  const incomingRef = useRef<HTMLDivElement>(null)
+  const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [scale, setScale] = useState(1)
   const [controlsVisible, setControlsVisible] = useState(true)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -139,11 +148,32 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
    */
   const goTo = useCallback((target: number) => {
     const index = Math.min(Math.max(target, 0), slides.length - 1)
-    if (index === current || exitTimer.current) return
+    if (index === current || exitTimer.current || transitionTimer.current) return
+
+    // La transition est portée par la diapositive dans laquelle on ENTRE.
+    const settings = slides[index].transition
+    const transition = getSlideTransition(settings?.preset)
+    // Une transition Ultra reste inerte hors du mode : cohérent avec les effets
+    // et les séquences, qui sont eux aussi neutralisés.
+    const usable = transition && (ultra || transition.tier === 'basic') ? transition : undefined
+
+    const startTransition = () => {
+      if (!usable || usable.duration <= 0) {
+        setCurrent(index)
+        return
+      }
+      const seconds = transitionDuration(usable, settings?.speed ?? 1)
+      setOutgoing(current)
+      setCurrent(index)
+      transitionTimer.current = setTimeout(() => {
+        transitionTimer.current = null
+        setOutgoing(null)
+      }, seconds * 1000)
+    }
 
     const wait = ultra ? exitDuration(slides[current]) : 0
     if (wait <= 0) {
-      setCurrent(index)
+      startTransition()
       return
     }
 
@@ -151,13 +181,30 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
     exitTimer.current = setTimeout(() => {
       exitTimer.current = null
       setExiting(false)
-      setCurrent(index)
+      startTransition()
     }, wait * 1000)
   }, [current, slides, ultra])
+
+  // Joue la transition une fois les deux couches montées.
+  useEffect(() => {
+    if (outgoing === null) return
+    const settings = slides[current]?.transition
+    const transition = getSlideTransition(settings?.preset)
+    if (!transition || !outgoingRef.current || !incomingRef.current) return
+
+    const tween = runSlideTransition({
+      outgoing: outgoingRef.current,
+      incoming: incomingRef.current,
+      transition,
+      speed: settings?.speed ?? 1,
+    })
+    return () => { tween.kill() }
+  }, [outgoing, current, slides])
 
   // Une transition en cours ne doit pas survivre à la fermeture.
   useEffect(() => () => {
     if (exitTimer.current) clearTimeout(exitTimer.current)
+    if (transitionTimer.current) clearTimeout(transitionTimer.current)
   }, [])
 
   // ── Clavier
@@ -202,6 +249,23 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
   }
 
   const slide = slides[current]
+  const outgoingSlide = outgoing !== null ? slides[outgoing] : null
+  const activeTransition = getSlideTransition(slides[current]?.transition?.preset)
+  const needsPerspective = outgoingSlide !== null && activeTransition?.perspective === true
+
+  /** Blocs d'une couche, triés par profondeur. */
+  const renderBlocks = (source: typeof slide, active: boolean, isExiting: boolean) =>
+    source.blocks
+      .slice()
+      .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
+      .map(block => (
+        <AnimatedBlockWrapper
+          key={block.id}
+          block={viewBlock(block, ultra)}
+          isActive={active}
+          exiting={isExiting}
+        />
+      ))
 
   return (
     <div className={styles.overlay}>
@@ -211,18 +275,27 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
         onMouseMove={handleMouseMove}
         onClick={handleSlideAreaClick}
       >
-        <div className={styles.slide} style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}>
-          {slide.blocks
-            .slice()
-            .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
-            .map(block => (
-              <AnimatedBlockWrapper
-                key={block.id}
-                block={viewBlock(block, ultra)}
-                isActive={true}
-                exiting={exiting}
-              />
-            ))}
+        <div
+          ref={stageRef}
+          className={`${styles.stage} ${needsPerspective ? styles.stagePerspective : ''}`}
+          style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}
+        >
+          {/* La couche sortante n'existe que le temps de la transition. Elle est
+              rendue en premier pour passer sous l'entrante. */}
+          {outgoingSlide && (
+            <div ref={outgoingRef} className={styles.slide}>
+              {renderBlocks(outgoingSlide, true, false)}
+            </div>
+          )}
+          <div
+            // La clé force un remontage à chaque changement : les blocs rejouent
+            // ainsi leur séquence d'entrée sur la nouvelle diapositive.
+            key={slide.id}
+            ref={incomingRef}
+            className={styles.slide}
+          >
+            {renderBlocks(slide, true, exiting)}
+          </div>
         </div>
       </div>
 

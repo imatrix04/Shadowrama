@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { BLOCKS_CONFIG } from '../blocks'
-import type { AnimationType, BlockData, MotionPhase, Slide } from '../types'
+import type { AnimationType, BlockData, MotionPhase, Slide, SlideTransitionSettings } from '../types'
 import { useEditorHistory } from '../hooks/useEditorHistory'
 import { loadDraft, saveDraft } from '../utils/fileManager'
 import { hydrateMediaStore } from '../utils/mediaStore'
@@ -32,6 +32,9 @@ export default function Editor() {
   // plusieurs fois de suite : sans lui, deux clics identiques ne changeraient
   // rien et l'animation ne repartirait pas.
   const [motionPreview, setMotionPreview] = useState<{ id: number; phase: MotionPhase; nonce: number } | null>(null)
+  // L'état de présentation vit ici et non dans la barre : le canvas doit savoir
+  // qu'il ne doit plus réagir au clavier tant qu'on présente.
+  const [presenting, setPresenting] = useState(false)
 
   const { slides, begin, commit, patch, undo, redo, reset, canUndo, canRedo } = useEditorHistory(
     initialDraft?.slides ?? [{ id: nextId(), blocks: [] }]
@@ -152,6 +155,24 @@ export default function Editor() {
     setSelectedBlockIds(copies.map(b => b.id))
   }, [commit, currentSlide])
 
+  // Entrer en présentation vide la sélection : les poignées et les raccourcis
+  // n'ont plus de sens, et au retour on ne reprend pas sur un bloc oublié.
+  const handlePresentingChange = useCallback((value: boolean) => {
+    setPresenting(value)
+    if (value) setSelectedBlockIds([])
+  }, [])
+
+  const setSlideTransition = useCallback(
+    (index: number, settings: SlideTransitionSettings | undefined) => {
+      commit(prev => prev.map((slide, i) =>
+        // Aucune transition ⇒ aucun champ : une diapositive sans réglage reste
+        // vierge, et les projets existants ne gagnent pas de données inutiles.
+        i === index ? { ...slide, transition: settings } : slide
+      ))
+    },
+    [commit],
+  )
+
   const selectAllBlocks = useCallback(() => {
     setSelectedBlockIds(slides[currentSlide]?.blocks.map(b => b.id) ?? [])
   }, [slides, currentSlide])
@@ -159,6 +180,7 @@ export default function Editor() {
   // ── Raccourcis clavier globaux de l'éditeur
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (presenting) return
       const mod = e.ctrlKey || e.metaKey
       if (!mod) return
 
@@ -185,7 +207,7 @@ export default function Editor() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [undo, redo, duplicateBlocks, selectAllBlocks, selectedBlockIds])
+  }, [undo, redo, duplicateBlocks, selectAllBlocks, selectedBlockIds, presenting])
 
   // Animation commune à toute la sélection, sinon rien : le panneau ne peut
   // marquer une entrée comme active que si elle vaut pour tous les blocs.
@@ -268,6 +290,8 @@ export default function Editor() {
         draftFailed={draftFailed}
         ultra={ultra}
         onToggleUltra={toggleUltra}
+        presenting={presenting}
+        onPresentingChange={handlePresentingChange}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <LeftSidebars
@@ -291,6 +315,7 @@ export default function Editor() {
             onGestureStart={begin}
             ultra={ultra}
             motionPreview={motionPreview}
+            inputsEnabled={!presenting}
           />
         )}
         <SlidePanel
@@ -301,6 +326,8 @@ export default function Editor() {
           onDuplicateSlide={duplicateSlide}
           onDeleteSlide={deleteSlide}
           onReorderSlides={onReorderSlides}
+          ultra={ultra}
+          onSetTransition={setSlideTransition}
         />
       </div>
     </div>

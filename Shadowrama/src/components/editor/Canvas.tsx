@@ -29,11 +29,15 @@ interface Props {
   ultra: boolean
   /** Aperçu de séquence demandé depuis le panneau Mouvement. */
   motionPreview: { id: number; phase: MotionPhase; nonce: number } | null
+  /** Faux pendant la présentation : le canvas ne doit plus réagir au clavier,
+   *  sinon les flèches déplacent un bloc en même temps qu'elles changent de
+   *  diapositive. */
+  inputsEnabled: boolean
 }
 
 export default function Canvas({
   blocks, selectedBlockIds, onSelectBlocks, onUpdateBlock, onDeleteBlocks, onGestureStart,
-  ultra, motionPreview,
+  ultra, motionPreview, inputsEnabled,
 }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -58,6 +62,8 @@ export default function Canvas({
   const hasDraggedSelection = useRef(false)
 
   useEffect(() => {
+    if (!inputsEnabled) return
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
         document.activeElement?.tagName === 'INPUT' || 
@@ -108,7 +114,7 @@ export default function Canvas({
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [selectedBlockIds, blocks, onDeleteBlocks, onUpdateBlock, onGestureStart])
+  }, [selectedBlockIds, blocks, onDeleteBlocks, onUpdateBlock, onGestureStart, inputsEnabled])
 
   // Un mouseup relâché hors de la fenêtre laissait le panoramique actif
   // indéfiniment : on écoute donc aussi au niveau du document.

@@ -21,12 +21,28 @@
   cursor: pointer;
 }
 
+/* Scène : porte la mise à l'échelle et empile les couches de diapositives.
+   Pendant une transition, deux couches coexistent et s'animent en sens
+   inverse ; elles doivent donc se superposer exactement. */
+.stage {
+  position: relative;
+  width: 960px;
+  height: 540px;
+  flex-shrink: 0;
+}
+
+.stagePerspective {
+  perspective: 1400px;
+}
+
 .slide {
+  position: absolute;
+  inset: 0;
   width: 960px;
   height: 540px;
   background-color: var(--editor-bg-canvas);
-  position: relative;
   border-radius: 8px;
+  backface-visibility: hidden;
   overflow: hidden;
   flex-shrink: 0;
   pointer-events: none; /* les clics passent au wrapper pour la navigation */

@@ -183,3 +183,62 @@
   filter: brightness(1.1);
   background-color: var(--accent);
 }
+
+/* ── Nouveautés du mode Ultra Design ──────────────────────────────────────
+   Traitement distinct : ces entrées ne concernent que les utilisateurs du
+   mode, les confondre avec les nouveautés ordinaires induirait en erreur. */
+
+.highlightUltra {
+  position: relative;
+  padding: 0.85rem 0.9rem 0.8rem;
+  background:
+    linear-gradient(135deg, rgba(108, 99, 255, 0.18), rgba(177, 77, 255, 0.1)),
+    var(--editor-bg-raised);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background-clip: padding-box;
+  box-shadow:
+    0 0 0 1px rgba(140, 99, 255, 0.45),
+    0 6px 22px -8px rgba(140, 99, 255, 0.5);
+  overflow: hidden;
+}
+
+/* Liseré lumineux à gauche : repère immédiat dans une liste mélangée. */
+.highlightUltra::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--accent), #b14dff);
+}
+
+.ultraBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.35rem;
+  padding: 0.12rem 0.45rem;
+  background: linear-gradient(135deg, var(--accent), #b14dff);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+/* Pastille au niveau de la version, pour repérer d'un coup d'œil les
+   versions qui touchent au mode. */
+.releaseUltraTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid rgba(140, 99, 255, 0.5);
+  border-radius: 999px;
+  color: var(--accent-hover);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}

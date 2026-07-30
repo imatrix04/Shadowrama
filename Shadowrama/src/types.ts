@@ -243,9 +243,45 @@ export interface BlockComponentProps<T extends BlockData = BlockData> {
   onStopEdit?: () => void
 }
 
+/** Transition appliquée EN ENTRANT sur cette diapositive. */
+export interface SlideTransitionSettings {
+  preset: string
+  /** Multiplicateur de la durée du preset. 1 = durée d'origine. */
+  speed?: number
+}
+
 export interface Slide {
   id: number
   blocks: BlockData[]
+  transition?: SlideTransitionSettings
+}
+
+/** État d'une couche de diapositive pendant une transition. */
+export interface SlideKeyframe {
+  opacity?: number
+  /** Pourcentage de la largeur/hauteur de la diapositive. */
+  xPercent?: number
+  yPercent?: number
+  scale?: number
+  rotateY?: number
+  rotateZ?: number
+  blur?: number
+}
+
+export interface SlideTransition {
+  id: string
+  label: string
+  /** `ultra` n'est proposé qu'en mode Ultra Design. */
+  tier: 'basic' | 'ultra'
+  /** Secondes. */
+  duration: number
+  ease?: string
+  /** Cible de la diapositive qui s'en va (elle part de l'état neutre). */
+  from: SlideKeyframe
+  /** État de départ de la diapositive qui arrive (elle rejoint l'état neutre). */
+  to: SlideKeyframe
+  /** Ajoute une perspective au conteneur, nécessaire aux rotations 3D. */
+  perspective?: boolean
 }
 
 // ── Échappatoire typée pour les composants génériques (panneau de propriétés) ──

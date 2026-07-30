@@ -1,7 +1,7 @@
 import type { BlockData, MotionPhase, MotionSettings } from '../../../types'
 import { presetsForPhase, presetDuration, getPreset } from '../../../ultra/presets'
 import Icon from '../../ui/Icon'
-import styles from './UltraPanels.module.css'
+import styles from '../PanelControls.module.css'
 
 interface Props {
   block: BlockData | null

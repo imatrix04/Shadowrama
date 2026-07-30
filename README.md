@@ -21,29 +21,40 @@ embarquées en base64).
 
 ## Changelog
 
-Dernière version : **0.14.0** (2026-07-30).
+Dernière version : **0.15.0** (2026-07-30).
 
-**Barre latérale plus vive** — Les panneaux Blocs et Animations s'ouvrent près de deux fois plus vite, indiquent lequel est actif, et leur contenu apparaît progressivement au lieu de surgir d'un bloc.
+> **✦ Mode Ultra Design** *(Ultra Design)*
+>
+> Un interrupteur qui déverrouille les effets visuels avancés et les séquences d'animation composées. Il se coupe et se réactive à tout moment : un projet reste ouvrable dans les deux modes, et rien n'est perdu en repassant en mode simple.
 
-**Le panneau Animations vous répond** — Il signale l'animation appliquée au bloc sélectionné et explique quoi faire quand aucun bloc ne l'est. Jusqu'ici, cliquer sans sélection restait sans effet et sans explication.
+> **✦ Séquences d'animation** *(Ultra Design)*
+>
+> 22 mouvements répartis en six familles, à l'entrée comme à la sortie. Un mouvement n'est plus une simple transition mais une suite d'étapes — apparaître, dépasser, revenir. Le texte peut s'animer lettre par lettre ou mot par mot.
 
-**Des icônes dessinées** — Les emoji laissent place à un jeu d'icônes cohérent, identique quel que soit votre système : barre latérale, barre du haut et menu contextuel.
+> **✦ Effets visuels** *(Ultra Design)*
+>
+> Ombre portée, lueur, dégradé, arrondi par coin, contour de texte, flou, luminosité, saturation, contraste et modes de fusion. Tous cumulables sur un même bloc.
+
+**Transitions entre diapositives** — Quatre transitions classiques disponibles pour tout le monde — fondu, glissement, glissement vertical, zoom — et quatre transitions spectaculaires réservées au mode Ultra Design.
+
+**Blocs plus expressifs** — Rotation et opacité sur les quatre types de blocs, verrouillage des proportions au redimensionnement, alignement vertical du texte, graisse et italique, et trois nouvelles formes.
 
 ### Nouveautés
-- L'onglet ouvert est mis en évidence dans la barre latérale.
-- L'animation appliquée à la sélection est cochée dans la liste.
-- Un message indique quoi faire lorsque aucun bloc n'est sélectionné.
-- Les infobulles précisent l'action et le nombre de blocs concernés.
+- Rotation et opacité disponibles sur tous les blocs.
+- Maj pendant un redimensionnement conserve les proportions.
+- Alignement vertical, graisse, italique, interlignage et interlettrage sur les blocs texte et titre.
+- Trois nouvelles formes : ligne, étoile et hexagone.
+- Onglet Transitions dans la barre latérale droite, pour régler l'apparition de chaque diapositive.
+- Aperçu d'une séquence directement dans l'éditeur, sans passer par le mode présentation.
 
 ### Améliorations
-- Les panneaux latéraux s'ouvrent et se ferment plus vite, et leur contenu s'estompe au lieu de disparaître d'un coup.
-- Le menu contextuel affiche le nom du bloc (« Image ») au lieu de son type technique (« image »).
-- Le réglage système « réduire les animations » est respecté : les transitions sont alors supprimées.
-- Les deux panneaux latéraux reposent désormais sur un composant commun, et les couleurs de l'interface sont unifiées — deux violets d'accent différents cohabitaient jusqu'ici.
+- Le menu contextuel d'un bloc affiche son nom plutôt que son type technique.
+- Le gras des titres est devenu un réglage modifiable au lieu d'être figé.
 
 ### Corrections
-- À l'ouverture de l'éditeur, la vue était calée sur le coin haut-gauche de la diapositive au lieu d'être centrée dessus.
-- La diapositive n'était pas recadrée après l'agrandissement de la fenêtre : le cadrage restait calculé pour la taille précédente.
-- Le bouton d'ouverture de la barre latérale déclarait un état « ouvert » qui n'avait aucun effet.
+- Les flèches du clavier déplaçaient le bloc sélectionné pendant la présentation, en plus de changer de diapositive.
+- Le champ « Arrondi » était proposé pour toutes les formes mais n'agissait que sur le rectangle et le cercle.
+- La bordure des formes anguleuses débordait de leur cadre.
+- Le dernier emoji visible sur une diapositive, dans l'emplacement d'image vide, a été remplacé par une icône.
 
 Historique complet : [CHANGELOG.md](CHANGELOG.md).

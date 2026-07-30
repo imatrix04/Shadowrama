@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Release } from '../../utils/changelog'
+import { hasUltraContent } from '../../utils/changelog'
+import Icon from './Icon'
 import styles from './WhatsNew.module.css'
 
 const SECTIONS: { key: 'added' | 'changed' | 'fixed'; label: string }[] = [
@@ -30,11 +32,24 @@ function ReleaseSection({ release, showVersion }: { release: Release; showVersio
         <div className={styles.releaseHead}>
           <span className={styles.version}>Version {release.version}</span>
           <span className={styles.date}>{formatDate(release.date)}</span>
+          {hasUltraContent(release) && (
+            <span className={styles.releaseUltraTag}>
+              <Icon name="ultra" size={10} /> Ultra
+            </span>
+          )}
         </div>
       )}
 
       {release.highlights?.map(highlight => (
-        <div key={highlight.title} className={styles.highlight}>
+        <div
+          key={highlight.title}
+          className={highlight.ultra ? styles.highlightUltra : styles.highlight}
+        >
+          {highlight.ultra && (
+            <span className={styles.ultraBadge}>
+              <Icon name="ultra" size={10} /> Ultra Design
+            </span>
+          )}
           <p className={styles.highlightTitle}>{highlight.title}</p>
           <p className={styles.highlightBody}>{highlight.body}</p>
         </div>

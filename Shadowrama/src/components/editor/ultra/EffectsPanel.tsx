@@ -1,5 +1,5 @@
 import type { BlockData, BlockEffects } from '../../../types'
-import styles from './UltraPanels.module.css'
+import styles from '../PanelControls.module.css'
 
 interface Props {
   block: BlockData | null

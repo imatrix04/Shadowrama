@@ -1,3 +1,7 @@
+/* Contrôles communs aux panneaux de la barre latérale : Mouvement, Effets et
+   Transitions. Ce fichier vivait dans ultra/ alors qu'il sert aussi aux
+   transitions de base, disponibles hors du mode Ultra Design. */
+
 .hint {
   margin: 0 0 0.6rem;
   padding: 0.5rem 0.6rem;
@@ -198,3 +202,16 @@
 }
 
 .remove:hover { color: var(--danger-soft); }
+
+/* Texte d'explication discret, sous un intitulé de section. */
+.subtle {
+  margin: 0 0 0.6rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--editor-text-dim);
+}
+
+.subtle strong {
+  color: var(--editor-text-muted);
+  font-weight: 600;
+}

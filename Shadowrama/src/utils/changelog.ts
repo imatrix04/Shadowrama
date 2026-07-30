@@ -3,6 +3,14 @@ import changelogData from '../../changelog.json'
 export interface Highlight {
   title: string
   body: string
+  /**
+   * Nouveauté relevant du mode Ultra Design.
+   *
+   * Ces entrées reçoivent un traitement visuel distinct : elles ne concernent
+   * pas tout le monde, et les noyer dans la liste ordinaire brouillerait la
+   * frontière entre les deux modes.
+   */
+  ultra?: boolean
 }
 
 export interface Release {
@@ -67,4 +75,9 @@ export function releasesToAnnounce(currentVersion: string, lastSeen: string | nu
 
 export function findRelease(version: string): Release | undefined {
   return RELEASES.find(r => r.version === version)
+}
+
+/** Une version apporte-t-elle des nouveautés du mode Ultra Design ? */
+export function hasUltraContent(release: Release): boolean {
+  return release.highlights?.some(h => h.ultra) ?? false
 }

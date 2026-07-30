@@ -26,13 +26,15 @@ interface Props {
   draftFailed: boolean
   ultra: boolean
   onToggleUltra: () => void
+  presenting: boolean
+  onPresentingChange: (value: boolean) => void
 }
 
 export default function TopBar({
   slides, projectName, setProjectName, filePath, setFilePath, onLoad, onNew,
   onUndo, onRedo, canUndo, canRedo, draftFailed, ultra, onToggleUltra,
+  presenting, onPresentingChange,
 }: Props) {
-  const [presenting, setPresenting] = useState(false)
   const [nameDialogOpen, setNameDialogOpen] = useState(false)
   const [nameInput, setNameInput] = useState('mon-projet')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -190,7 +192,7 @@ export default function TopBar({
             <Icon name="ultra" /> Ultra Design
           </button>
           <button className={`${styles.btn} ${styles.btnAccent}`}
-            onClick={() => setPresenting(true)}>
+            onClick={() => onPresentingChange(true)}>
             <Icon name="play" /> Présenter
           </button>
         </div>
@@ -234,7 +236,7 @@ export default function TopBar({
       {presenting && (
         <PresentationMode
           slides={slides}
-          onClose={() => setPresenting(false)}
+          onClose={() => onPresentingChange(false)}
           ultra={ultra}
         />
       )}

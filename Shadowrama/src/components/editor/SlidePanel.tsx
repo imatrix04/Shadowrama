@@ -1,12 +1,15 @@
 import { useState } from 'react'
-import type { Slide } from '../../types'
+import type { Slide, SlideTransitionSettings } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
+import TransitionPanel from './TransitionPanel'
 import Drawer, { DrawerTitle } from '../ui/Drawer'
 import type { DrawerTab } from '../ui/Drawer'
 import styles from './SlidePanel.module.css'
 
-// Un seul onglet : le tiroir se comporte alors comme un simple volet.
-const TABS: DrawerTab[] = [{ key: 'slides', label: 'Diapositives', icon: 'slides' }]
+const TABS: DrawerTab[] = [
+  { key: 'slides', label: 'Diapositives', icon: 'slides' },
+  { key: 'transitions', label: 'Transitions', icon: 'transition' },
+]
 
 interface Props {
   slides: Slide[]
@@ -16,6 +19,9 @@ interface Props {
   onDuplicateSlide: (index: number) => void
   onDeleteSlide: (index: number) => void
   onReorderSlides: (fromIndex: number, toIndex: number) => void
+  /** Le niveau « ultra » des transitions n'est proposé qu'en mode Ultra Design. */
+  ultra: boolean
+  onSetTransition: (index: number, settings: SlideTransitionSettings | undefined) => void
 }
 
 export default function SlidePanel({
@@ -26,6 +32,8 @@ export default function SlidePanel({
   onDuplicateSlide,
   onDeleteSlide,
   onReorderSlides,
+  ultra,
+  onSetTransition,
 }: Props) {
   const [openPanel, setOpenPanel] = useState<string | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
@@ -59,7 +67,17 @@ export default function SlidePanel({
       tabs={TABS}
       activeTab={openPanel}
       onTabChange={setOpenPanel}
-      renderTab={() => (
+      renderTab={key => key === 'transitions' ? (
+        <>
+          <DrawerTitle>Transition d'entrée</DrawerTitle>
+          <TransitionPanel
+            slideIndex={currentSlide}
+            current={slides[currentSlide]?.transition}
+            ultra={ultra}
+            onChange={settings => onSetTransition(currentSlide, settings)}
+          />
+        </>
+      ) : (
         <>
           <DrawerTitle>Diapositives</DrawerTitle>
           <div className={styles.list}>
