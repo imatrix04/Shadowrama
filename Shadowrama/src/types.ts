@@ -31,6 +31,12 @@ export interface BaseBlockData {
   height: number
   zIndex?: number
   animation?: AnimationConfig
+  /** 0–1. Était propre aux formes ; remontée ici pour valoir aussi pour le
+   *  texte, les titres et les images. La clé étant inchangée, les projets
+   *  enregistrés restent lisibles. */
+  opacity?: number
+  /** Degrés, sens horaire. Appliquée au rendu du bloc (voir Block.tsx). */
+  rotation?: number
 }
 
 // ── Un type par bloc, avec SES props spécifiques ──
@@ -43,14 +49,18 @@ export interface ImageBlockData extends BaseBlockData {
   objectFit?: 'cover' | 'contain' | 'fill'
 }
 
+export type ShapeKind =
+  | 'rectangle' | 'circle' | 'triangle'
+  | 'arrow-up' | 'arrow-down' | 'arrow-left' | 'arrow-right'
+  | 'line' | 'star' | 'hexagon'
+
 export interface ShapeBlockData extends BaseBlockData {
   type: 'shape'
-  shape: 'rectangle' | 'circle' | 'triangle' | 'arrow-up' | 'arrow-down' | 'arrow-left' | 'arrow-right'
+  shape: ShapeKind
   backgroundColor: string
   borderRadius?: number
   borderColor?: string
   borderWidth?: number
-  opacity?: number
 }
 
 export interface TextBlockData extends BaseBlockData {
@@ -59,6 +69,14 @@ export interface TextBlockData extends BaseBlockData {
   fontSize?: number
   color?: string
   textAlign?: 'left' | 'center' | 'right'
+  /** Alignement dans la hauteur du bloc : le texte était toujours collé en haut. */
+  verticalAlign?: 'top' | 'middle' | 'bottom'
+  fontWeight?: 'normal' | 'bold'
+  fontStyle?: 'normal' | 'italic'
+  /** Multiplicateur (1.4 = 140 %). */
+  lineHeight?: number
+  /** En pixels, peut être négatif. */
+  letterSpacing?: number
 }
 
 export interface TitleBlockData extends BaseBlockData {
@@ -67,6 +85,14 @@ export interface TitleBlockData extends BaseBlockData {
   fontSize?: number
   color?: string
   textAlign?: 'left' | 'center' | 'right'
+  /** Alignement dans la hauteur du bloc : le texte était toujours collé en haut. */
+  verticalAlign?: 'top' | 'middle' | 'bottom'
+  fontWeight?: 'normal' | 'bold'
+  fontStyle?: 'normal' | 'italic'
+  /** Multiplicateur (1.4 = 140 %). */
+  lineHeight?: number
+  /** En pixels, peut être négatif. */
+  letterSpacing?: number
 }
 
 // Futurs blocs : vidéo, graphique, carrousel...

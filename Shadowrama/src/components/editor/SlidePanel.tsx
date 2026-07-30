@@ -83,7 +83,12 @@ export default function SlidePanel({
                         <div
                           key={block.id}
                           className={styles.thumbBlockWrapper}
-                          style={{ left: block.x, top: block.y, width: block.width, height: block.height }}
+                          style={{
+                            left: block.x, top: block.y,
+                            width: block.width, height: block.height,
+                            opacity: block.opacity ?? 1,
+                            transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
+                          }}
                         >
                           <Renderer block={block} />
                         </div>

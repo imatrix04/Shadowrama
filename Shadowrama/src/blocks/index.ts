@@ -25,6 +25,16 @@ export const BLOCKS_REGISTRY: Record<string, ComponentType<BlockComponentProps>>
   shape: ShapeBlock as ComponentType<BlockComponentProps>,
 }
 
+/**
+ * Champs valables pour tous les blocs, ajoutés après ceux du type.
+ * Les déclarer ici évite de les recopier dans les quatre configs — et de les
+ * oublier dans un cinquième bloc à venir.
+ */
+const COMMON_PROPERTIES: BlockProperty[] = [
+  { key: 'opacity', label: 'Opacité', type: 'float' },
+  { key: 'rotation', label: 'Rotation (°)', type: 'number' },
+]
+
 const CONFIG_BY_TYPE = new Map(BLOCKS_CONFIG.map(c => [c.type, c]))
 
 export function getBlockConfig(type: string): BlockConfig | undefined {
@@ -37,7 +47,9 @@ export function getBlockConfig(type: string): BlockConfig | undefined {
  * aux projets déjà enregistrés.
  */
 export function getBlockProperties(type: string): BlockProperty[] {
-  return CONFIG_BY_TYPE.get(type as BlockData['type'])?.properties ?? []
+  const own = CONFIG_BY_TYPE.get(type as BlockData['type'])?.properties
+  if (!own) return []
+  return [...own, ...COMMON_PROPERTIES]
 }
 
 export function isKnownBlockType(type: unknown): type is BlockData['type'] {

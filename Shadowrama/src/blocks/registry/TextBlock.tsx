@@ -1,3 +1,3 @@
 import { createTextualBlock } from './createTextualBlock'
 
-export default createTextualBlock(18, {})
+export default createTextualBlock(18)

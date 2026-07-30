@@ -12,14 +12,25 @@ const ANIMATION_PRESETS: Record<string, gsap.TweenVars> = {
   none: {},
 }
 
+/** État visuel à atteindre en fin d'animation, propre au bloc. */
+interface RestState {
+  opacity: number
+  rotation: number
+}
+
 /**
  * Joue l'animation d'entrée d'un bloc UNE FOIS quand `play` passe à true.
  * `play` doit être contrôlé par le parent (ex: PresentationMode quand la slide devient active).
+ *
+ * L'état de repos est passé explicitement : GSAP écrit `opacity` et `transform`
+ * sur l'élément, il écraserait donc l'opacité et la rotation réglées sur le bloc
+ * si l'animation visait un « opacity: 1 » et une rotation nulle en dur.
  */
 export function useBlockAnimation(
   elementRef: React.RefObject<HTMLElement | null>,
   animation: AnimationConfig | undefined,
-  play: boolean
+  play: boolean,
+  rest: RestState = { opacity: 1, rotation: 0 },
 ) {
   const hasPlayed = useRef(false)
 
@@ -28,8 +39,8 @@ export function useBlockAnimation(
     if (!el || !animation || animation.type === 'none') return
 
     if (!play) {
-      // Slide pas (encore) active : on remet l'état initial sans jouer
-      gsap.set(el, ANIMATION_PRESETS[animation.type] ?? {})
+      // Slide pas (encore) active : on remet l'état initial sans jouer.
+      gsap.set(el, { ...ANIMATION_PRESETS[animation.type], rotation: rest.rotation })
       hasPlayed.current = false
       return
     }
@@ -39,9 +50,10 @@ export function useBlockAnimation(
 
     gsap.fromTo(
       el,
-      ANIMATION_PRESETS[animation.type] ?? {},
+      { ...ANIMATION_PRESETS[animation.type], rotation: rest.rotation },
       {
-        opacity: 1,
+        opacity: rest.opacity,
+        rotation: rest.rotation,
         x: 0,
         y: 0,
         scale: 1,
@@ -50,5 +62,5 @@ export function useBlockAnimation(
         ease: animation.ease ?? 'power2.out',
       }
     )
-  }, [play, animation, elementRef])
+  }, [play, animation, elementRef, rest.opacity, rest.rotation])
 }

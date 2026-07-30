@@ -21,6 +21,9 @@ interface Props {
   onReorder: (id: number, direction: 'front' | 'back' | 'forward' | 'backward') => void
 }
 
+const MIN_W = 40
+const MIN_H = 20
+
 type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 
 const HANDLES: { dir: ResizeHandle; style: React.CSSProperties }[] = [
@@ -108,20 +111,48 @@ export default function Block({
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing.current) return
       openGestureOnce()
-      const dx = (e.clientX - resizeStart.current.x) / zoom
-      const dy = (e.clientY - resizeStart.current.y) / zoom
+
+      // Le déplacement de souris est en repère écran. Si le bloc est pivoté, on
+      // le ramène dans son propre repère, sinon tirer une poignée agrandit le
+      // bloc dans une direction qui ne correspond pas au geste.
+      const rawDx = (e.clientX - resizeStart.current.x) / zoom
+      const rawDy = (e.clientY - resizeStart.current.y) / zoom
+      const angle = -(block.rotation ?? 0) * Math.PI / 180
+      const dx = rawDx * Math.cos(angle) - rawDy * Math.sin(angle)
+      const dy = rawDx * Math.sin(angle) + rawDy * Math.cos(angle)
+
       const dir = resizeDir.current!
+      const start = resizeStart.current
       const changes: Partial<BlockData> = {}
 
-      if (dir.includes('e')) changes.width  = Math.max(40, resizeStart.current.w + dx)
-      if (dir.includes('s')) changes.height = Math.max(20, resizeStart.current.h + dy)
+      if (dir.includes('e')) changes.width  = Math.max(MIN_W, start.w + dx)
+      if (dir.includes('s')) changes.height = Math.max(MIN_H, start.h + dy)
       if (dir.includes('w')) {
-        changes.width = Math.max(40, resizeStart.current.w - dx)
-        changes.x     = resizeStart.current.bx + resizeStart.current.w - changes.width
+        changes.width = Math.max(MIN_W, start.w - dx)
+        changes.x     = start.bx + start.w - changes.width
       }
       if (dir.includes('n')) {
-        changes.height = Math.max(20, resizeStart.current.h - dy)
-        changes.y      = resizeStart.current.by + resizeStart.current.h - changes.height
+        changes.height = Math.max(MIN_H, start.h - dy)
+        changes.y      = start.by + start.h - changes.height
+      }
+
+      // Maj enfoncée : conserve les proportions d'origine. Indispensable pour
+      // les images, qui se déformaient au moindre coin tiré.
+      if (e.shiftKey && start.h > 0) {
+        const ratio = start.w / start.h
+        const w = changes.width ?? start.w
+        const h = changes.height ?? start.h
+        // On suit l'axe le plus sollicité pour éviter les à-coups.
+        if (Math.abs(w - start.w) >= Math.abs(h - start.h)) {
+          changes.width = w
+          changes.height = Math.max(MIN_H, w / ratio)
+        } else {
+          changes.height = h
+          changes.width = Math.max(MIN_W, h * ratio)
+        }
+        // Les bords haut/gauche restent ancrés sur le coin opposé.
+        if (dir.includes('w')) changes.x = start.bx + start.w - (changes.width ?? start.w)
+        if (dir.includes('n')) changes.y = start.by + start.h - (changes.height ?? start.h)
       }
 
       onResize(block.id, changes)
@@ -149,11 +180,15 @@ export default function Block({
         top: block.y,
         width: block.width,
         height: block.height,
-        outline: isSelected && !isEditing ? '2px solid #6c63ff' : '2px solid transparent',
+        outline: isSelected && !isEditing ? '2px solid var(--accent)' : '2px solid transparent',
         cursor: isEditing ? 'text' : 'grab',
         userSelect: isEditing ? 'text' : 'none',
         boxSizing: 'border-box',
         zIndex: block.zIndex,
+        opacity: block.opacity ?? 1,
+        // Pivot au centre : les poignées tournent avec le bloc, et le
+        // redimensionnement compense l'angle (voir handleResizeMouseDown).
+        transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
       }}
     >
       {BlockComponent && (

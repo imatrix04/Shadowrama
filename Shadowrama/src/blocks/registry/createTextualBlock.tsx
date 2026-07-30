@@ -1,14 +1,20 @@
 import { useRef, useEffect } from 'react'
-import type { CSSProperties } from 'react'
 import type { BlockComponentProps, TextBlockData, TitleBlockData } from '../../types'
 
 type TextualBlockData = TextBlockData | TitleBlockData
 
+const VERTICAL_ALIGN = {
+  top: 'flex-start',
+  middle: 'center',
+  bottom: 'flex-end',
+} as const
+
 /**
  * Bloc de texte éditable en place. `TextBlock` et `TitleBlock` ne diffèrent que
- * par leur style par défaut, d'où cette fabrique plutôt que deux copies.
+ * par leurs valeurs par défaut (voir les fichiers de config), d'où cette
+ * fabrique plutôt que deux copies.
  */
-export function createTextualBlock(defaultFontSize: number, extraStyle: CSSProperties) {
+export function createTextualBlock(defaultFontSize: number) {
   return function TextualBlock({
     block,
     onUpdate,
@@ -16,10 +22,13 @@ export function createTextualBlock(defaultFontSize: number, extraStyle: CSSPrope
     onStartEdit,
     onStopEdit,
   }: BlockComponentProps<TextualBlockData>) {
+    // Deux éléments sont nécessaires : le conteneur porte l'alignement vertical,
+    // l'élément éditable garde une hauteur automatique — sinon il occuperait
+    // toute la boîte et le centrage n'aurait aucun effet.
+    const boxRef = useRef<HTMLDivElement>(null)
     const ref = useRef<HTMLDivElement>(null)
+
     // Contenu à restaurer sur Échap : capturé à l'ENTRÉE en édition.
-    // Un simple useState initialisé au montage restait bloqué sur le tout
-    // premier contenu et Échap réécrivait un texte périmé.
     const contentBeforeEdit = useRef(block.content)
 
     useEffect(() => {
@@ -53,14 +62,17 @@ export function createTextualBlock(defaultFontSize: number, extraStyle: CSSPrope
     }
 
     const handleBlur = () => {
-      const el = ref.current
-      const content = el?.innerText ?? ''
+      const content = ref.current?.innerText ?? ''
 
       // Le bloc a une hauteur fixe : un texte plus long débordait silencieusement
-      // sous le cadre. On agrandit le bloc à la fin de la saisie (pas pendant,
-      // pour éviter qu'il ne sautille à chaque caractère).
-      const overflow = el && el.scrollHeight > el.clientHeight
-      onUpdate?.(block.id, overflow ? { content, height: el.scrollHeight } : { content })
+      // sous le cadre. On compare la hauteur du texte à celle de la boîte (et non
+      // scrollHeight/clientHeight du même élément, qui sont désormais égaux
+      // puisque l'élément éditable est en hauteur automatique).
+      const needed = ref.current?.scrollHeight ?? 0
+      const available = boxRef.current?.clientHeight ?? 0
+      const overflows = needed > available
+
+      onUpdate?.(block.id, overflows ? { content, height: needed } : { content })
       onStopEdit?.()
     }
 
@@ -78,31 +90,45 @@ export function createTextualBlock(defaultFontSize: number, extraStyle: CSSPrope
 
     return (
       <div
-        ref={ref}
-        contentEditable={isEditing}
-        suppressContentEditableWarning
-        onDoubleClick={handleDoubleClick}
-        onInput={handleInput}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
+        ref={boxRef}
         style={{
-          margin: 0,
-          fontSize: block.fontSize ?? defaultFontSize,
-          color: block.color,
-          textAlign: block.textAlign || 'center',
-          wordBreak: 'break-word',
-          whiteSpace: 'pre-wrap',
-          outline: isEditing ? '2px solid #6c63ff' : 'none',
-          borderRadius: '3px',
-          padding: '4px 6px',
-          minWidth: '40px',
-          minHeight: '1em',
-          cursor: isEditing ? 'text' : 'inherit',
           width: '100%',
           height: '100%',
-          ...extraStyle,
+          display: 'flex',
+          alignItems: VERTICAL_ALIGN[block.verticalAlign ?? 'top'],
+          boxSizing: 'border-box',
+          overflow: 'hidden',
         }}
-      />
+      >
+        <div
+          ref={ref}
+          contentEditable={isEditing}
+          suppressContentEditableWarning
+          onDoubleClick={handleDoubleClick}
+          onInput={handleInput}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          style={{
+            margin: 0,
+            width: '100%',
+            fontSize: block.fontSize ?? defaultFontSize,
+            fontWeight: block.fontWeight ?? 'normal',
+            fontStyle: block.fontStyle ?? 'normal',
+            lineHeight: block.lineHeight ?? 1.4,
+            letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : 'normal',
+            color: block.color,
+            textAlign: block.textAlign || 'center',
+            wordBreak: 'break-word',
+            whiteSpace: 'pre-wrap',
+            outline: isEditing ? '2px solid var(--accent)' : 'none',
+            borderRadius: 'var(--r-sm)',
+            padding: '4px 6px',
+            minHeight: '1em',
+            cursor: isEditing ? 'text' : 'inherit',
+            boxSizing: 'border-box',
+          }}
+        />
+      </div>
     )
   }
 }

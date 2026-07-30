@@ -15,14 +15,24 @@ const CONTROLS_HIDE_DELAY_MS = 1500
 // Petit composant wrapper qui applique le hook par bloc
 function AnimatedBlockWrapper({ block, isActive }: { block: BlockData; isActive: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
-  useBlockAnimation(ref, block.animation, isActive)
+  const opacity = block.opacity ?? 1
+  const rotation = block.rotation ?? 0
+  // L'état de repos est communiqué au hook : sans lui, GSAP terminerait sur une
+  // opacité de 1 et une rotation nulle, effaçant les réglages du bloc.
+  useBlockAnimation(ref, block.animation, isActive, { opacity, rotation })
   const BlockComponent = BLOCKS_REGISTRY[block.type]
   if (!BlockComponent) return null
   return (
     <div
       ref={ref}
       className={styles.blockWrapper}
-      style={{ left: block.x, top: block.y, width: block.width, height: block.height, zIndex: block.zIndex ?? 0 }}
+      style={{
+        left: block.x, top: block.y, width: block.width, height: block.height,
+        zIndex: block.zIndex ?? 0,
+        // Cas sans animation : GSAP ne touche pas l'élément, le style porte tout.
+        opacity,
+        transform: rotation ? `rotate(${rotation}deg)` : undefined,
+      }}
     >
       <BlockComponent block={block} onUpdate={() => {}} isEditing={false} onStartEdit={() => {}} onStopEdit={() => {}} />
     </div>
