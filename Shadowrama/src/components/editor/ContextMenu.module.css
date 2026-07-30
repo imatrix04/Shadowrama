@@ -19,7 +19,7 @@
   inset: 0;
   z-index: 99;
   background: rgba(10, 10, 16, 0.15);
-  animation: backdropIn 0.15s ease-out;
+  animation: backdropIn var(--t-fast) ease-out;
 }
 
 .menu {
@@ -56,17 +56,21 @@
 .menu::-webkit-scrollbar-thumb {
   background: rgba(124, 92, 255, 0.25);
   border-radius: 10px;
-  transition: background 0.2s;
+  transition: background var(--t-base);
 }
 .menu::-webkit-scrollbar-thumb:hover {
   background: rgba(124, 92, 255, 0.5);
 }
 
 .typeLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+
   margin: 0;
   font-size: 0.68rem;
   font-weight: 600;
-  color: #7c5cff;
+  color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 1.5px;
   padding-bottom: 0.4rem;
@@ -113,7 +117,7 @@
   font-size: 0.74rem;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--t-fast) ease;
 }
 
 .smallBtn:hover {
@@ -131,7 +135,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  animation: menuIn 0.2s ease-out backwards;
+  animation: menuIn var(--t-base) ease-out backwards;
 }
 
 .fieldLabel {
@@ -152,7 +156,7 @@
   font-family: inherit;
   width: 100%;
   box-sizing: border-box;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition: border-color var(--t-fast), background var(--t-fast), box-shadow var(--t-fast);
 }
 
 .input:hover {
@@ -162,7 +166,7 @@
 .input:focus-visible,
 .input:focus {
   outline: none;
-  border-color: #7c5cff;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
 }
 
@@ -188,7 +192,7 @@ select.input {
 }
 
 .deleteBtn {
-  color: #ff6b6b;
+  color: var(--danger-soft);
   width: 100%;
   background: rgba(255, 107, 107, 0.06);
   border-color: rgba(255, 107, 107, 0.2);
@@ -197,5 +201,5 @@ select.input {
 .deleteBtn:hover {
   background: rgba(255, 107, 107, 0.15);
   border-color: rgba(255, 107, 107, 0.5);
-  color: #ff8787;
+  color: var(--danger-hover);
 }

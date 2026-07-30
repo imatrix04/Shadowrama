@@ -1,0 +1,139 @@
+.wrapper {
+  display: flex;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+/* ── Onglets ──────────────────────────────────────────────────────────────
+   Colonne flex : les positions étaient auparavant des `top` en dur (1rem,
+   3.75rem), à réinventer pour chaque panneau ajouté. */
+.tabs {
+  position: absolute;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  z-index: 51;
+}
+
+.tabsLeft { left: 100%; align-items: flex-start; }
+.tabsRight { right: 100%; align-items: flex-end; }
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 32px;
+  padding: 0 0.6rem;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  color: var(--editor-text-muted);
+  font-family: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast),
+    transform var(--t-fast) var(--ease-out);
+}
+
+.tabsLeft .tab { border-radius: 0 var(--r-md) var(--r-md) 0; border-left: none; }
+.tabsRight .tab { border-radius: var(--r-md) 0 0 var(--r-md); border-right: none; }
+
+.tab:hover {
+  background-color: var(--editor-btn-bg-hover);
+  color: var(--editor-text);
+}
+
+.tabsLeft .tab:hover { transform: translateX(2px); }
+.tabsRight .tab:hover { transform: translateX(-2px); }
+
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Onglet actif : c'est ce qui manquait le plus — rien n'indiquait quel
+   panneau était ouvert. */
+.tabActive {
+  background-color: var(--accent-bg-soft);
+  border-color: var(--accent);
+  color: var(--editor-text);
+}
+
+.tabActive:hover {
+  background-color: var(--accent-bg-soft);
+}
+
+.tabIcon {
+  flex-shrink: 0;
+  display: flex;
+}
+
+/* Le chevron pivote au lieu de changer de glyphe (◀ / ▶). */
+.chevron {
+  flex-shrink: 0;
+  display: flex;
+  transition: transform var(--t-base) var(--ease-out);
+}
+
+.chevronFlipped { transform: rotate(180deg); }
+
+/* ── Panneau ──────────────────────────────────────────────────────────── */
+
+.panel {
+  width: 0;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  background-color: var(--editor-bg-panel);
+  /* Léger dégradé et liseré interne : le panneau était un aplat très sombre,
+     sans relief par rapport au canvas. */
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 220px);
+  transition: width var(--t-slow) var(--ease-out);
+}
+
+.panelOpen { width: var(--drawer-width); }
+
+.panelLeft.panelOpen { border-right: 1px solid var(--editor-border); }
+.panelRight.panelOpen { border-left: 1px solid var(--editor-border); }
+
+.inner {
+  /* Largeur figée sur celle du panneau ouvert : un `min-width` inférieur
+     faisait sauter le contenu pendant l'ouverture. */
+  width: var(--drawer-width);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0.85rem 0.6rem;
+  gap: 0.4rem;
+  box-sizing: border-box;
+  overflow-y: auto;
+  /* Le contenu s'estompe au lieu d'être démonté d'un coup : on voyait
+     auparavant une bande vide se rétracter. */
+  opacity: 0;
+  transition: opacity var(--t-base) var(--ease-out);
+}
+
+.innerVisible { opacity: 1; }
+
+.inner::-webkit-scrollbar { width: 8px; }
+.inner::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--r-sm);
+}
+
+.title {
+  margin: 0 0 0.5rem;
+  padding: 0 0.15rem;
+  color: var(--editor-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}

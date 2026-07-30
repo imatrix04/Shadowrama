@@ -69,7 +69,7 @@
   color: var(--editor-text);
   font-size: 0.9rem;
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition: background-color var(--t-fast), border-color var(--t-fast);
 }
 
 .btn:hover {

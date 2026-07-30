@@ -9,7 +9,7 @@
 }
 
 .dialog {
-  background-color: #1e1e2e;
+  background-color: var(--editor-bg-raised);
   border: 1px solid var(--editor-border);
   border-radius: 8px;
   padding: 1rem;
@@ -37,7 +37,7 @@
   width: 100%;
   margin-top: 0.75rem;
   padding: 0.5rem;
-  background-color: #2a2a2a;
+  background-color: var(--editor-btn-bg);
   border: 1px solid var(--editor-border-light);
   border-radius: 4px;
   color: var(--editor-text);
@@ -67,7 +67,7 @@
   font-size: 0.85rem;
   font-family: inherit;
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition: background-color var(--t-fast), border-color var(--t-fast);
 }
 
 .btn:hover {
@@ -87,7 +87,7 @@
 
 .btnDanger {
   border-color: rgba(255, 107, 107, 0.5);
-  color: #ff8787;
+  color: var(--danger-hover);
 }
 
 .btnDanger:hover {

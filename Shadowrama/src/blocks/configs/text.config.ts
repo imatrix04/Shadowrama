@@ -2,7 +2,8 @@ import type { BlockConfig } from '../../types'
 
 const textConfig: BlockConfig = {
   type: 'text',
-  label: '📝 Texte',
+  label: 'Texte',
+  icon: 'text',
   defaultProps: { content: 'Mon texte', fontSize: 18, color: '#ffffff' },
   properties: [
     { key: 'content', label: 'Contenu', type: 'textarea' },

@@ -2,7 +2,8 @@ import type { BlockConfig } from '../../types'
 
 const imageConfig: BlockConfig = {
   type: 'image',
-  label: '🖼️ Image',
+  label: 'Image',
+  icon: 'image',
   defaultProps: { src: '', alt: 'Image', width: 300, height: 200, objectFit: 'cover' },
   properties: [
     { key: 'src', label: 'Image', type: 'file' },

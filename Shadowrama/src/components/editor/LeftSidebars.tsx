@@ -1,81 +1,113 @@
 import { useState } from 'react'
 import type { AnimationType, BlockConfig } from '../../types'
 import { BLOCKS_CONFIG } from '../../blocks'
+import Drawer, { DrawerTitle } from '../ui/Drawer'
+import type { DrawerTab } from '../ui/Drawer'
+import Icon from '../ui/Icon'
+import type { IconName } from '../ui/Icon'
 import styles from './LeftSidebars.module.css'
 
 interface Props {
   onAddBlock: (block: Partial<BlockConfig['defaultProps']> & { type: string }) => void
   onSelectAnimation: (type: AnimationType) => void
+  /** Nombre de blocs sélectionnés : le panneau Animations en dépend. */
+  selectionCount: number
+  /** Animation commune à la sélection, pour la marquer comme active. */
+  currentAnimation: AnimationType | null
 }
 
-const ANIMATIONS: { label: string; value: AnimationType }[] = [
-  { label: 'Aucune', value: 'none' },
-  { label: 'Fondu', value: 'fadeIn' },
-  { label: 'Glisse depuis la gauche', value: 'slideInLeft' },
-  { label: 'Glisse depuis la droite', value: 'slideInRight' },
-  { label: 'Glisse depuis le bas', value: 'slideInUp' },
-  { label: 'Zoom', value: 'zoomIn' },
+const ANIMATIONS: { label: string; value: AnimationType; icon: IconName }[] = [
+  { label: 'Aucune', value: 'none', icon: 'animNone' },
+  { label: 'Fondu', value: 'fadeIn', icon: 'animFade' },
+  { label: 'Depuis la gauche', value: 'slideInLeft', icon: 'animSlideLeft' },
+  { label: 'Depuis la droite', value: 'slideInRight', icon: 'animSlideRight' },
+  { label: 'Depuis le bas', value: 'slideInUp', icon: 'animSlideUp' },
+  { label: 'Zoom', value: 'zoomIn', icon: 'animZoom' },
 ]
 
-type PanelKey = 'blocs' | 'animations' | null
+const TABS: DrawerTab[] = [
+  { key: 'blocs', label: 'Blocs', icon: 'shape' },
+  { key: 'animations', label: 'Animations', icon: 'animFade' },
+]
 
-export default function LeftSidebars({ onAddBlock, onSelectAnimation }: Props) {
-  const [openPanel, setOpenPanel] = useState<PanelKey>(null)
+// Décalage d'apparition, plafonné pour que les listes longues n'attendent pas.
+function stagger(index: number): React.CSSProperties {
+  return { animationDelay: `${Math.min(index, 8) * 25}ms` }
+}
 
-  const handleAdd = (config: BlockConfig) => {
-    onAddBlock({ type: config.type, ...config.defaultProps })
-  }
+export default function LeftSidebars({
+  onAddBlock, onSelectAnimation, selectionCount, currentAnimation,
+}: Props) {
+  const [openPanel, setOpenPanel] = useState<string | null>(null)
 
-  const toggle = (key: PanelKey) => {
-    setOpenPanel(prev => (prev === key ? null : key))
+  const renderBlocks = () => (
+    <>
+      <DrawerTitle>Blocs</DrawerTitle>
+      <div className={styles.list}>
+        {BLOCKS_CONFIG.map((config, i) => (
+          <button
+            key={config.type}
+            className={styles.item}
+            style={stagger(i)}
+            onClick={() => onAddBlock({ type: config.type, ...config.defaultProps })}
+            title={`Ajouter un bloc ${config.label.toLowerCase()}`}
+          >
+            <span className={styles.itemIcon}><Icon name={config.icon} /></span>
+            {config.label}
+          </button>
+        ))}
+      </div>
+    </>
+  )
+
+  const renderAnimations = () => {
+    const hasSelection = selectionCount > 0
+    return (
+      <>
+        <DrawerTitle>Animations d'entrée</DrawerTitle>
+        {!hasSelection && (
+          <p className={styles.hint}>
+            Sélectionnez un bloc sur la diapositive pour lui appliquer une animation.
+          </p>
+        )}
+        <div className={styles.list}>
+          {ANIMATIONS.map((anim, i) => {
+            const active = hasSelection && currentAnimation === anim.value
+            return (
+              <button
+                key={anim.value}
+                className={[
+                  styles.item,
+                  active ? styles.itemActive : '',
+                  hasSelection ? '' : styles.disabled,
+                ].join(' ')}
+                style={stagger(i)}
+                disabled={!hasSelection}
+                onClick={() => onSelectAnimation(anim.value)}
+                title={
+                  hasSelection
+                    ? `Appliquer « ${anim.label} » à ${selectionCount} bloc${selectionCount > 1 ? 's' : ''}`
+                    : 'Aucun bloc sélectionné'
+                }
+              >
+                <span className={styles.itemIcon}><Icon name={anim.icon} /></span>
+                {anim.label}
+                {active && <span className={styles.check}>✓</span>}
+              </button>
+            )
+          })}
+        </div>
+      </>
+    )
   }
 
   return (
-    <div className={styles.wrapper}>
-      <button
-        className={`${styles.toggleBtn} ${styles.toggleBtnBlocs} ${openPanel === 'blocs' ? styles.toggleBtnOpen : ''}`}
-        onClick={() => toggle('blocs')}
-        title={openPanel === 'blocs' ? 'Fermer Blocs' : 'Ouvrir Blocs'}
-      >
-        <span>{openPanel === 'blocs' ? '◀' : '▶'}</span>
-        <span className={styles.toggleLabel}>Blocs</span>
-      </button>
-
-      <button
-        className={`${styles.toggleBtn} ${styles.toggleBtnAnimations} ${openPanel === 'animations' ? styles.toggleBtnOpen : ''}`}
-        onClick={() => toggle('animations')}
-        title={openPanel === 'animations' ? 'Fermer Animations' : 'Ouvrir Animations'}
-      >
-        <span>{openPanel === 'animations' ? '◀' : '▶'}</span>
-        <span className={styles.toggleLabel}>Animations</span>
-      </button>
-
-      <div className={`${styles.panel} ${openPanel ? styles.panelOpen : ''}`}>
-        {openPanel === 'blocs' && (
-          <div className={styles.panelInner}>
-            <p className={styles.title}>Blocs</p>
-            {BLOCKS_CONFIG.map(config => (
-              <button key={config.type} className={styles.blockBtn} onClick={() => handleAdd(config)}>
-                {config.label}
-              </button>
-            ))}
-          </div>
-        )}
-        {openPanel === 'animations' && (
-          <div className={styles.panelInner}>
-            <p className={styles.title}>Animations</p>
-            {ANIMATIONS.map(anim => (
-              <button
-                key={anim.value}
-                className={styles.blockBtn}
-                onClick={() => onSelectAnimation(anim.value)}
-              >
-                {anim.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    <Drawer
+      side="left"
+      tabs={TABS}
+      activeTab={openPanel}
+      onTabChange={setOpenPanel}
+      renderTab={key => (key === 'blocs' ? renderBlocks() : renderAnimations())}
+    />
   )
 }

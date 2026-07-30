@@ -181,6 +181,15 @@ export default function Editor() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [undo, redo, duplicateBlocks, selectAllBlocks, selectedBlockIds])
 
+  // Animation commune à toute la sélection, sinon rien : le panneau ne peut
+  // marquer une entrée comme active que si elle vaut pour tous les blocs.
+  const currentAnimation = (() => {
+    const blocks = slides[currentSlide].blocks.filter(b => selectedBlockIds.includes(b.id))
+    if (blocks.length === 0) return null
+    const first = blocks[0].animation?.type ?? 'none'
+    return blocks.every(b => (b.animation?.type ?? 'none') === first) ? first : null
+  })()
+
   // ── Animations
   const handleSelectAnimation = (type: AnimationType) => {
     if (selectedBlockIds.length === 0) return
@@ -220,7 +229,12 @@ export default function Editor() {
         draftFailed={draftFailed}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <LeftSidebars onAddBlock={addBlock} onSelectAnimation={handleSelectAnimation} />
+        <LeftSidebars
+          onAddBlock={addBlock}
+          onSelectAnimation={handleSelectAnimation}
+          selectionCount={selectedBlockIds.length}
+          currentAnimation={currentAnimation}
+        />
         {mediaReady && (
           <Canvas
             blocks={slides[currentSlide].blocks}

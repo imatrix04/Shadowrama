@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import type { Slide } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
+import Drawer, { DrawerTitle } from '../ui/Drawer'
+import type { DrawerTab } from '../ui/Drawer'
 import styles from './SlidePanel.module.css'
+
+// Un seul onglet : le tiroir se comporte alors comme un simple volet.
+const TABS: DrawerTab[] = [{ key: 'slides', label: 'Diapositives', icon: 'slides' }]
 
 interface Props {
   slides: Slide[]
@@ -22,7 +27,7 @@ export default function SlidePanel({
   onDeleteSlide,
   onReorderSlides,
 }: Props) {
-  const [open, setOpen] = useState(false)
+  const [openPanel, setOpenPanel] = useState<string | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
@@ -49,17 +54,14 @@ export default function SlidePanel({
   }
 
   return (
-    <div className={styles.wrapper}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className={`${styles.toggleBtn} ${open ? styles.toggleBtnOpen : ''}`}
-      >
-        {open ? '▶' : '◀'}
-      </button>
-
-      <div className={`${styles.panel} ${open ? styles.panelOpen : ''}`}>
-        <div className={styles.panelInner}>
-          <p className={styles.title}>Diapositives</p>
+    <Drawer
+      side="right"
+      tabs={TABS}
+      activeTab={openPanel}
+      onTabChange={setOpenPanel}
+      renderTab={() => (
+        <>
+          <DrawerTitle>Diapositives</DrawerTitle>
           <div className={styles.list}>
             {slides.map((slide, i) => (
               <div
@@ -109,8 +111,8 @@ export default function SlidePanel({
             ))}
           </div>
           <button className={styles.addBtn} onClick={onAddSlide}>＋ Nouvelle diapo</button>
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    />
   )
 }

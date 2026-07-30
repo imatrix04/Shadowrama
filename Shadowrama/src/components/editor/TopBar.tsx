@@ -6,6 +6,7 @@ import {
 } from '../../utils/fileManager'
 import { clearMediaStore } from '../../utils/mediaStore'
 import Dialog from '../ui/Dialog'
+import Icon from '../ui/Icon'
 import PresentationMode from './PresentationMode'
 import styles from './TopBar.module.css'
 
@@ -165,23 +166,23 @@ export default function TopBar({
         </div>
         <div className={styles.actions}>
           <button className={styles.btn} onClick={onUndo} disabled={!canUndo} title="Annuler (Ctrl+Z)">
-            ↶
+            <Icon name="undo" />
           </button>
           <button className={styles.btn} onClick={onRedo} disabled={!canRedo} title="Rétablir (Ctrl+Y)">
-            ↷
+            <Icon name="redo" />
           </button>
           <button className={styles.btn} onClick={handleNew}>
-            🆕 Nouveau
+            <Icon name="new" /> Nouveau
           </button>
           <button className={styles.btn} onClick={handleSave} title="Sauvegarder (Ctrl+S)">
-            💾 Sauvegarder
+            <Icon name="save" /> Sauvegarder
           </button>
           <button className={styles.btn} onClick={handleOpen}>
-            📂 Ouvrir
+            <Icon name="open" /> Ouvrir
           </button>
           <button className={`${styles.btn} ${styles.btnAccent}`}
             onClick={() => setPresenting(true)}>
-            ▶ Présenter
+            <Icon name="play" /> Présenter
           </button>
         </div>
       </div>

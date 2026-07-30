@@ -6,6 +6,10 @@
   --editor-border: #333333;
   --editor-border-light: #444444;
 
+  /* Surface surélevée : dialogues, menus, vignettes. Existait déjà en dur à
+     plusieurs endroits (#1e1e2e) sans être un token. */
+  --editor-bg-raised: #1e1e2e;
+
   /* Boutons */
   --editor-btn-bg: #2a2a3e;
   --editor-btn-bg-hover: #3a3a5e;
@@ -18,8 +22,32 @@
   --accent-hover: #8b84ff;
   --accent-border: #8b84ff;
   --accent-bg-soft: rgba(108, 99, 255, 0.15);
+  --accent-glow: rgba(108, 99, 255, 0.35);
 
   /* États */
   --danger: #ff4d4d;
+  --danger-soft: #ff6b6b;
+  --danger-hover: #ff8787;
   --warning: #ffb84d;
+
+  /* Mouvement — une seule échelle pour toute l'application.
+     Les tiroirs étaient à 500 ms quand tout le reste était à 150 ms, d'où une
+     impression de lourdeur. */
+  --t-fast: 130ms;
+  --t-base: 180ms;
+  --t-slow: 260ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Rayons */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-fast: 0ms;
+    --t-base: 0ms;
+    --t-slow: 0ms;
+  }
 }

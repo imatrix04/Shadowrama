@@ -15,7 +15,7 @@
   width: 520px;
   max-width: 100%;
   max-height: min(80vh, 40rem);
-  background-color: #1e1e2e;
+  background-color: var(--editor-bg-raised);
   border: 1px solid var(--editor-border);
   border-radius: 12px;
   overflow: hidden;
@@ -160,7 +160,7 @@
   font-size: 0.83rem;
   font-family: inherit;
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition: background-color var(--t-fast), border-color var(--t-fast);
 }
 
 .btn:hover:not(:disabled) {

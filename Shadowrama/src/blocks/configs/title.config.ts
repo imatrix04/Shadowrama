@@ -2,7 +2,8 @@ import type { BlockConfig } from '../../types'
 
 const titleConfig: BlockConfig = {
   type: 'title',
-  label: '🔤 Titre',
+  label: 'Titre',
+  icon: 'title',
   defaultProps: { content: 'Mon Titre', fontSize: 36, color: '#ffffff'},
   properties: [
     { key: 'content', label: 'Contenu', type: 'textarea' },

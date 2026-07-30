@@ -41,6 +41,10 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
   // Un appui prolongé sur une flèche émet des dizaines de keydown : une seule
   // entrée d'historique pour toute la rafale, refermée au keyup.
   const arrowGestureOpen = useRef(false)
+  // Tant que l'utilisateur n'a pas zoomé ni déplacé la vue lui-même, la diapo
+  // est recentrée à chaque redimensionnement. Dès qu'il prend la main, on ne
+  // touche plus à son cadrage.
+  const userAdjustedView = useRef(false)
 
   const [selectionRect, setSelectionRect] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null)
   const isSelectingArea = useRef(false)
@@ -122,6 +126,7 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
     // molette seule fait défiler (Maj pour défiler horizontalement).
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault()
+      userAdjustedView.current = true
 
       if (e.ctrlKey || e.metaKey) {
         const rect = el.getBoundingClientRect()
@@ -160,6 +165,7 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
     if (e.button === 1) {
       e.preventDefault()
       setIsPanning(true)
+      userAdjustedView.current = true
       panStart.current = { x: e.clientX - offset.x, y: e.clientY - offset.y }
     } else if (e.button === 0 && (e.target === canvasRef.current || e.target === wrapperRef.current)) {
       e.preventDefault()
@@ -279,6 +285,7 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
   const zoomByStep = (step: number) => {
     const el = wrapperRef.current
     if (!el) return
+    userAdjustedView.current = true
     const rect = el.getBoundingClientRect()
     const cx = rect.width / 2
     const cy = rect.height / 2
@@ -296,9 +303,19 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
     })
   }
 
-  // Le bouton de réinitialisation ramenait à 100 % en (0,0), c'est-à-dire au
-  // coin haut-gauche. On ajuste plutôt la diapo à la zone visible et on la
-  // centre, ce qui est le comportement attendu d'un « réinitialiser la vue ».
+  /**
+   * Ajuste la diapositive à la zone visible et la centre.
+   *
+   * Attention au repère : `.wrapper` centre déjà son contenu en flexbox, sur la
+   * base de la taille NON transformée (960×540). La mise à l'échelle part
+   * ensuite du coin (`transformOrigin: 0 0`) et fait donc grandir la diapo vers
+   * la droite et le bas. Sans compensation, tout zoom supérieur à 100 % ne
+   * laisse voir que son coin haut-gauche.
+   *
+   * Le décalage à appliquer ramène le coin de la diapo agrandie là où il doit
+   * être ; les dimensions du conteneur s'annulent dans le calcul :
+   *   offset = (taille × (1 − zoom)) / 2
+   */
   const fitToScreen = useCallback(() => {
     const el = wrapperRef.current
     if (!el) return
@@ -314,12 +331,34 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
     )
     setView({
       zoom,
-      offset: { x: (width - CANVAS_W * zoom) / 2, y: (height - CANVAS_H * zoom) / 2 },
+      offset: { x: CANVAS_W * (1 - zoom) / 2, y: CANVAS_H * (1 - zoom) / 2 },
     })
   }, [])
 
-  // Vue ajustée dès l'ouverture, plutôt qu'une diapo collée au coin.
-  useEffect(() => { fitToScreen() }, [fitToScreen])
+  /**
+   * Vue ajustée et centrée à l'ouverture.
+   *
+   * Un simple effet au montage ne suffisait pas : la fenêtre Electron est créée
+   * en 1200×800 puis maximisée (voir electron/main.ts). Le cadrage était donc
+   * calculé pour la petite taille et jamais repris, laissant la diapo décalée
+   * vers le coin haut-gauche. On observe donc les dimensions réelles, et on
+   * recentre tant que l'utilisateur n'a pas cadré la vue lui-même.
+   */
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+
+    // Ajustement immédiat : couvre le cas normal sans attendre l'observateur.
+    fitToScreen()
+
+    // Puis on suit les changements de taille, pour le passage en plein écran
+    // comme pour un redimensionnement manuel de la fenêtre.
+    const observer = new ResizeObserver(() => {
+      if (!userAdjustedView.current) fitToScreen()
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [fitToScreen])
 
   const handleBlockMove = (id: number, rawX: number, rawY: number) => {
     const block = blocks.find(b => b.id === id)
@@ -530,7 +569,15 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
         <button onClick={() => zoomByStep(-0.1)} className={styles.zoomBtn}>−</button>
         <span className={styles.zoomLabel}>{Math.round(zoom * 100)}%</span>
         <button onClick={() => zoomByStep(0.1)} className={styles.zoomBtn}>+</button>
-        <button onClick={fitToScreen} className={styles.zoomBtn} title="Ajuster à l'écran">↺</button>
+        <button
+          onClick={() => {
+            // Réinitialisation explicite : on rend la main au recentrage auto.
+            userAdjustedView.current = false
+            fitToScreen()
+          }}
+          className={styles.zoomBtn}
+          title="Ajuster à l'écran"
+        >↺</button>
       </div>
     </div>
   )

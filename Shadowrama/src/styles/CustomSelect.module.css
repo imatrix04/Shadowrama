@@ -11,7 +11,7 @@
   font-size: 0.82rem;
   font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition: border-color var(--t-fast), background var(--t-fast), box-shadow var(--t-fast);
 }
 
 .trigger:hover {
@@ -19,7 +19,7 @@
 }
 
 .triggerActive {
-  border-color: #7c5cff;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
 }
 
@@ -32,8 +32,8 @@
 .chevron {
   flex-shrink: 0;
   margin-left: 6px;
-  color: #7c5cff;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--accent);
+  transition: transform var(--t-base) cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .chevronOpen {
@@ -114,5 +114,5 @@
 
 .check {
   flex-shrink: 0;
-  color: #7c5cff;
+  color: var(--accent);
 }

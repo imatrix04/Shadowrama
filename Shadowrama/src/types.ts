@@ -1,4 +1,5 @@
 // types.ts
+import type { IconName } from './components/ui/Icon'
 
 export interface BlockProperty {
   key: string
@@ -87,6 +88,9 @@ export type BlockData =
 export interface BlockConfig {
   type: BlockData['type']
   label: string
+  /** Nom d'icône (voir components/ui/Icon). L'icône était auparavant un emoji
+   *  collé dans `label`, donc ni stylable ni indépendant du système. */
+  icon: IconName
   defaultProps: Partial<BlockData>
   properties: BlockProperty[]
 }

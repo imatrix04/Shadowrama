@@ -2,7 +2,8 @@ import { useRef, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { BlockData, BlockProperty, AnimationType } from '../../types'
 import { getBlockField, setBlockField } from '../../types'
-import { getBlockProperties } from '../../blocks'
+import { getBlockProperties, getBlockConfig } from '../../blocks'
+import Icon from '../ui/Icon'
 import styles from './ContextMenu.module.css'
 import CustomSelect from '../../styles/CustomSelect'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
@@ -85,10 +86,10 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#ffffff',
+              color: 'var(--editor-text)',
               fontSize: '0.85rem',
-              backgroundColor: '#2A2A2A',
-              borderRadius: '4px'
+              backgroundColor: 'var(--editor-btn-bg)',
+              borderRadius: 'var(--r-sm)'
             }}>
               transparent
             </div>
@@ -178,6 +179,7 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
 
   // Résolues depuis la config du type, pas depuis le bloc : voir BaseBlockData.
   const properties = getBlockProperties(block.type)
+  const config = getBlockConfig(block.type)
   const animation = block.animation
   const hasAnimation = !!animation && animation.type !== 'none'
 
@@ -198,7 +200,12 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
         className={styles.menu}
         style={{ left: pos.x, top: pos.y }}
       >
-        <p className={styles.typeLabel}>{block.type}</p>
+        {/* Affichait le type brut (« image »). On reprend le libellé et l'icône
+            de la config, comme la sidebar. */}
+        <p className={styles.typeLabel}>
+          {config && <Icon name={config.icon} size={13} />}
+          {config?.label ?? block.type}
+        </p>
 
         <div className={styles.section}>
           <span className={styles.sectionLabel}>Ordre</span>

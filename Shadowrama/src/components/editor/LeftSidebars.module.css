@@ -1,106 +1,104 @@
-.wrapper {
-  display: flex;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 10;
-}
+/* Les styles de structure (tiroir, onglets, titre) vivent dans
+   components/ui/Drawer.module.css : ce fichier ne décrit plus que le contenu
+   propre aux panneaux Blocs et Animations. */
 
-.toggleBtn {
-  position: absolute;
-  right: -105px;
-  z-index: 51;
-  width: 105px;
-  height: 32px;
-  background-color: var(--editor-btn-bg);
-  border: 1px solid var(--editor-border-light);
-  border-radius: 0 6px 6px 0;
-  color: var(--editor-text-muted);
-  cursor: pointer;
-  font-size: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: right 0.2s, background-color 0.15s;
-}
-
-.toggleBtn:hover {
-  background-color: var(--editor-btn-bg-hover);
-}
-
-.toggleBtnOpen {
-  right: -105px;
-}
-
-.toggleLabel {
-  font-size: 0.7rem;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.toggleBtnBlocs {
-  top: 1rem;
-}
-
-.toggleBtnAnimations {
-  top: 3.75rem;
-}
-
-.panel {
-  width: 0px;
-  overflow: hidden;
-  transition: width 0.5s ease;
-  height: 100%;
-  background-color: var(--editor-bg-panel);
-  border-right: none;
-  box-sizing: border-box;
-}
-
-.panelOpen {
-  width: 200px;
-  border-right: 1px solid var(--editor-border);
-}
-
-.panelInner {
-  min-width: 160px;
-  height: 100%;
+.list {
   display: flex;
   flex-direction: column;
-  padding: 0.75rem 0.5rem;
-  gap: 0.5rem;
-  box-sizing: border-box;
-  overflow-y: auto;
+  gap: 0.3rem;
 }
 
-.title {
-  margin: 0 0 0.5rem 0;
-  color: var(--editor-text-muted);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  text-align: center;
-}
-
-.blockBtn {
-  padding: 0.6rem;
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
   background-color: var(--editor-btn-bg);
   border: 1px solid var(--editor-border-light);
-  border-radius: 6px;
+  border-radius: var(--r-md);
   color: var(--editor-text);
-  cursor: pointer;
-  text-align: left;
+  font-family: inherit;
   font-size: 0.85rem;
-  width: 100%;
-  transition: background-color 0.15s, border-color 0.15s;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--t-fast),
+    border-color var(--t-fast),
+    transform var(--t-fast) var(--ease-out);
+
+  /* Apparition décalée à l'ouverture du tiroir : les boutons arrivaient tous
+     ensemble, d'un bloc. Le délai est posé en style inline par le composant. */
+  opacity: 0;
+  transform: translateX(-6px);
+  animation: itemIn var(--t-base) var(--ease-out) forwards;
 }
 
-.blockBtn:hover {
+@keyframes itemIn {
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.item:hover {
   background-color: var(--editor-btn-bg-hover);
   border-color: var(--accent);
+  transform: translateX(2px);
 }
 
-.blockBtn:focus-visible {
+.item:active {
+  transform: translateX(1px) scale(0.985);
+}
+
+.item:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+
+.itemIcon {
+  flex-shrink: 0;
+  display: flex;
+  color: var(--editor-text-muted);
+  transition: color var(--t-fast);
+}
+
+.item:hover .itemIcon { color: var(--accent-hover); }
+
+/* Animation actuellement appliquée à la sélection. Rien ne l'indiquait. */
+.itemActive {
+  background-color: var(--accent-bg-soft);
+  border-color: var(--accent);
+}
+
+.itemActive .itemIcon { color: var(--accent-hover); }
+
+.check {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--accent-hover);
+  font-size: 0.8rem;
+}
+
+/* Panneau Animations sans sélection : cliquer ne faisait rien, silencieusement.
+   On explique au lieu de laisser croire à une panne. */
+.hint {
+  margin: 0 0 0.6rem;
+  padding: 0.5rem 0.6rem;
+  background-color: rgba(255, 184, 77, 0.08);
+  border: 1px solid rgba(255, 184, 77, 0.25);
+  border-radius: var(--r-md);
+  color: var(--warning);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.disabled:hover {
+  background-color: var(--editor-btn-bg);
+  border-color: var(--editor-border-light);
+  transform: none;
+}
+
+.disabled:hover .itemIcon { color: var(--editor-text-muted); }

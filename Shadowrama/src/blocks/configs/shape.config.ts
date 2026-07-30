@@ -2,7 +2,8 @@ import type{ BlockConfig } from '../../types'
 
 const shapeConfig: BlockConfig = {
   type: 'shape',
-  label: '🟦 Forme',
+  label: 'Forme',
+  icon: 'shape',
   defaultProps: { shape: 'rectangle', backgroundColor: '#3b82f6', borderWidth: 0, borderColor: '#ffffff', width: 150, height: 150 },
   properties: [
     { 
