@@ -155,7 +155,7 @@ export default function LeftSidebars({
       activeTab={openPanel}
       onTabChange={setOpenPanel}
       renderTab={renderTab}
-      width={ultra ? 250 : 220}
+      width={ultra ? 280 : 220}
     />
   )
 }

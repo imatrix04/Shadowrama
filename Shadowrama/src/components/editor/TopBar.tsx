@@ -235,6 +235,7 @@ export default function TopBar({
         <PresentationMode
           slides={slides}
           onClose={() => setPresenting(false)}
+          ultra={ultra}
         />
       )}
     </>

@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import type { BlockData, MotionPhase } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
 import { EffectLayer } from '../../ultra/effects'
+import { viewBlock } from '../../ultra/effectStyle'
 import { buildTimeline, gsapReset } from '../../ultra/timeline'
 import ContextMenu from './ContextMenu'
 
@@ -236,7 +237,7 @@ export default function Block({
     >
       {BlockComponent && (
         <div ref={motionRef} style={{ width: '100%', height: '100%' }}>
-        <EffectLayer block={ultra ? block : { ...block, effects: undefined }}>
+        <EffectLayer block={viewBlock(block, ultra)}>
         <div ref={textRef} style={{ width: '100%', height: '100%' }}>
         <BlockComponent
           block={block}

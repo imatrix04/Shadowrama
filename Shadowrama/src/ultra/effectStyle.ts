@@ -42,3 +42,17 @@ export function blockGradient(block: BlockData): Gradient | undefined {
   return block.effects?.gradient
 }
 
+
+/**
+ * Vue d'un bloc selon le mode.
+ *
+ * Hors mode Ultra Design, effets et séquences sont ignorés au RENDU mais restent
+ * intacts dans les données : couper le mode ne détruit rien, il montre le projet
+ * tel qu'il apparaîtrait sans les fonctions avancées. La présentation doit s'y
+ * conformer aussi, sinon couper le mode n'a aucun effet une fois lancée.
+ */
+export function viewBlock(block: BlockData, ultra: boolean): BlockData {
+  if (ultra) return block
+  if (!block.effects && !block.motion) return block
+  return { ...block, effects: undefined, motion: undefined }
+}

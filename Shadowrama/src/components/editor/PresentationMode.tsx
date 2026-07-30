@@ -1,21 +1,42 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useBlockAnimation } from '../../hooks/useBlockAnimation'
 import type { Slide, BlockData } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
 import { EffectLayer } from '../../ultra/effects'
+import { viewBlock } from '../../ultra/effectStyle'
 import { buildTimeline } from '../../ultra/timeline'
+import { getPreset, presetDuration } from '../../ultra/presets'
 import styles from './PresentationMode.module.css'
 
 interface Props {
   slides: Slide[]
   onClose: () => void
+  /** Hors mode Ultra, la présentation ignore effets et séquences. */
+  ultra: boolean
+}
+
+/** Temps nécessaire pour que toutes les sorties d'une diapositive s'achèvent. */
+function exitDuration(slide: Slide): number {
+  let longest = 0
+  for (const block of slide.blocks) {
+    const settings = block.motion?.out
+    const preset = getPreset(settings?.preset)
+    if (!settings || !preset) continue
+    longest = Math.max(longest, (settings.delay ?? 0) + presetDuration(preset, settings.speed ?? 1))
+  }
+  return longest
 }
 
 const CONTROLS_REVEAL_ZONE_PX = 80
 const CONTROLS_HIDE_DELAY_MS = 1500
 
 // Petit composant wrapper qui applique le hook par bloc
-function AnimatedBlockWrapper({ block, isActive }: { block: BlockData; isActive: boolean }) {
+function AnimatedBlockWrapper({ block, isActive, exiting }: {
+  block: BlockData
+  isActive: boolean
+  /** La diapositive s'en va : on joue la séquence de sortie. */
+  exiting: boolean
+}) {
   const ref = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLDivElement>(null)
   const opacity = block.opacity ?? 1
@@ -25,17 +46,20 @@ function AnimatedBlockWrapper({ block, isActive }: { block: BlockData; isActive:
   // historique n'est appelé que si aucune séquence n'est définie, sinon les deux
   // écriraient sur le même élément.
   const motionIn = block.motion?.in
+  const motionOut = block.motion?.out
   // L'état de repos est communiqué au hook : sans lui, GSAP terminerait sur une
   // opacité de 1 et une rotation nulle, effaçant les réglages du bloc.
   useBlockAnimation(ref, motionIn ? undefined : block.animation, isActive, { opacity, rotation })
 
   useEffect(() => {
-    if (!motionIn || !isActive) return
+    // La sortie l'emporte sur l'entrée : la diapositive est en train de partir.
+    const settings = exiting ? motionOut : motionIn
+    if (!settings || !isActive) return
     const el = ref.current
     if (!el) return
 
     const built = buildTimeline(el, {
-      settings: motionIn,
+      settings,
       rest: { opacity, rotation },
       textElement: textRef.current?.querySelector<HTMLElement>('[data-text-content]') ?? null,
     })
@@ -46,7 +70,7 @@ function AnimatedBlockWrapper({ block, isActive }: { block: BlockData; isActive:
       built.timeline.kill()
       built.cleanup()
     }
-  }, [motionIn, isActive, opacity, rotation])
+  }, [motionIn, motionOut, exiting, isActive, opacity, rotation])
 
   const BlockComponent = BLOCKS_REGISTRY[block.type]
   if (!BlockComponent) return null
@@ -72,8 +96,12 @@ function AnimatedBlockWrapper({ block, isActive }: { block: BlockData; isActive:
   )
 }
 
-export default function PresentationMode({ slides, onClose }: Props) {
+export default function PresentationMode({ slides, onClose, ultra }: Props) {
   const [current, setCurrent] = useState(0)
+  // Diapositive en cours de sortie : on laisse les séquences se dérouler avant
+  // de basculer, sinon les blocs disparaîtraient d'un coup.
+  const [exiting, setExiting] = useState(false)
+  const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [scale, setScale] = useState(1)
   const [controlsVisible, setControlsVisible] = useState(true)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -103,20 +131,45 @@ export default function PresentationMode({ slides, onClose }: Props) {
     return () => window.removeEventListener('resize', updateScale)
   }, [])
 
+  /**
+   * Change de diapositive en laissant d'abord jouer les séquences de sortie.
+   *
+   * Sans cette attente, changer de diapo faisait disparaître les blocs
+   * instantanément : les sorties étaient définies mais jamais déclenchées.
+   */
+  const goTo = useCallback((target: number) => {
+    const index = Math.min(Math.max(target, 0), slides.length - 1)
+    if (index === current || exitTimer.current) return
+
+    const wait = ultra ? exitDuration(slides[current]) : 0
+    if (wait <= 0) {
+      setCurrent(index)
+      return
+    }
+
+    setExiting(true)
+    exitTimer.current = setTimeout(() => {
+      exitTimer.current = null
+      setExiting(false)
+      setCurrent(index)
+    }, wait * 1000)
+  }, [current, slides, ultra])
+
+  // Une transition en cours ne doit pas survivre à la fermeture.
+  useEffect(() => () => {
+    if (exitTimer.current) clearTimeout(exitTimer.current)
+  }, [])
+
   // ── Clavier
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
-        setCurrent(prev => Math.min(prev + 1, slides.length - 1))
-      }
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        setCurrent(prev => Math.max(prev - 1, 0))
-      }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') goTo(current + 1)
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goTo(current - 1)
       if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [slides.length, onClose])
+  }, [goTo, current, onClose])
 
   // ── Affichage/masquage des contrôles selon la position de la souris
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -144,11 +197,8 @@ export default function PresentationMode({ slides, onClose }: Props) {
     const clickX = e.clientX - rect.left
     const midpoint = rect.width / 2
 
-    if (clickX < midpoint) {
-      setCurrent(prev => Math.max(prev - 1, 0))
-    } else {
-      setCurrent(prev => Math.min(prev + 1, slides.length - 1))
-    }
+    if (clickX < midpoint) goTo(current - 1)
+    else goTo(current + 1)
   }
 
   const slide = slides[current]
@@ -165,7 +215,14 @@ export default function PresentationMode({ slides, onClose }: Props) {
           {slide.blocks
             .slice()
             .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
-            .map(block => <AnimatedBlockWrapper key={block.id} block={block} isActive={true} />)}
+            .map(block => (
+              <AnimatedBlockWrapper
+                key={block.id}
+                block={viewBlock(block, ultra)}
+                isActive={true}
+                exiting={exiting}
+              />
+            ))}
         </div>
       </div>
 
@@ -175,7 +232,7 @@ export default function PresentationMode({ slides, onClose }: Props) {
       >
         <button
           className={styles.btn}
-          onClick={() => setCurrent(p => Math.max(p - 1, 0))}
+          onClick={() => goTo(current - 1)}
           disabled={current === 0}
         >
           ◀
@@ -183,7 +240,7 @@ export default function PresentationMode({ slides, onClose }: Props) {
         <span className={styles.counter}>{current + 1} / {slides.length}</span>
         <button
           className={styles.btn}
-          onClick={() => setCurrent(p => Math.min(p + 1, slides.length - 1))}
+          onClick={() => goTo(current + 1)}
           disabled={current === slides.length - 1}
         >
           ▶

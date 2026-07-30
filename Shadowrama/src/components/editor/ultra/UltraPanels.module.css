@@ -11,6 +11,7 @@
 
 .group {
   margin-bottom: 0.9rem;
+  min-width: 0;
 }
 
 .groupLabel {
@@ -46,6 +47,7 @@
 .preset {
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 0.45rem;
   width: 100%;
   padding: 0.45rem 0.55rem;
@@ -74,7 +76,12 @@
   border-color: var(--accent);
 }
 
-.presetName { flex: 1; }
+.presetName {
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
 
 .presetPlay {
   flex-shrink: 0;
@@ -101,16 +108,27 @@
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.35rem;
+  /* Sans cette remise à zéro, les enfants d'un conteneur flex refusent de
+     passer sous leur largeur de contenu et débordent du tiroir. */
+  min-width: 0;
 }
 
 .fieldLabel {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 0.74rem;
+  line-height: 1.25;
   color: var(--editor-text-muted);
+  overflow-wrap: anywhere;
 }
 
 .input {
+  flex: 0 0 auto;
   width: 4.6rem;
+  /* `min-width: auto` empêchait notamment le <select> des modes de fusion de
+     descendre sous la largeur de « luminosity », son option la plus longue. */
+  min-width: 0;
+  max-width: 4.6rem;
   padding: 0.3rem 0.4rem;
   background-color: var(--editor-btn-bg);
   border: 1px solid var(--editor-border-light);
@@ -127,6 +145,7 @@
 }
 
 .color {
+  flex: 0 0 auto;
   width: 2.2rem;
   height: 1.6rem;
   padding: 1px;
@@ -137,12 +156,15 @@
 }
 
 .range {
+  flex: 0 0 auto;
   width: 4.6rem;
+  min-width: 0;
   accent-color: var(--accent);
 }
 
 .toggle {
   width: 100%;
+  box-sizing: border-box;
   padding: 0.4rem;
   background-color: transparent;
   border: 1px dashed var(--editor-border-light);

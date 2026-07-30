@@ -114,6 +114,9 @@
   gap: 0.4rem;
   box-sizing: border-box;
   overflow-y: auto;
+  /* Filet de sécurité : aucun contenu de panneau ne doit pouvoir élargir le
+     tiroir ni dépasser sur le canvas. */
+  overflow-x: hidden;
   /* Le contenu s'estompe au lieu d'être démonté d'un coup : on voyait
      auparavant une bande vide se rétracter. */
   opacity: 0;
