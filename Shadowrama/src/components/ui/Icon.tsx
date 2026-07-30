@@ -2,6 +2,7 @@ export type IconName =
   | 'text' | 'title' | 'image' | 'shape'
   | 'slides' | 'chevronLeft' | 'chevronRight'
   | 'new' | 'save' | 'open' | 'play' | 'undo' | 'redo'
+  | 'ultra' | 'motion' | 'effects'
   | 'animNone' | 'animFade' | 'animSlideLeft' | 'animSlideRight' | 'animSlideUp' | 'animZoom'
 
 interface Props {
@@ -46,6 +47,24 @@ const PATHS: Record<IconName, React.ReactNode> = {
   chevronLeft: <path d="M15 5l-7 7 7 7" />,
   chevronRight: <path d="M9 5l7 7-7 7" />,
 
+  ultra: (
+    <>
+      <path d="M12 3l1.9 4.6L18.5 9.5 13.9 11.4 12 16l-1.9-4.6L5.5 9.5l4.6-1.9z" />
+      <path d="M18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z" />
+    </>
+  ),
+  motion: (
+    <>
+      <path d="M3 17c4 0 5-10 9-10s5 5 9 5" />
+      <circle cx="3" cy="17" r="1.4" />
+    </>
+  ),
+  effects: (
+    <>
+      <circle cx="9" cy="9" r="6" />
+      <circle cx="15" cy="15" r="6" />
+    </>
+  ),
   new: (
     <>
       <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" />

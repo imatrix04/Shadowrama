@@ -9,6 +9,8 @@ import type { Slide } from '../types'
 import Dialog from '../components/ui/Dialog'
 import WhatsNew from '../components/ui/WhatsNew'
 import { useWhatsNew } from '../hooks/useWhatsNew'
+import { useUltraMode } from '../hooks/useUltraMode'
+import Icon from '../components/ui/Icon'
 import styles from './Home.module.css'
 
 function formatDate(timestamp: number): string {
@@ -24,6 +26,7 @@ export default function Home() {
   const [recents, setRecents] = useState<RecentProject[]>(loadRecents)
   const [error, setError] = useState<string | null>(null)
   const whatsNew = useWhatsNew()
+  const { enableUltra } = useUltraMode()
 
   const goToEditor = () => navigate('/editor')
 
@@ -103,6 +106,19 @@ export default function Home() {
               Ouvrir un projet
             </button>
           </div>
+
+          {/* Entrée directe dans le mode Ultra Design : le mode est une
+              surcouche de l'éditeur, ce bouton l'active puis ouvre l'éditeur. */}
+          <button
+            className={styles.ctaUltra}
+            onClick={() => { enableUltra(); goToEditor() }}
+          >
+            <Icon name="ultra" size={18} />
+            <span>
+              <strong>Mode Ultra Design</strong>
+              <em>Effets avancés et séquences d'animation composées</em>
+            </span>
+          </button>
 
           {recents.length > 0 && (
             <div className={styles.recents}>

@@ -17,6 +17,115 @@ export interface AnimationConfig {
   ease?: string       // ex: 'power2.out', défaut 'power2.out'
 }
 
+
+// ── Mode Ultra Design ───────────────────────────────────────────────────────
+// Tout est optionnel : un projet créé en mode simple reste valide, et un projet
+// Ultra s'ouvre en mode simple — les effets et séquences sont alors ignorés au
+// rendu, mais conservés dans le fichier.
+
+export interface Shadow {
+  x: number
+  y: number
+  blur: number
+  color: string
+}
+
+export interface Glow {
+  blur: number
+  color: string
+}
+
+export interface Gradient {
+  from: string
+  to: string
+  /** Degrés. 0 = de bas en haut, 90 = de gauche à droite. */
+  angle: number
+}
+
+export interface CornerRadius {
+  tl: number
+  tr: number
+  br: number
+  bl: number
+}
+
+/** Effets visuels avancés, appliqués par-dessus le rendu propre au bloc. */
+export interface BlockEffects {
+  shadow?: Shadow
+  glow?: Glow
+  /** Remplace la couleur unie du bloc quand il en accepte une (forme, texte). */
+  gradient?: Gradient
+  /** Flou gaussien, en pixels. */
+  blur?: number
+  /** 1 = neutre. */
+  brightness?: number
+  saturate?: number
+  contrast?: number
+  blendMode?: 'normal' | 'multiply' | 'screen' | 'overlay' | 'difference' | 'exclusion' | 'luminosity'
+  /** Arrondi par coin, indépendant du `borderRadius` simple. */
+  corners?: CornerRadius
+  textStroke?: { width: number; color: string }
+}
+
+/** Propriétés animables. Toutes optionnelles : une étape ne touche que ce qu'elle nomme. */
+export interface Keyframe {
+  opacity?: number
+  /** Décalages en pixels, relatifs à la position du bloc. */
+  x?: number
+  y?: number
+  scale?: number
+  /** Degrés, en plus de la rotation propre au bloc. */
+  rotate?: number
+  skewX?: number
+  skewY?: number
+  blur?: number
+}
+
+export interface AnimationStep {
+  to: Keyframe
+  /** Secondes. */
+  duration: number
+  ease?: string
+}
+
+export type MotionPhase = 'in' | 'out'
+
+/**
+ * Un preset décrit un état de départ puis une suite d'étapes enchaînées.
+ * C'est ce qui permet des mouvements composés — apparaître, dépasser, revenir —
+ * là où l'ancien modèle ne connaissait qu'une transition unique.
+ */
+export interface MotionPreset {
+  id: string
+  label: string
+  phase: MotionPhase
+  /** Famille, pour regrouper la bibliothèque dans l'interface. */
+  family: 'fondu' | 'glissement' | 'echelle' | 'rotation' | 'flou' | 'texte'
+  from: Keyframe
+  steps: AnimationStep[]
+  /**
+   * Découpe le texte pour animer chaque caractère ou chaque mot séparément.
+   * Ignoré sur les blocs non textuels.
+   */
+  split?: 'chars' | 'words'
+}
+
+/** Réglages d'une phase sur un bloc donné. */
+export interface MotionSettings {
+  preset: string
+  /** Multiplicateur de la durée du preset. 1 = durée d'origine. */
+  speed?: number
+  /** Secondes avant le démarrage. */
+  delay?: number
+  /** Décalage entre les fragments d'un texte découpé, en secondes. */
+  stagger?: number
+}
+
+export interface BlockMotion {
+  in?: MotionSettings
+  out?: MotionSettings
+}
+
 // Champs communs à TOUS les blocs, quel que soit leur type.
 // Les descripteurs de champs éditables ne sont volontairement PAS stockés ici :
 // ils sont résolus depuis BLOCKS_CONFIG via `getBlockProperties(block.type)`.
@@ -37,6 +146,11 @@ export interface BaseBlockData {
   opacity?: number
   /** Degrés, sens horaire. Appliquée au rendu du bloc (voir Block.tsx). */
   rotation?: number
+  /** Mode Ultra Design : effets visuels avancés. */
+  effects?: BlockEffects
+  /** Mode Ultra Design : séquences d'entrée et de sortie. Prend le pas sur
+   *  `animation`, conservée pour les projets antérieurs. */
+  motion?: BlockMotion
 }
 
 // ── Un type par bloc, avec SES props spécifiques ──

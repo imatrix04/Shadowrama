@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import type { AnimationType, BlockConfig } from '../../types'
+import type { AnimationType, BlockConfig, BlockData, MotionPhase } from '../../types'
 import { BLOCKS_CONFIG } from '../../blocks'
 import Drawer, { DrawerTitle } from '../ui/Drawer'
 import type { DrawerTab } from '../ui/Drawer'
 import Icon from '../ui/Icon'
 import type { IconName } from '../ui/Icon'
+import MotionPanel from './ultra/MotionPanel'
+import EffectsPanel from './ultra/EffectsPanel'
 import styles from './LeftSidebars.module.css'
 
 interface Props {
@@ -14,6 +16,13 @@ interface Props {
   selectionCount: number
   /** Animation commune à la sélection, pour la marquer comme active. */
   currentAnimation: AnimationType | null
+  /** Mode Ultra Design : déverrouille les panneaux Mouvement et Effets. */
+  ultra: boolean
+  /** Bloc unique sélectionné : les panneaux Ultra travaillent sur un seul bloc. */
+  selectedBlock: BlockData | null
+  onUpdateSelected: (changes: Partial<BlockData> | ((block: BlockData) => Partial<BlockData>)) => void
+  onGestureStart: () => void
+  onPreviewMotion: (phase: MotionPhase) => void
 }
 
 const ANIMATIONS: { label: string; value: AnimationType; icon: IconName }[] = [
@@ -25,9 +34,16 @@ const ANIMATIONS: { label: string; value: AnimationType; icon: IconName }[] = [
   { label: 'Zoom', value: 'zoomIn', icon: 'animZoom' },
 ]
 
-const TABS: DrawerTab[] = [
+const BASE_TABS: DrawerTab[] = [
   { key: 'blocs', label: 'Blocs', icon: 'shape' },
   { key: 'animations', label: 'Animations', icon: 'animFade' },
+]
+
+// Les panneaux Ultra s'ajoutent aux onglets existants : le mode est une
+// surcouche, pas un éditeur parallèle.
+const ULTRA_TABS: DrawerTab[] = [
+  { key: 'mouvement', label: 'Mouvement', icon: 'motion' },
+  { key: 'effets', label: 'Effets', icon: 'effects' },
 ]
 
 // Décalage d'apparition, plafonné pour que les listes longues n'attendent pas.
@@ -37,6 +53,7 @@ function stagger(index: number): React.CSSProperties {
 
 export default function LeftSidebars({
   onAddBlock, onSelectAnimation, selectionCount, currentAnimation,
+  ultra, selectedBlock, onUpdateSelected, onGestureStart, onPreviewMotion,
 }: Props) {
   const [openPanel, setOpenPanel] = useState<string | null>(null)
 
@@ -101,13 +118,44 @@ export default function LeftSidebars({
     )
   }
 
+  const renderTab = (key: string) => {
+    if (key === 'blocs') return renderBlocks()
+    if (key === 'mouvement') {
+      return (
+        <>
+          <DrawerTitle>Séquences</DrawerTitle>
+          <MotionPanel
+            block={selectedBlock}
+            onUpdate={onUpdateSelected}
+            onGestureStart={onGestureStart}
+            onPreview={onPreviewMotion}
+          />
+        </>
+      )
+    }
+    if (key === 'effets') {
+      return (
+        <>
+          <DrawerTitle>Effets visuels</DrawerTitle>
+          <EffectsPanel
+            block={selectedBlock}
+            onUpdate={onUpdateSelected}
+            onGestureStart={onGestureStart}
+          />
+        </>
+      )
+    }
+    return renderAnimations()
+  }
+
   return (
     <Drawer
       side="left"
-      tabs={TABS}
+      tabs={ultra ? [...BASE_TABS, ...ULTRA_TABS] : BASE_TABS}
       activeTab={openPanel}
       onTabChange={setOpenPanel}
-      renderTab={key => (key === 'blocs' ? renderBlocks() : renderAnimations())}
+      renderTab={renderTab}
+      width={ultra ? 250 : 220}
     />
   )
 }

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { BLOCKS_CONFIG } from '../blocks'
-import type { AnimationType, BlockData, Slide } from '../types'
+import type { AnimationType, BlockData, MotionPhase, Slide } from '../types'
 import { useEditorHistory } from '../hooks/useEditorHistory'
 import { loadDraft, saveDraft } from '../utils/fileManager'
 import { hydrateMediaStore } from '../utils/mediaStore'
 import { nextId } from '../utils/ids'
+import { useUltraMode } from '../hooks/useUltraMode'
 import Canvas from '../components/editor/Canvas'
 import LeftSidebars from '../components/editor/LeftSidebars'
 import TopBar from '../components/editor/TopBar'
@@ -26,6 +27,11 @@ export default function Editor() {
   // L'autosauvegarde peut échouer (quota du navigateur saturé) : on le signale
   // dans la barre plutôt que de laisser croire que tout est enregistré.
   const [draftFailed, setDraftFailed] = useState(false)
+  const { ultra, toggleUltra } = useUltraMode()
+  // Demande d'aperçu d'une séquence. `nonce` permet de rejouer la même phase
+  // plusieurs fois de suite : sans lui, deux clics identiques ne changeraient
+  // rien et l'animation ne repartirait pas.
+  const [motionPreview, setMotionPreview] = useState<{ id: number; phase: MotionPhase; nonce: number } | null>(null)
 
   const { slides, begin, commit, patch, undo, redo, reset, canUndo, canRedo } = useEditorHistory(
     initialDraft?.slides ?? [{ id: nextId(), blocks: [] }]
@@ -190,6 +196,39 @@ export default function Editor() {
     return blocks.every(b => (b.animation?.type ?? 'none') === first) ? first : null
   })()
 
+  // Les panneaux Ultra travaillent sur un bloc unique : avec plusieurs blocs
+  // sélectionnés, on ne saurait pas quoi afficher comme valeurs courantes.
+  const selectedBlock = selectedBlockIds.length === 1
+    ? slides[currentSlide].blocks.find(b => b.id === selectedBlockIds[0]) ?? null
+    : null
+
+  // Accepte une fonction plutôt qu'un objet : les panneaux Ultra composent des
+  // objets imbriqués (`effects`, `motion`) à partir de l'existant. Avec un objet
+  // figé, deux réglages enchaînés avant le rendu suivant se perdent — le second
+  // repartirait d'un `block.effects` périmé.
+  const updateSelectedBlock = useCallback(
+    (changes: Partial<BlockData> | ((block: BlockData) => Partial<BlockData>)) => {
+      if (selectedBlockIds.length !== 1) return
+      const id = selectedBlockIds[0]
+      patch(prev => prev.map((slide, i) =>
+        i === currentSlide
+          ? {
+              ...slide,
+              blocks: slide.blocks.map(b => b.id === id
+                ? ({ ...b, ...(typeof changes === 'function' ? changes(b) : changes) } as BlockData)
+                : b),
+            }
+          : slide
+      ))
+    },
+    [selectedBlockIds, patch, currentSlide],
+  )
+
+  const previewMotion = useCallback((phase: MotionPhase) => {
+    if (selectedBlockIds.length !== 1) return
+    setMotionPreview({ id: selectedBlockIds[0], phase, nonce: Date.now() })
+  }, [selectedBlockIds])
+
   // ── Animations
   const handleSelectAnimation = (type: AnimationType) => {
     if (selectedBlockIds.length === 0) return
@@ -227,6 +266,8 @@ export default function Editor() {
         canUndo={canUndo}
         canRedo={canRedo}
         draftFailed={draftFailed}
+        ultra={ultra}
+        onToggleUltra={toggleUltra}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <LeftSidebars
@@ -234,6 +275,11 @@ export default function Editor() {
           onSelectAnimation={handleSelectAnimation}
           selectionCount={selectedBlockIds.length}
           currentAnimation={currentAnimation}
+          ultra={ultra}
+          selectedBlock={selectedBlock}
+          onUpdateSelected={updateSelectedBlock}
+          onGestureStart={begin}
+          onPreviewMotion={previewMotion}
         />
         {mediaReady && (
           <Canvas
@@ -243,6 +289,8 @@ export default function Editor() {
             onUpdateBlock={updateBlock}
             onDeleteBlocks={handleDeleteBlocks}
             onGestureStart={begin}
+            ultra={ultra}
+            motionPreview={motionPreview}
           />
         )}
         <SlidePanel

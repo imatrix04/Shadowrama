@@ -1,4 +1,5 @@
 import type { BlockComponentProps, ShapeBlockData, ShapeKind } from '../../types'
+import { gradientCss } from '../../ultra/effectStyle'
 
 const DEFAULT_FILL = 'var(--accent)'
 const DEFAULT_STROKE = 'var(--editor-text)'
@@ -102,7 +103,12 @@ function roundedPolygonPath(points: Point[], radius: number): string {
 export default function ShapeBlock({ block }: BlockComponentProps<ShapeBlockData>) {
   const shape = block.shape ?? 'rectangle'
   const borderWidth = Math.max(0, block.borderWidth ?? 0)
-  const fill = block.backgroundColor ?? DEFAULT_FILL
+  // Mode Ultra : un dégradé prend le pas sur la couleur unie. En SVG il passe
+  // par une définition <linearGradient>, la propriété `fill` n'acceptant pas de
+  // valeur CSS `linear-gradient()`.
+  const gradient = block.effects?.gradient
+  const gradientId = `grad-${block.id}`
+  const fill = gradient ? `url(#${gradientId})` : (block.backgroundColor ?? DEFAULT_FILL)
   const hasBorder = borderWidth > 0
   const stroke = hasBorder ? (block.borderColor ?? DEFAULT_STROKE) : 'none'
 
@@ -115,7 +121,8 @@ export default function ShapeBlock({ block }: BlockComponentProps<ShapeBlockData
         position: 'absolute',
         inset: 0,
         boxSizing: 'border-box',
-        backgroundColor: fill,
+        backgroundColor: gradient ? undefined : (block.backgroundColor ?? DEFAULT_FILL),
+        backgroundImage: gradient ? gradientCss(gradient) : undefined,
         borderRadius: shape === 'circle' ? '50%' : `${block.borderRadius ?? 4}px`,
         border: hasBorder ? `${borderWidth}px solid ${stroke}` : 'none',
       }} />
@@ -133,6 +140,14 @@ export default function ShapeBlock({ block }: BlockComponentProps<ShapeBlockData
         preserveAspectRatio="none"
         style={{ position: 'absolute', inset: 0, display: 'block' }}
       >
+        {gradient && (
+          <defs>
+            <linearGradient id={gradientId} gradientTransform={`rotate(${gradient.angle} 0.5 0.5)`}>
+              <stop offset="0%" stopColor={gradient.from} />
+              <stop offset="100%" stopColor={gradient.to} />
+            </linearGradient>
+          </defs>
+        )}
         <line
           x1={thickness / 2} y1={block.height / 2}
           x2={block.width - thickness / 2} y2={block.height / 2}
@@ -162,6 +177,14 @@ export default function ShapeBlock({ block }: BlockComponentProps<ShapeBlockData
       preserveAspectRatio="none"
       style={{ position: 'absolute', inset: 0, display: 'block' }}
     >
+        {gradient && (
+          <defs>
+            <linearGradient id={gradientId} gradientTransform={`rotate(${gradient.angle} 0.5 0.5)`}>
+              <stop offset="0%" stopColor={gradient.from} />
+              <stop offset="100%" stopColor={gradient.to} />
+            </linearGradient>
+          </defs>
+        )}
       <path
         d={roundedPolygonPath(shapePoints(shape, box), block.borderRadius ?? 0)}
         fill={fill}

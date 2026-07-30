@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useBlockAnimation } from '../../hooks/useBlockAnimation'
 import type { Slide, BlockData } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
+import { EffectLayer } from '../../ultra/effects'
+import { buildTimeline } from '../../ultra/timeline'
 import styles from './PresentationMode.module.css'
 
 interface Props {
@@ -15,13 +17,40 @@ const CONTROLS_HIDE_DELAY_MS = 1500
 // Petit composant wrapper qui applique le hook par bloc
 function AnimatedBlockWrapper({ block, isActive }: { block: BlockData; isActive: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
+  const textRef = useRef<HTMLDivElement>(null)
   const opacity = block.opacity ?? 1
   const rotation = block.rotation ?? 0
+
+  // Une séquence Ultra prend le pas sur l'ancienne animation simple. Le hook
+  // historique n'est appelé que si aucune séquence n'est définie, sinon les deux
+  // écriraient sur le même élément.
+  const motionIn = block.motion?.in
   // L'état de repos est communiqué au hook : sans lui, GSAP terminerait sur une
   // opacité de 1 et une rotation nulle, effaçant les réglages du bloc.
-  useBlockAnimation(ref, block.animation, isActive, { opacity, rotation })
+  useBlockAnimation(ref, motionIn ? undefined : block.animation, isActive, { opacity, rotation })
+
+  useEffect(() => {
+    if (!motionIn || !isActive) return
+    const el = ref.current
+    if (!el) return
+
+    const built = buildTimeline(el, {
+      settings: motionIn,
+      rest: { opacity, rotation },
+      textElement: textRef.current?.querySelector<HTMLElement>('[data-text-content]') ?? null,
+    })
+    if (!built) return
+
+    built.timeline.eventCallback('onComplete', built.cleanup)
+    return () => {
+      built.timeline.kill()
+      built.cleanup()
+    }
+  }, [motionIn, isActive, opacity, rotation])
+
   const BlockComponent = BLOCKS_REGISTRY[block.type]
   if (!BlockComponent) return null
+
   return (
     <div
       ref={ref}
@@ -34,7 +63,11 @@ function AnimatedBlockWrapper({ block, isActive }: { block: BlockData; isActive:
         transform: rotation ? `rotate(${rotation}deg)` : undefined,
       }}
     >
-      <BlockComponent block={block} onUpdate={() => {}} isEditing={false} onStartEdit={() => {}} onStopEdit={() => {}} />
+      <EffectLayer block={block}>
+        <div ref={textRef} style={{ width: '100%', height: '100%' }}>
+          <BlockComponent block={block} onUpdate={() => {}} isEditing={false} onStartEdit={() => {}} onStopEdit={() => {}} />
+        </div>
+      </EffectLayer>
     </div>
   )
 }

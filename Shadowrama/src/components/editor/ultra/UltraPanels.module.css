@@ -1,0 +1,178 @@
+.hint {
+  margin: 0 0 0.6rem;
+  padding: 0.5rem 0.6rem;
+  background-color: rgba(255, 184, 77, 0.08);
+  border: 1px solid rgba(255, 184, 77, 0.25);
+  border-radius: var(--r-md);
+  color: var(--warning);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.group {
+  margin-bottom: 0.9rem;
+}
+
+.groupLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--editor-text-dim);
+}
+
+/* ── Bibliothèque de mouvements ────────────────────────────────────────── */
+
+.family {
+  margin: 0 0 0.3rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.presetList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.7rem;
+}
+
+.preset {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-md);
+  color: var(--editor-text);
+  font-family: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--t-fast),
+    border-color var(--t-fast),
+    transform var(--t-fast) var(--ease-out);
+}
+
+.preset:hover {
+  background-color: var(--editor-btn-bg-hover);
+  border-color: var(--accent);
+  transform: translateX(2px);
+}
+
+.presetActive {
+  background-color: var(--accent-bg-soft);
+  border-color: var(--accent);
+}
+
+.presetName { flex: 1; }
+
+.presetPlay {
+  flex-shrink: 0;
+  display: flex;
+  padding: 0.15rem;
+  background: none;
+  border: none;
+  border-radius: var(--r-sm);
+  color: var(--editor-text-muted);
+  cursor: pointer;
+  transition: color var(--t-fast), background-color var(--t-fast);
+}
+
+.presetPlay:hover {
+  color: var(--accent-hover);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Champs ────────────────────────────────────────────────────────────── */
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.fieldLabel {
+  flex: 1;
+  font-size: 0.74rem;
+  color: var(--editor-text-muted);
+}
+
+.input {
+  width: 4.6rem;
+  padding: 0.3rem 0.4rem;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-sm);
+  color: var(--editor-text);
+  font-family: inherit;
+  font-size: 0.76rem;
+  box-sizing: border-box;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.color {
+  width: 2.2rem;
+  height: 1.6rem;
+  padding: 1px;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.range {
+  width: 4.6rem;
+  accent-color: var(--accent);
+}
+
+.toggle {
+  width: 100%;
+  padding: 0.4rem;
+  background-color: transparent;
+  border: 1px dashed var(--editor-border-light);
+  border-radius: var(--r-md);
+  color: var(--editor-text-muted);
+  font-family: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast), background-color var(--t-fast);
+}
+
+.toggle:hover {
+  border-color: var(--accent);
+  color: var(--editor-text);
+  background-color: var(--accent-bg-soft);
+}
+
+.toggleOn {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--editor-text);
+}
+
+.remove {
+  background: none;
+  border: none;
+  color: var(--editor-text-dim);
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.remove:hover { color: var(--danger-soft); }

@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react'
 import type { BlockComponentProps, TextBlockData, TitleBlockData } from '../../types'
+import { gradientCss } from '../../ultra/effectStyle'
 
 type TextualBlockData = TextBlockData | TitleBlockData
 
@@ -102,6 +103,10 @@ export function createTextualBlock(defaultFontSize: number) {
       >
         <div
           ref={ref}
+          // Repère pour le découpage par lettres/mots du mode Ultra : seul ce
+          // nœud peut voir son contenu remplacé, car le bloc y écrit déjà son
+          // texte directement. Découper un ancêtre détruirait le DOM de React.
+          data-text-content="true"
           contentEditable={isEditing}
           suppressContentEditableWarning
           onDoubleClick={handleDoubleClick}
@@ -116,7 +121,14 @@ export function createTextualBlock(defaultFontSize: number) {
             fontStyle: block.fontStyle ?? 'normal',
             lineHeight: block.lineHeight ?? 1.4,
             letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : 'normal',
-            color: block.color,
+            // Un dégradé sur du texte passe par le fond rogné aux glyphes ;
+            // la couleur doit alors devenir transparente pour le laisser voir.
+            ...(block.effects?.gradient ? {
+              backgroundImage: gradientCss(block.effects.gradient),
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              color: 'transparent',
+            } : { color: block.color }),
             textAlign: block.textAlign || 'center',
             wordBreak: 'break-word',
             whiteSpace: 'pre-wrap',

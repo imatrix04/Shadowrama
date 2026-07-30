@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import type { BlockData } from '../../types'
+import type { BlockData, MotionPhase } from '../../types'
 import Block from './Block'
 import styles from './Canvas.module.css'
 
@@ -26,9 +26,15 @@ interface Props {
   onDeleteBlocks: (ids: number[]) => void
   /** Ouvre une entrée d'historique avant la première modification d'un geste. */
   onGestureStart: () => void
+  ultra: boolean
+  /** Aperçu de séquence demandé depuis le panneau Mouvement. */
+  motionPreview: { id: number; phase: MotionPhase; nonce: number } | null
 }
 
-export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpdateBlock, onDeleteBlocks, onGestureStart }: Props) {
+export default function Canvas({
+  blocks, selectedBlockIds, onSelectBlocks, onUpdateBlock, onDeleteBlocks, onGestureStart,
+  ultra, motionPreview,
+}: Props) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [view, setView] = useState({ zoom: 1, offset: { x: 0, y: 0 } })
@@ -544,6 +550,8 @@ export default function Canvas({ blocks, selectedBlockIds, onSelectBlocks, onUpd
                 onMove={handleBlockMove}
                 onDragEnd={handleBlockDragEnd}
                 onGestureStart={onGestureStart}
+                ultra={ultra}
+                motionPreview={motionPreview?.id === block.id ? motionPreview : null}
                 onDelete={(id) => onDeleteBlocks([id])}
                 onReorder={handleReorder}
               />

@@ -24,11 +24,13 @@ interface Props {
   canRedo: boolean
   /** Vrai quand la dernière autosauvegarde a échoué (quota du navigateur). */
   draftFailed: boolean
+  ultra: boolean
+  onToggleUltra: () => void
 }
 
 export default function TopBar({
   slides, projectName, setProjectName, filePath, setFilePath, onLoad, onNew,
-  onUndo, onRedo, canUndo, canRedo, draftFailed,
+  onUndo, onRedo, canUndo, canRedo, draftFailed, ultra, onToggleUltra,
 }: Props) {
   const [presenting, setPresenting] = useState(false)
   const [nameDialogOpen, setNameDialogOpen] = useState(false)
@@ -179,6 +181,13 @@ export default function TopBar({
           </button>
           <button className={styles.btn} onClick={handleOpen}>
             <Icon name="open" /> Ouvrir
+          </button>
+          <button
+            className={`${styles.btn} ${ultra ? styles.btnUltraOn : styles.btnUltra}`}
+            onClick={onToggleUltra}
+            title={ultra ? 'Quitter le mode Ultra Design' : 'Activer le mode Ultra Design : effets et séquences avancées'}
+          >
+            <Icon name="ultra" /> Ultra Design
           </button>
           <button className={`${styles.btn} ${styles.btnAccent}`}
             onClick={() => setPresenting(true)}>

@@ -157,3 +157,25 @@
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
+/* Bascule du mode Ultra Design : volontairement distincte des autres actions,
+   c'est un changement d'état de l'éditeur et non une commande ponctuelle. */
+.btnUltra {
+  border-color: rgba(108, 99, 255, 0.45);
+  color: var(--accent-hover);
+}
+
+.btnUltra:hover:not(:disabled) {
+  background-color: var(--accent-bg-soft);
+  border-color: var(--accent);
+}
+
+.btnUltraOn {
+  background-image: linear-gradient(135deg, var(--accent), #b14dff);
+  border-color: var(--accent-border);
+  color: #fff;
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.btnUltraOn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}

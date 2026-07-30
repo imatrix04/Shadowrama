@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react'
-import type { BlockData } from '../../types'
+import { useRef, useState, useEffect } from 'react'
+import type { BlockData, MotionPhase } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
+import { EffectLayer } from '../../ultra/effects'
+import { buildTimeline, gsapReset } from '../../ultra/timeline'
 import ContextMenu from './ContextMenu'
 
 interface Props {
@@ -19,6 +21,9 @@ interface Props {
   /** Ouvre une entrée d'historique avant la première modification d'un geste. */
   onGestureStart: () => void
   onReorder: (id: number, direction: 'front' | 'back' | 'forward' | 'backward') => void
+  ultra: boolean
+  /** Non nul quand un aperçu de séquence est demandé pour CE bloc. */
+  motionPreview: { phase: MotionPhase; nonce: number } | null
 }
 
 const MIN_W = 40
@@ -39,6 +44,7 @@ const HANDLES: { dir: ResizeHandle; style: React.CSSProperties }[] = [
 
 export default function Block({
   block, isSelected, zoom, onSelect, onUpdate, onDelete, onMove, onResize, onDragEnd, onGestureStart, onReorder,
+  ultra, motionPreview,
 }: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const isDragging = useRef(false)
@@ -52,6 +58,43 @@ export default function Block({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   const BlockComponent = BLOCKS_REGISTRY[block.type]
+
+  // Couche dédiée au mouvement : GSAP y écrit `transform` et `filter`. La couche
+  // d'effets est en dessous, sinon une animation de flou effacerait les ombres.
+  const motionRef = useRef<HTMLDivElement>(null)
+  const textRef = useRef<HTMLDivElement>(null)
+
+  // Aperçu depuis le panneau Mouvement. On dépend du `nonce` pour pouvoir
+  // rejouer la même phase plusieurs fois d'affilée.
+  const nonce = motionPreview?.nonce
+  const phase = motionPreview?.phase
+  useEffect(() => {
+    if (!nonce || !phase) return
+    const el = motionRef.current
+    const settings = block.motion?.[phase]
+    if (!el || !settings) return
+
+    const built = buildTimeline(el, {
+      settings,
+      rest: { opacity: block.opacity ?? 1, rotation: 0 },
+      textElement: textRef.current?.querySelector<HTMLElement>('[data-text-content]') ?? null,
+    })
+    if (!built) return
+
+    // L'aperçu ne doit rien laisser derrière lui : on remet l'état de repos et
+    // on recolle le texte découpé.
+    built.timeline.eventCallback('onComplete', () => {
+      built.cleanup()
+      gsapReset(el, block.opacity ?? 1)
+    })
+
+    return () => {
+      built.timeline.kill()
+      built.cleanup()
+      gsapReset(el, block.opacity ?? 1)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nonce, phase])
 
   const openGestureOnce = () => {
     if (gestureOpened.current) return
@@ -192,6 +235,9 @@ export default function Block({
       }}
     >
       {BlockComponent && (
+        <div ref={motionRef} style={{ width: '100%', height: '100%' }}>
+        <EffectLayer block={ultra ? block : { ...block, effects: undefined }}>
+        <div ref={textRef} style={{ width: '100%', height: '100%' }}>
         <BlockComponent
           block={block}
           onUpdate={onUpdate}
@@ -203,6 +249,9 @@ export default function Block({
           }}
           onStopEdit={() => setIsEditing(false)}
         />
+        </div>
+        </EffectLayer>
+        </div>
       )}
 
       {isSelected && !isEditing && HANDLES.map(({ dir, style }) => (

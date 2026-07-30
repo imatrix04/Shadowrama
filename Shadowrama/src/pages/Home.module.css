@@ -316,7 +316,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .title, .lead, .ctaRow, .recents, .mockBlock, .mockImage::before {
+  .title, .lead, .ctaRow, .ctaUltra, .recents, .mockBlock, .mockImage::before {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
@@ -329,4 +329,47 @@
   .hero {
     grid-template-columns: 1fr;
   }
+}
+/* ── Entrée mode Ultra Design ── */
+
+.ctaUltra {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  max-width: 26rem;
+  background: linear-gradient(135deg, rgba(139, 59, 255, 0.14), rgba(255, 107, 214, 0.08));
+  border: 1px solid rgba(139, 59, 255, 0.4);
+  border-radius: 10px;
+  color: var(--ink);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  opacity: 0;
+  animation: rise 0.6s ease 0.3s forwards;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.ctaUltra:hover {
+  transform: translateY(-1px);
+  border-color: var(--violet);
+  box-shadow: 0 8px 28px rgba(139, 59, 255, 0.25);
+}
+
+.ctaUltra span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ctaUltra strong {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.ctaUltra em {
+  font-size: 0.76rem;
+  font-style: normal;
+  color: var(--muted);
 }
