@@ -2,7 +2,9 @@ import { dialog, ipcMain } from 'electron'
 import { readFile, writeFile } from 'fs/promises'
 import JSZip from 'jszip'
 
-interface MediaEntry { key: string; data: string } // data = base64
+// Octets bruts. L'ancien format transportait du base64 : +33 % de volume sur
+// l'IPC, plus un encodage et un décodage à chaque bout.
+interface MediaEntry { key: string; data: Uint8Array }
 
 ipcMain.handle('save-project-as', async (_e, manifestJson: string, media: MediaEntry[], defaultName: string) => {
   const { canceled, filePath } = await dialog.showSaveDialog({
@@ -15,6 +17,7 @@ ipcMain.handle('save-project-as', async (_e, manifestJson: string, media: MediaE
 })
 
 ipcMain.handle('save-project', async (_e, filePath: string, manifestJson: string, media: MediaEntry[]) => {
+  assertProjectPath(filePath)
   await writeZip(filePath, manifestJson, media)
   return filePath
 })
@@ -30,8 +33,26 @@ ipcMain.handle('open-project', async () => {
 
 // Ouverture sans boîte de dialogue, pour la liste des projets récents.
 ipcMain.handle('open-project-at', async (_e, filePath: string) => {
+  assertProjectPath(filePath)
   return readProject(filePath)
 })
+
+/**
+ * Refuse tout chemin qui n'est pas un projet Shadowrama.
+ *
+ * `open-project-at` et `save-project` prennent un chemin fourni par le renderer,
+ * sans boîte de dialogue : sans ce filtre, ils forment une primitive de lecture
+ * et d'écriture de fichier arbitraire. L'application ne charge aucun contenu
+ * distant, donc le risque reste théorique — mais il suffirait d'une injection
+ * dans le renderer pour lire une clé SSH ou un `.env`. Contraindre l'extension
+ * ne coûte rien et réduit la surface à des fichiers que l'application produit
+ * elle-même.
+ */
+function assertProjectPath(filePath: string) {
+  if (typeof filePath !== 'string' || !/\.shma$/i.test(filePath)) {
+    throw new Error('Chemin de projet invalide : un fichier .shma est attendu.')
+  }
+}
 
 async function readProject(filePath: string) {
   const buffer = await readFile(filePath)
@@ -48,9 +69,9 @@ async function readProject(filePath: string) {
   const media: MediaEntry[] = []
   const entries = Object.values(zip.files).filter(f => !f.dir && f.name.startsWith('media/'))
   for (const entry of entries) {
-    const base64 = await entry.async('base64')
+    const data = await entry.async('uint8array')
     const key = entry.name // ex: "media/img-123.png"
-    media.push({ key, data: base64 })
+    media.push({ key, data })
   }
 
   return { filePath, manifestJson, media }
@@ -62,7 +83,7 @@ async function writeZip(filePath: string, manifestJson: string, media: MediaEntr
   for (const m of media) {
     // Garde-fou : un média ne doit jamais pouvoir écraser le manifest.
     if (m.key === 'manifest.json' || !m.key.startsWith('media/')) continue
-    zip.file(m.key, m.data, { base64: true })
+    zip.file(m.key, m.data)
   }
   const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
   await writeFile(filePath, buffer)

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, ipcMain, globalShortcut } from 'electron'
+import { app, BrowserWindow, Menu, ipcMain, globalShortcut, shell } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import log from 'electron-log'
 import { join } from 'path'
@@ -19,9 +19,15 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      // Le renderer tourne dans le bac à sable de Chromium. Les deux preloads
+      // n'importent que le module `electron`, seul module accessible dans un
+      // preload sandboxé — rien à adapter.
+      sandbox: true,
       preload: join(__dirname, 'preload.js'),
     },
   })
+
+  hardenNavigation(win)
 
   win.maximize()
   win.show()
@@ -36,8 +42,47 @@ function createWindow() {
   return win
 }
 
+/**
+ * Empêche la fenêtre applicative de devenir un navigateur.
+ *
+ * Sans ces deux garde-fous, un lien dans un bloc de texte — ou n'importe quel
+ * `window.location = …` — remplace l'éditeur par une page distante, qui hérite
+ * alors du preload et de son accès au système de fichiers. Une navigation
+ * externe part donc dans le navigateur de l'utilisateur, jamais ici.
+ */
+function hardenNavigation(win: BrowserWindow) {
+  const isInternal = (url: string) => {
+    if (url.startsWith('file://')) return true
+    return process.env.NODE_ENV === 'development' && url.startsWith('http://localhost:5173')
+  }
+
+  win.webContents.on('will-navigate', (event, url) => {
+    if (isInternal(url)) return
+    event.preventDefault()
+    void openExternally(url)
+  })
+
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    void openExternally(url)
+    return { action: 'deny' }
+  })
+}
+
+/** N'ouvre à l'extérieur que ce qui est réellement une page web. */
+async function openExternally(url: string) {
+  try {
+    const { protocol } = new URL(url)
+    if (protocol !== 'http:' && protocol !== 'https:') return
+    await shell.openExternal(url)
+  } catch {
+    // URL invalide : il n'y a rien à ouvrir, et surtout rien à faire ici.
+  }
+}
+
 ipcMain.on('set-fullscreen', (_event, value: boolean) => {
-  mainWindow?.setFullScreen(value)
+  // La fenêtre peut avoir été fermée entre-temps ; appeler une méthode sur un
+  // BrowserWindow détruit lève.
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setFullScreen(value)
 })
 
 // Une vérification au seul démarrage laissait passer les versions publiées

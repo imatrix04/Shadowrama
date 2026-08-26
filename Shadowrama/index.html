@@ -2,6 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Politique construite dans vite.config.ts (plugin shadowrama-csp) :
+         stricte pour l'application packagée, assouplie pour le serveur de dev. -->
+    <meta http-equiv="Content-Security-Policy" content="%CSP%" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Les polices sont embarquées via @fontsource (voir src/main.tsx) : pas de

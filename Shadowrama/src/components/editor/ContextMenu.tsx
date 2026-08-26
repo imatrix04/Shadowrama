@@ -146,15 +146,13 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
             onChange={async e => {
               const file = e.target.files?.[0]
               if (!file) return
-              const reader = new FileReader()
-              reader.onload = () => {
-                const dataUrl = reader.result as string
-                const base64 = dataUrl.split(',')[1]
-                const key = generateMediaKey(file.name)
-                registerMedia(key, base64, file.type)
-                onUpdate(block.id, setBlockField(block, prop.key, key))
-              }
-              reader.readAsDataURL(file)
+              // `arrayBuffer()` remplace le FileReader + découpage de data URL :
+              // on garde les octets bruts, sans passer par une chaîne base64
+              // 33 % plus grosse qu'il fallait ensuite redécoder.
+              const bytes = new Uint8Array(await file.arrayBuffer())
+              const key = generateMediaKey(file.name)
+              registerMedia(key, bytes, file.type)
+              onUpdate(block.id, setBlockField(block, prop.key, key))
             }}
           />
         </div>

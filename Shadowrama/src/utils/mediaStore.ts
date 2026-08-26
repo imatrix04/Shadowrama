@@ -1,6 +1,9 @@
+import { MEDIA_STORE, withStore } from './idb'
+
 interface MediaEntry {
   blobUrl: string
-  base64: string // sans préfixe data:, juste le payload
+  /** Octets bruts de l'image. */
+  bytes: Uint8Array
   mimeType: string
 }
 
@@ -8,50 +11,33 @@ interface MediaEntry {
 // il doit donc rester synchrone. IndexedDB ne sert qu'à le reconstruire au
 // démarrage — sans ça, le brouillon restauré référence des médias disparus et
 // tous les blocs image retombent sur le placeholder.
+//
+// Les octets sont stockés en binaire et non en base64. L'ancien format gardait
+// la même image trois fois (base64 en mémoire, Blob pour l'affichage, base64 en
+// base) et repassait par un `atob` caractère par caractère à chaque démarrage :
+// une trentaine de photos suffisaient à faire ramer l'ouverture.
 const store = new Map<string, MediaEntry>()
-
-const DB_NAME = 'shadowrama'
-const DB_VERSION = 1
-const STORE_NAME = 'media'
 
 interface PersistedMedia {
   key: string
-  base64: string
+  bytes?: Uint8Array
+  /** Format hérité des versions ≤ 0.15 : converti à la lecture. */
+  base64?: string
   mimeType: string
 }
 
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-    request.onupgradeneeded = () => {
-      if (!request.result.objectStoreNames.contains(STORE_NAME)) {
-        request.result.createObjectStore(STORE_NAME, { keyPath: 'key' })
-      }
-    }
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
+function createBlobUrl(bytes: Uint8Array, mimeType: string): string {
+  // `slice()` détache la vue de son tampon d'origine : un Blob construit sur une
+  // vue partagée resterait solidaire du tampon complet.
+  return URL.createObjectURL(new Blob([bytes.slice()], { type: mimeType }))
 }
 
-async function withStore<T>(
-  mode: IDBTransactionMode,
-  run: (store: IDBObjectStore) => IDBRequest<T>,
-): Promise<T> {
-  const db = await openDb()
-  return new Promise<T>((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, mode)
-    const request = run(tx.objectStore(STORE_NAME))
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-    tx.oncomplete = () => db.close()
-  })
-}
-
-function createBlobUrl(base64: string, mimeType: string): string {
-  const byteChars = atob(base64)
-  const bytes = new Uint8Array(byteChars.length)
-  for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i)
-  return URL.createObjectURL(new Blob([bytes], { type: mimeType }))
+/** Décode le format hérité (base64) vers des octets bruts. */
+export function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes
 }
 
 /**
@@ -61,27 +47,32 @@ function createBlobUrl(base64: string, mimeType: string): string {
 export async function hydrateMediaStore(): Promise<void> {
   let persisted: PersistedMedia[]
   try {
-    persisted = await withStore<PersistedMedia[]>('readonly', s => s.getAll() as IDBRequest<PersistedMedia[]>)
+    persisted = await withStore<PersistedMedia[]>(MEDIA_STORE, 'readonly', s => s.getAll() as IDBRequest<PersistedMedia[]>)
   } catch {
     // IndexedDB indisponible : on dégrade en cache purement mémoire.
     return
   }
   for (const entry of persisted) {
     if (store.has(entry.key)) continue
+    // Les entrées écrites par une version antérieure sont en base64 : on les
+    // convertit à la volée plutôt que de vider la base, sinon le brouillon en
+    // cours perdrait ses images à la première mise à jour.
+    const bytes = entry.bytes ?? (entry.base64 ? base64ToBytes(entry.base64) : undefined)
+    if (!bytes) continue
     store.set(entry.key, {
-      blobUrl: createBlobUrl(entry.base64, entry.mimeType),
-      base64: entry.base64,
+      blobUrl: createBlobUrl(bytes, entry.mimeType),
+      bytes,
       mimeType: entry.mimeType,
     })
   }
 }
 
-export function registerMedia(key: string, base64: string, mimeType: string): string {
-  const blobUrl = createBlobUrl(base64, mimeType)
-  store.set(key, { blobUrl, base64, mimeType })
+export function registerMedia(key: string, bytes: Uint8Array, mimeType: string): string {
+  const blobUrl = createBlobUrl(bytes, mimeType)
+  store.set(key, { blobUrl, bytes, mimeType })
   // Persistance opportuniste : un échec d'écriture IndexedDB ne doit pas
   // empêcher l'insertion de l'image dans la diapo en cours.
-  void withStore('readwrite', s => s.put({ key, base64, mimeType })).catch(() => {})
+  void withStore(MEDIA_STORE, 'readwrite', s => s.put({ key, bytes, mimeType })).catch(() => {})
   return blobUrl
 }
 
@@ -92,28 +83,34 @@ export function resolveMedia(key: string): string | undefined {
 export function clearMediaStore() {
   for (const entry of store.values()) URL.revokeObjectURL(entry.blobUrl)
   store.clear()
-  void withStore('readwrite', s => s.clear()).catch(() => {})
+  void withStore(MEDIA_STORE, 'readwrite', s => s.clear()).catch(() => {})
 }
 
 /**
- * Supprime les médias qu'aucun bloc ne référence plus.
- * Sans ça, une image supprimée continue d'être réécrite dans le .shma à chaque
- * sauvegarde et le fichier grossit indéfiniment.
+ * Médias à écrire dans le `.shma`, restreints à ceux encore référencés.
+ *
+ * Le filtrage est volontairement NON destructif : le store garde les médias que
+ * plus aucun bloc n'utilise. Une version antérieure les supprimait ici même, si
+ * bien que supprimer une image puis enregistrer puis annuler ramenait un bloc
+ * dont le média avait disparu du cache ET d'IndexedDB — une perte de données
+ * qu'un Ctrl+Z est censé justement empêcher. Le fichier, lui, ne contient bien
+ * que ce qui sert : il ne grossit pas.
  */
-export function pruneMedia(usedKeys: Set<string>) {
+export function getAllMediaForSave(usedKeys: Set<string>): { key: string; data: Uint8Array }[] {
+  const out: { key: string; data: Uint8Array }[] = []
   for (const [key, entry] of store) {
-    if (usedKeys.has(key)) continue
-    URL.revokeObjectURL(entry.blobUrl)
-    store.delete(key)
-    void withStore('readwrite', s => s.delete(key)).catch(() => {})
+    if (usedKeys.has(key)) out.push({ key, data: entry.bytes })
   }
-}
-
-export function getAllMediaForSave(): { key: string; data: string }[] {
-  return Array.from(store.entries()).map(([key, entry]) => ({ key, data: entry.base64 }))
+  return out
 }
 
 export function generateMediaKey(originalName: string): string {
-  const ext = originalName.split('.').pop() || 'png'
+  // `split('.').pop()` rendait le nom ENTIER quand il ne contient aucun point :
+  // un fichier « photo » donnait la clé « …-photo ». L'extension est aussi
+  // ramenée en minuscules — `guessMimeType` compare des suffixes en minuscules,
+  // si bien qu'un « IMG.JPG » était typé `application/octet-stream` et ne
+  // réapparaissait pas à la réouverture du projet.
+  const match = /\.([a-z0-9]+)$/i.exec(originalName)
+  const ext = match ? match[1].toLowerCase() : 'png'
   return `media/img-${Date.now()}-${Math.floor(Math.random() * 1000)}.${ext}`
 }

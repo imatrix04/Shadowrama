@@ -1,6 +1,6 @@
 {
   "name": "Shadowrama",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,10 @@
     "changelog": "node scripts/changelog.mjs all",
     "preview": "vite preview",
     "dist": "npm run build && electron-builder",
-    "release": "npm run changelog && dotenv -- electron-builder --publish always"
+    "release": "npm run changelog && dotenv -- electron-builder --publish always",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "tsc -b && eslint . && vitest run"
   },
   "build": {
     "appId": "com.shadowrama.desktop",
@@ -35,8 +38,7 @@
       "icon": "public/icon.ico"
     },
     "mac": {
-      "target": "dmg",
-      "icon": "public/icon.icns"
+      "target": "dmg"
     },
     "linux": {
       "target": "AppImage",
@@ -59,6 +61,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -70,10 +74,12 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "jsdom": "^30.0.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.16",
     "vite-plugin-electron": "^1.0.4",
-    "vite-plugin-electron-renderer": "^1.0.0"
+    "vite-plugin-electron-renderer": "^1.0.0",
+    "vitest": "^4.1.11"
   }
 }

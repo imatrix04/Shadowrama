@@ -3,7 +3,8 @@
 // (`npm run dev` ouvert dans un navigateur), et le code l'appelle en `?.`.
 interface MediaPayload {
   key: string
-  data: string
+  /** Octets bruts de l'image. Traversent l'IPC par clonage structuré. */
+  data: Uint8Array
 }
 
 type UpdateCheckResult =

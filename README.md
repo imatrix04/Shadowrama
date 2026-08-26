@@ -13,6 +13,19 @@ npm run build     # build de production (renderer + process Electron)
 npm run dist      # build + packaging installateur (electron-builder)
 ```
 
+## Vérifications
+
+```bash
+npm test          # tests unitaires (vitest)
+npm run check     # types + lint + tests, comme l'intégration continue
+```
+
+Les tests couvrent la logique qui ne se voit pas à l'œil : historique
+d'édition, presse-papiers, lecture d'un `.shma`, cycle de vie des médias. Ils
+tournent sans DOM Electron et s'exécutent en quelques secondes. Le workflow
+`.github/workflows/ci.yml` rejoue types, lint, tests et build à chaque
+poussée.
+
 ## Format de projet
 
 Un projet Shadowrama est un fichier `.shma` : une archive zip contenant
@@ -21,40 +34,27 @@ embarquées en base64).
 
 ## Changelog
 
-Dernière version : **0.15.0** (2026-07-30).
+Dernière version : **0.16.0** (2026-08-26).
 
-> **✦ Mode Ultra Design** *(Ultra Design)*
->
-> Un interrupteur qui déverrouille les effets visuels avancés et les séquences d'animation composées. Il se coupe et se réactive à tout moment : un projet reste ouvrable dans les deux modes, et rien n'est perdu en repassant en mode simple.
+**Vos images ne disparaissent plus** — Supprimer une image, enregistrer, puis annuler ramenait un cadre vide : l'enregistrement avait effacé l'image de la mémoire de l'application, et l'annulation n'avait plus rien à restituer. Le fichier .shma ne contient toujours que les images réellement utilisées, mais l'annulation retrouve désormais les autres.
 
-> **✦ Séquences d'animation** *(Ultra Design)*
->
-> 22 mouvements répartis en six familles, à l'entrée comme à la sortie. Un mouvement n'est plus une simple transition mais une suite d'étapes — apparaître, dépasser, revenir. Le texte peut s'animer lettre par lettre ou mot par mot.
+**Fini l'écran blanc** — Annuler l'ajout d'une diapositive pouvait interrompre l'éditeur et laisser une fenêtre entièrement vide, sans explication ni retour possible. Ce cas est corrigé, et si une autre erreur survenait, un écran de récupération propose désormais de recharger — votre travail reste dans la sauvegarde automatique.
 
-> **✦ Effets visuels** *(Ultra Design)*
->
-> Ombre portée, lueur, dégradé, arrondi par coin, contour de texte, flou, luminosité, saturation, contraste et modes de fusion. Tous cumulables sur un même bloc.
-
-**Transitions entre diapositives** — Quatre transitions classiques disponibles pour tout le monde — fondu, glissement, glissement vertical, zoom — et quatre transitions spectaculaires réservées au mode Ultra Design.
-
-**Blocs plus expressifs** — Rotation et opacité sur les quatre types de blocs, verrouillage des proportions au redimensionnement, alignement vertical du texte, graisse et italique, et trois nouvelles formes.
+**Les projets illustrés ne saturent plus** — La sauvegarde automatique tenait dans quelques mégaoctets, vite atteints dès qu'un projet contenait des photos : passé cette limite elle échouait, et l'avertissement « Brouillon non sauvegardé » s'installait dans la barre. Elle repose maintenant sur un stockage sans ce plafond, où les images sont conservées telles quelles au lieu d'être converties en texte — l'ouverture d'un projet illustré est d'autant plus rapide.
 
 ### Nouveautés
-- Rotation et opacité disponibles sur tous les blocs.
-- Maj pendant un redimensionnement conserve les proportions.
-- Alignement vertical, graisse, italique, interlignage et interlettrage sur les blocs texte et titre.
-- Trois nouvelles formes : ligne, étoile et hexagone.
-- Onglet Transitions dans la barre latérale droite, pour régler l'apparition de chaque diapositive.
-- Aperçu d'une séquence directement dans l'éditeur, sans passer par le mode présentation.
+- Un écran de récupération remplace la fenêtre vide en cas d'erreur inattendue : il explique la situation, propose de recharger l'application et affiche le détail technique.
+- Une suite de tests automatisés couvre l'historique d'édition, le presse-papiers, la lecture des fichiers .shma et le cycle de vie des images. Elle est rejouée à chaque modification du code.
 
 ### Améliorations
-- Le menu contextuel d'un bloc affiche son nom plutôt que son type technique.
-- Le gras des titres est devenu un réglage modifiable au lieu d'être figé.
+- Déplacer plusieurs blocs à la fois est plus fluide : toute la sélection est repositionnée en une seule opération, au lieu d'une par bloc et soixante fois par seconde.
+- Les images circulent et sont enregistrées en binaire plutôt qu'en texte, de l'import jusqu'au fichier .shma : moins de mémoire occupée, et une écriture plus rapide.
+- L'application est verrouillée sur son propre contenu : elle refuse toute ressource extérieure, et sa fenêtre ne peut plus être détournée vers une page web. Elle fonctionne, comme avant, entièrement hors ligne.
 
 ### Corrections
-- Les flèches du clavier déplaçaient le bloc sélectionné pendant la présentation, en plus de changer de diapositive.
-- Le champ « Arrondi » était proposé pour toutes les formes mais n'agissait que sur le rectangle et le cercle.
-- La bordure des formes anguleuses débordait de leur cadre.
-- Le dernier emoji visible sur une diapositive, dans l'emplacement d'image vide, a été remplacé par une icône.
+- Annuler l'ajout d'une diapositive, ou refaire une suppression, pouvait interrompre l'éditeur sur une fenêtre vide.
+- Changer le plan d'un bloc (« Mettre au premier plan », « Reculer d'un plan ») ne créait pas d'étape d'annulation distincte : le Ctrl+Z suivant défaisait aussi la modification précédente.
+- Ouvrir depuis l'accueil un projet trop volumineux pour le stockage local rouvrait silencieusement le projet précédent, au risque de l'écraser à la première sauvegarde. L'échec est désormais signalé.
+- Une image dont le nom ne comporte pas d'extension, ou dont l'extension est en majuscules (« PHOTO.JPG »), n'était pas retrouvée à la réouverture du projet.
 
 Historique complet : [CHANGELOG.md](CHANGELOG.md).

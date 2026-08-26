@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Une nouvelle poussée sur la même branche annule la vérification en cours :
+# inutile de payer pour un état déjà dépassé.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # L'application vit dans un sous-dossier du dépôt.
+        working-directory: Shadowrama
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Shadowrama/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Types
+        run: npx tsc -b
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Tests
+        run: npx vitest run
+
+      # Compile le renderer ET les process Electron : une erreur de build ne doit
+      # se découvrir ni au packaging, ni chez l'utilisateur.
+      - name: Build
+        run: npm run build

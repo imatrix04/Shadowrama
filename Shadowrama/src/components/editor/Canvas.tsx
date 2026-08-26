@@ -23,21 +23,21 @@ interface Props {
   selectedBlockIds: number[]
   onSelectBlocks: (ids: number[]) => void
   onUpdateBlock: (id: number, changes: Partial<BlockData>) => void
+  /** Lot appartenant au même geste : une seule mise à jour pour toute la sélection. */
+  onUpdateBlocks: (updates: { id: number; changes: Partial<BlockData> }[]) => void
+  /** Lot atomique laissant une entrée d'historique (ordre de profondeur). */
+  onCommitBlocks: (updates: { id: number; changes: Partial<BlockData> }[]) => void
   onDeleteBlocks: (ids: number[]) => void
   /** Ouvre une entrée d'historique avant la première modification d'un geste. */
   onGestureStart: () => void
   ultra: boolean
   /** Aperçu de séquence demandé depuis le panneau Mouvement. */
   motionPreview: { id: number; phase: MotionPhase; nonce: number } | null
-  /** Faux pendant la présentation : le canvas ne doit plus réagir au clavier,
-   *  sinon les flèches déplacent un bloc en même temps qu'elles changent de
-   *  diapositive. */
-  inputsEnabled: boolean
 }
 
 export default function Canvas({
-  blocks, selectedBlockIds, onSelectBlocks, onUpdateBlock, onDeleteBlocks, onGestureStart,
-  ultra, motionPreview, inputsEnabled,
+  blocks, selectedBlockIds, onSelectBlocks, onUpdateBlock, onUpdateBlocks, onCommitBlocks,
+  onDeleteBlocks, onGestureStart, ultra, motionPreview,
 }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -48,9 +48,6 @@ export default function Canvas({
   const [isPanning, setIsPanning] = useState(false)
   const panStart = useRef({ x: 0, y: 0 })
   const [snapLines, setSnapLines] = useState<SnapLine[]>([])
-  // Un appui prolongé sur une flèche émet des dizaines de keydown : une seule
-  // entrée d'historique pour toute la rafale, refermée au keyup.
-  const arrowGestureOpen = useRef(false)
   // Tant que l'utilisateur n'a pas zoomé ni déplacé la vue lui-même, la diapo
   // est recentrée à chaque redimensionnement. Dès qu'il prend la main, on ne
   // touche plus à son cadrage.
@@ -60,61 +57,6 @@ export default function Canvas({
   const isSelectingArea = useRef(false)
   const selectionStart = useRef({ x: 0, y: 0 })
   const hasDraggedSelection = useRef(false)
-
-  useEffect(() => {
-    if (!inputsEnabled) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        document.activeElement?.tagName === 'INPUT' || 
-        document.activeElement?.tagName === 'TEXTAREA' || 
-        document.activeElement?.getAttribute('contenteditable') === 'true'
-      ) {
-        return
-      }
-
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlockIds.length > 0) {
-        onDeleteBlocks(selectedBlockIds)
-        return
-      }
-
-      const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
-      if (arrowKeys.includes(e.key) && selectedBlockIds.length > 0) {
-        e.preventDefault()
-        if (!arrowGestureOpen.current) {
-          arrowGestureOpen.current = true
-          onGestureStart()
-        }
-        const step = e.shiftKey ? 10 : 1
-        let dx = 0
-        let dy = 0
-
-        if (e.key === 'ArrowLeft') dx = -step
-        if (e.key === 'ArrowRight') dx = step
-        if (e.key === 'ArrowUp') dy = -step
-        if (e.key === 'ArrowDown') dy = step
-
-        selectedBlockIds.forEach(id => {
-          const block = blocks.find(b => b.id === id)
-          if (block) {
-            onUpdateBlock(id, { x: block.x + dx, y: block.y + dy })
-          }
-        })
-      }
-    }
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
-      if (arrowKeys.includes(e.key)) arrowGestureOpen.current = false
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
-    }
-  }, [selectedBlockIds, blocks, onDeleteBlocks, onUpdateBlock, onGestureStart, inputsEnabled])
 
   // Un mouseup relâché hors de la fenêtre laissait le panoramique actif
   // indéfiniment : on écoute donc aussi au niveau du document.
@@ -252,27 +194,34 @@ export default function Canvas({
 
     const getZ = (b: BlockData, i: number) => b.zIndex ?? i
 
+    // Un seul lot, donc une seule entrée d'historique : l'échange « avancer » /
+    // « reculer » touche deux blocs, et deux mises à jour séparées auraient
+    // demandé deux Ctrl+Z pour revenir en arrière.
     if (direction === 'front') {
       const maxZ = Math.max(...blocks.map((b, i) => getZ(b, i)), 0)
-      onUpdateBlock(id, { zIndex: maxZ + 1 })
+      onCommitBlocks([{ id, changes: { zIndex: maxZ + 1 } }])
     } else if (direction === 'back') {
       const minZ = Math.min(...blocks.map((b, i) => getZ(b, i)), 0)
-      onUpdateBlock(id, { zIndex: minZ - 1 })
+      onCommitBlocks([{ id, changes: { zIndex: minZ - 1 } }])
     } else if (direction === 'forward') {
       if (idx < sorted.length - 1) {
         const nextBlock = sorted[idx + 1]
         const val1 = getZ(sorted[idx], idx)
         const val2 = getZ(nextBlock, idx + 1)
-        onUpdateBlock(sorted[idx].id, { zIndex: val2 === val1 ? val1 + 1 : val2 })
-        onUpdateBlock(nextBlock.id, { zIndex: val1 })
+        onCommitBlocks([
+          { id: sorted[idx].id, changes: { zIndex: val2 === val1 ? val1 + 1 : val2 } },
+          { id: nextBlock.id, changes: { zIndex: val1 } },
+        ])
       }
     } else if (direction === 'backward') {
       if (idx > 0) {
         const prevBlock = sorted[idx - 1]
         const val1 = getZ(sorted[idx], idx)
         const val2 = getZ(prevBlock, idx - 1)
-        onUpdateBlock(sorted[idx].id, { zIndex: val2 === val1 ? val1 - 1 : val2 })
-        onUpdateBlock(prevBlock.id, { zIndex: val1 })
+        onCommitBlocks([
+          { id: sorted[idx].id, changes: { zIndex: val2 === val1 ? val1 - 1 : val2 } },
+          { id: prevBlock.id, changes: { zIndex: val1 } },
+        ])
       }
     }
   }
@@ -437,17 +386,18 @@ export default function Canvas({
     const dx = x - block.x
     const dy = y - block.y
 
-    onUpdateBlock(id, { x, y })
+    // Tous les blocs entraînés partent dans le même lot : une seule mise à jour
+    // par frame, au lieu d'une par bloc sélectionné.
+    const updates = [{ id, changes: { x, y } as Partial<BlockData> }]
 
     if (isMultiDrag) {
-      selectedBlockIds.forEach(selId => {
-        if (selId === id) return
-        const selBlock = blocks.find(b => b.id === selId)
-        if (selBlock) {
-          onUpdateBlock(selId, { x: selBlock.x + dx, y: selBlock.y + dy })
-        }
-      })
+      for (const selBlock of blocks) {
+        if (selBlock.id === id || !selectedBlockIds.includes(selBlock.id)) continue
+        updates.push({ id: selBlock.id, changes: { x: selBlock.x + dx, y: selBlock.y + dy } })
+      }
     }
+
+    onUpdateBlocks(updates)
   }
 
   /**

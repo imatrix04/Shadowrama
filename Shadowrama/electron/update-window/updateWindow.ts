@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import type { UpdateInfo } from 'electron-updater'
 import { join } from 'path'
@@ -163,8 +163,17 @@ export function openUpdateDialog(info?: UpdateInfo) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
       preload: join(__dirname, 'updatePreload.js'),
     },
+  })
+
+  // Les notes de version viennent du dépôt : elles peuvent contenir des liens.
+  // Aucun ne doit remplacer le contenu de cette fenêtre — qui a un preload.
+  updateWin.webContents.on('will-navigate', event => event.preventDefault())
+  updateWin.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:/.test(url)) void shell.openExternal(url)
+    return { action: 'deny' }
   })
 
   updateWin.loadFile(join(__dirname, 'update-window/update-dialog.html'))

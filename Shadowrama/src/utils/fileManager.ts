@@ -1,8 +1,11 @@
 import type { BlockData, Slide } from '../types'
 import { isKnownBlockType } from '../blocks'
-import { registerMedia, getAllMediaForSave, clearMediaStore, pruneMedia } from './mediaStore'
+import { registerMedia, getAllMediaForSave, clearMediaStore } from './mediaStore'
+import { clipboardMediaKeys } from './clipboard'
 import { nextId } from './ids'
+import { DRAFT_STORE, withStore } from './idb'
 
+/** Ancien emplacement du brouillon (localStorage), conservé pour la reprise. */
 const DRAFT_KEY = 'shadowrama-draft'
 const RECENTS_KEY = 'shadowrama-recents'
 const MAX_RECENTS = 8
@@ -23,38 +26,91 @@ export interface RecentProject {
 /** Erreur de lecture d'un projet, avec un message présentable à l'utilisateur. */
 export class ProjectFormatError extends Error {}
 
-export function saveDraft(projectName: string | null, filePath: string | null, slides: Slide[]) {
-  const draft: ProjectDraft = { projectName, filePath, slides, savedAt: Date.now() }
+/**
+ * Le brouillon vit dans IndexedDB, plus dans localStorage.
+ *
+ * localStorage plafonne à quelques mégaoctets — qu'un projet illustré atteint
+ * vite — et son écriture est synchrone : sérialiser toutes les diapositives
+ * toutes les 500 ms bloquait le thread principal pendant la frappe. IndexedDB
+ * n'impose ni ce plafond, ni ce blocage, et stocke les objets tels quels : plus
+ * de `JSON.stringify` sur l'ensemble du projet à chaque autosauvegarde.
+ */
+const DRAFT_ID = 'current'
+
+interface StoredDraft extends ProjectDraft {
+  id: string
+}
+
+export async function saveDraft(
+  projectName: string | null,
+  filePath: string | null,
+  slides: Slide[],
+): Promise<boolean> {
+  const draft: StoredDraft = { id: DRAFT_ID, projectName, filePath, slides, savedAt: Date.now() }
   try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+    await withStore(DRAFT_STORE, 'readwrite', s => s.put(draft))
     return true
   } catch {
-    // Quota dépassé (projet volumineux) ou stockage indisponible : l'échec de
-    // l'autosauvegarde ne doit pas faire tomber l'éditeur. Le projet reste
-    // intact en mémoire et enregistrable dans un .shma.
+    // Stockage indisponible ou refusé : l'échec de l'autosauvegarde ne doit pas
+    // faire tomber l'éditeur. Le projet reste intact en mémoire et
+    // enregistrable dans un .shma.
     return false
   }
 }
 
-export function loadDraft(): ProjectDraft | null {
+export async function loadDraft(): Promise<ProjectDraft | null> {
+  try {
+    const stored = await withStore<StoredDraft | undefined>(
+      DRAFT_STORE, 'readonly', s => s.get(DRAFT_ID) as IDBRequest<StoredDraft | undefined>,
+    )
+    if (stored) return parseDraft(stored)
+  } catch {
+    // On tente quand même la reprise depuis l'ancien emplacement.
+  }
+  return loadLegacyDraft()
+}
+
+/**
+ * Brouillon laissé par une version antérieure dans localStorage.
+ *
+ * Sans cette reprise, la mise à jour ferait perdre le travail en cours à
+ * quiconque avait l'éditeur ouvert sans avoir enregistré de `.shma`.
+ */
+function loadLegacyDraft(): ProjectDraft | null {
   try {
     const raw = localStorage.getItem(DRAFT_KEY)
     if (!raw) return null
-    const parsed = JSON.parse(raw)
-    const slides = normalizeSlides(parsed?.slides)
+    return parseDraft(JSON.parse(raw))
+  } catch {
+    return null
+  }
+}
+
+function parseDraft(parsed: unknown): ProjectDraft | null {
+  try {
+    const draft = parsed as Partial<ProjectDraft>
     return {
-      projectName: typeof parsed.projectName === 'string' ? parsed.projectName : null,
-      filePath: typeof parsed.filePath === 'string' ? parsed.filePath : null,
-      slides,
-      savedAt: typeof parsed.savedAt === 'number' ? parsed.savedAt : Date.now(),
+      projectName: typeof draft.projectName === 'string' ? draft.projectName : null,
+      filePath: typeof draft.filePath === 'string' ? draft.filePath : null,
+      slides: normalizeSlides(draft.slides),
+      savedAt: typeof draft.savedAt === 'number' ? draft.savedAt : Date.now(),
     }
   } catch {
     return null
   }
 }
 
-export function clearDraft() {
-  localStorage.removeItem(DRAFT_KEY)
+export async function clearDraft(): Promise<void> {
+  try {
+    await withStore(DRAFT_STORE, 'readwrite', s => s.delete(DRAFT_ID))
+  } catch {
+    /* rien à nettoyer si le stockage est indisponible */
+  }
+  try {
+    localStorage.removeItem(DRAFT_KEY)
+  } catch {
+    /* idem */
+  }
 }
 
 // ── Projets récents ─────────────────────────────────────────────────────────
@@ -143,9 +199,11 @@ function serializeManifest(slides: Slide[]): string {
 }
 
 // Médias réellement référencés par un bloc image : tout le reste est du déchet
-// laissé par un bloc supprimé ou une image remplacée.
+// laissé par un bloc supprimé ou une image remplacée. Le presse-papiers compte
+// comme une référence, sinon couper une image puis enregistrer avant de coller
+// la ferait disparaître.
 function collectUsedMediaKeys(slides: Slide[]): Set<string> {
-  const keys = new Set<string>()
+  const keys = new Set<string>(clipboardMediaKeys())
   for (const slide of slides) {
     for (const block of slide.blocks) {
       if (block.type === 'image' && block.src?.startsWith('media/')) keys.add(block.src)
@@ -155,8 +213,7 @@ function collectUsedMediaKeys(slides: Slide[]): Set<string> {
 }
 
 function mediaToWrite(slides: Slide[]) {
-  pruneMedia(collectUsedMediaKeys(slides))
-  return getAllMediaForSave()
+  return getAllMediaForSave(collectUsedMediaKeys(slides))
 }
 
 export async function saveProjectAs(slides: Slide[], defaultName: string): Promise<string | null> {
@@ -179,7 +236,12 @@ export async function openProjectAt(filePath: string): Promise<{ slides: Slide[]
   return { slides: readManifest(result.manifestJson, result.media), filePath: result.filePath }
 }
 
-function readManifest(manifestJson: string, media: { key: string; data: string }[]): Slide[] {
+/**
+ * Partie purement décisionnelle de la lecture d'un projet : du texte vers des
+ * diapositives valides, sans toucher au store média. Exportée pour être testable
+ * seule — c'est le point d'entrée de toute donnée venue du disque.
+ */
+export function parseManifestSlides(manifestJson: string): Slide[] {
   let parsed: unknown
   try {
     parsed = JSON.parse(manifestJson)
@@ -192,7 +254,11 @@ function readManifest(manifestJson: string, media: { key: string; data: string }
     ? parsed
     : (parsed as { slides?: unknown })?.slides
 
-  const slides = normalizeSlides(rawSlides)
+  return normalizeSlides(rawSlides)
+}
+
+function readManifest(manifestJson: string, media: { key: string; data: Uint8Array }[]): Slide[] {
+  const slides = parseManifestSlides(manifestJson)
 
   clearMediaStore()
   for (const m of media) {
