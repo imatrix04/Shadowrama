@@ -100,7 +100,6 @@ export function buildTimeline(target: HTMLElement, options: BuildOptions): Built
   if (!preset) return null
 
   const speed = options.settings.speed && options.settings.speed > 0 ? options.settings.speed : 1
-  const timeline = gsap.timeline({ delay: options.settings.delay ?? 0 })
 
   let cleanup = () => {}
   let animated: HTMLElement | HTMLElement[] = target
@@ -118,7 +117,12 @@ export function buildTimeline(target: HTMLElement, options: BuildOptions): Built
     }
   }
 
-  timeline.set(animated, toTweenVars(preset.from, options.rest))
+  // Appliqué immédiatement, HORS de la timeline : sinon ce .set() hériterait
+  // du délai de la timeline et le bloc resterait visible (à son état de repos)
+  // pendant tout le délai, au lieu d'être caché dès le montage.
+  gsap.set(animated, toTweenVars(preset.from, options.rest))
+
+  const timeline = gsap.timeline({ delay: options.settings.delay ?? 0 })
 
   for (const step of preset.steps) {
     timeline.to(animated, {

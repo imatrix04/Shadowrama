@@ -16,18 +16,31 @@ interface Props {
 export default function CustomSelect({ value, options, onChange }: Props) {
   const [open, setOpen] = useState(false)
   const [closing, setClosing] = useState(false)
-  const [coords, setCoords] = useState({ x: 0, y: 0, width: 0 })
+  const [coords, setCoords] = useState({ x: 0, y: 0, width: 0, openUpward: false, maxHeight: 220 })
   const triggerRef = useRef<HTMLButtonElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
   const selected = options.find(o => o.value === value)
 
-  const openDropdown = () => {
-    if (!triggerRef.current) return
-    const rect = triggerRef.current.getBoundingClientRect()
-    setCoords({ x: rect.left, y: rect.bottom + 6, width: rect.width })
-    setClosing(false)
-    setOpen(true)
+ const openDropdown = () => {
+  if (!triggerRef.current) return
+  const rect = triggerRef.current.getBoundingClientRect()
+  const MARGIN = 8
+  const PREFERRED = 220 // doit matcher le max-height du CSS
+
+  const spaceBelow = window.innerHeight - rect.bottom - MARGIN
+  const spaceAbove = rect.top - MARGIN
+  const openUpward = spaceBelow < PREFERRED && spaceAbove > spaceBelow
+
+  setCoords({
+    x: rect.left,
+    y: openUpward ? rect.top - 6 : rect.bottom + 6,
+    width: rect.width,
+    openUpward,
+    maxHeight: Math.min(PREFERRED, openUpward ? spaceAbove : spaceBelow),
+  })
+  setClosing(false)
+  setOpen(true)
   }
 
   const closeDropdown = () => {
@@ -83,11 +96,19 @@ export default function CustomSelect({ value, options, onChange }: Props) {
       </button>
 
       {open && createPortal(
-        <div
-          ref={listRef}
-          className={`${styles.list} ${closing ? styles.listClosing : ''}`}
-          style={{ left: coords.x, top: coords.y, width: coords.width }}
-        >
+          <div
+            ref={listRef}
+            className={`${styles.list} ${closing ? styles.listClosing : ''}`}
+            style={{
+              left: coords.x,
+              width: coords.width,
+              maxHeight: coords.maxHeight,
+              transformOrigin: coords.openUpward ? 'bottom' : 'top',
+              ...(coords.openUpward
+                ? { bottom: window.innerHeight - coords.y }
+                : { top: coords.y }),
+            }}
+          >
           {options.map(opt => (
             <button
               key={opt.value}

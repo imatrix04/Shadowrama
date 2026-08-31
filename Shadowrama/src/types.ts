@@ -4,8 +4,12 @@ import type { IconName } from './components/ui/Icon'
 export interface BlockProperty {
   key: string
   label: string
-  type: 'text' | 'textarea' | 'number' | 'color' | 'select' | 'float' | 'file'
+  type: 'text' | 'textarea' | 'number' | 'color' | 'select' | 'float' | 'file' | 'shapeGrid'
   options?: { label: string; value: string }[]
+  /** N'affiche ce champ que si une autre propriété du bloc vaut cette valeur.
+   *  Sert à cacher la grille 10×10 tant que « Grille personnalisée » n'est
+   *  pas le mode choisi, plutôt que de l'afficher pour toutes les formes. */
+  showIf?: { key: string; value: string }
 }
 
 export type AnimationType = 'fadeIn' | 'slideInLeft' | 'slideInRight' | 'slideInUp' | 'zoomIn' | 'none'
@@ -65,6 +69,8 @@ export interface BlockEffects {
   /** Arrondi par coin, indépendant du `borderRadius` simple. */
   corners?: CornerRadius
   textStroke?: { width: number; color: string }
+  /** Flottement doux en boucle, amplifié au survol de la souris. */
+  float?: { amplitude: number; duration: number }
 }
 
 /** Propriétés animables. Toutes optionnelles : une étape ne touche que ce qu'elle nomme. */
@@ -161,12 +167,15 @@ export interface ImageBlockData extends BaseBlockData {
   alt?: string
   borderRadius?: number
   objectFit?: 'cover' | 'contain' | 'fill'
+  /** Découpe l'image dans la forme d'une grille 10×10 (voir utils/shapeGrid). */
+  shapeMode?: 'none' | 'grid'
+  customShape?: number[]
 }
 
 export type ShapeKind =
   | 'rectangle' | 'circle' | 'triangle'
   | 'arrow-up' | 'arrow-down' | 'arrow-left' | 'arrow-right'
-  | 'line' | 'star' | 'hexagon'
+  | 'line' | 'star' | 'hexagon' | 'grid'
 
 export interface ShapeBlockData extends BaseBlockData {
   type: 'shape'
@@ -175,6 +184,8 @@ export interface ShapeBlockData extends BaseBlockData {
   borderRadius?: number
   borderColor?: string
   borderWidth?: number
+  /** Grille 10×10 dessinée à la main, utilisée quand `shape === 'grid'`. */
+  customShape?: number[]
 }
 
 export interface TextBlockData extends BaseBlockData {
@@ -250,10 +261,33 @@ export interface SlideTransitionSettings {
   speed?: number
 }
 
+/**
+ * Fond d'une diapositive.
+ *
+ * Hors mode Ultra Design, seul `type: 'color'` a un effet au rendu (voir
+ * `getSlideBackgroundStyle`) : dégradé et image restent enregistrés dans le
+ * projet mais inertes, comme les transitions et séquences Ultra.
+ */
+export interface SlideBackground {
+  type: 'color' | 'gradient' | 'image'
+  color?: string
+  /** Réutilise le type existant des dégradés de bloc (from/to/angle). */
+  gradient?: Gradient
+  /** Anime doucement le dégradé en boucle. Ignoré hors type 'gradient'. */
+  animated?: boolean
+  /** Clé média (voir mediaStore) pour une image importée, ou URL directe. */
+  image?: string
+  imageFit?: 'cover' | 'contain'
+  /** Superposition unie par-dessus le fond, pour garder le texte lisible sur
+   *  une image ou un dégradé chargé. */
+  overlay?: { color: string; opacity: number }
+}
+
 export interface Slide {
   id: number
   blocks: BlockData[]
   transition?: SlideTransitionSettings
+  background?: SlideBackground
 }
 
 /** État d'une couche de diapositive pendant une transition. */

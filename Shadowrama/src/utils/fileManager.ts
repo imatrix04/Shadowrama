@@ -1,4 +1,4 @@
-import type { BlockData, Slide } from '../types'
+import type { BlockData, Slide, SlideBackground, SlideTransitionSettings } from '../types'
 import { isKnownBlockType } from '../blocks'
 import { registerMedia, getAllMediaForSave, clearMediaStore } from './mediaStore'
 import { clipboardMediaKeys } from './clipboard'
@@ -164,13 +164,61 @@ function normalizeSlides(raw: unknown): Slide[] {
 
   const slides: Slide[] = raw.map(slide => {
     const blocks = Array.isArray(slide?.blocks) ? slide.blocks : []
-    return {
+    const normalized: Slide = {
       id: typeof slide?.id === 'number' ? slide.id : nextId(),
       blocks: blocks.filter(isUsableBlock).map(normalizeBlock),
     }
+    const transition = normalizeTransition((slide as { transition?: unknown })?.transition)
+    if (transition) normalized.transition = transition
+    const background = normalizeBackground((slide as { background?: unknown })?.background)
+    if (background) normalized.background = background
+    return normalized
   })
 
   return slides.length > 0 ? slides : [{ id: nextId(), blocks: [] }]
+}
+
+function normalizeTransition(raw: unknown): SlideTransitionSettings | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const t = raw as Record<string, unknown>
+  if (typeof t.preset !== 'string') return undefined
+  return {
+    preset: t.preset,
+    speed: typeof t.speed === 'number' ? t.speed : undefined,
+  }
+}
+
+/** Même logique de tri que `normalizeBlock` : on ne garde que des champs bien
+ *  formés, un `.shma` corrompu ou édité à la main ne doit pas faire planter
+ *  le rendu du fond. */
+function normalizeBackground(raw: unknown): SlideBackground | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const b = raw as Record<string, unknown>
+  if (b.type !== 'color' && b.type !== 'gradient' && b.type !== 'image') return undefined
+
+  const background: SlideBackground = { type: b.type }
+
+  if (typeof b.color === 'string') background.color = b.color
+
+  if (b.gradient && typeof b.gradient === 'object') {
+    const g = b.gradient as Record<string, unknown>
+    if (typeof g.from === 'string' && typeof g.to === 'string' && typeof g.angle === 'number') {
+      background.gradient = { from: g.from, to: g.to, angle: g.angle }
+    }
+  }
+
+  if (typeof b.animated === 'boolean') background.animated = b.animated
+  if (typeof b.image === 'string') background.image = b.image
+  if (b.imageFit === 'cover' || b.imageFit === 'contain') background.imageFit = b.imageFit
+
+  if (b.overlay && typeof b.overlay === 'object') {
+    const o = b.overlay as Record<string, unknown>
+    if (typeof o.color === 'string' && typeof o.opacity === 'number') {
+      background.overlay = { color: o.color, opacity: o.opacity }
+    }
+  }
+
+  return background
 }
 
 function isUsableBlock(block: unknown): boolean {
@@ -207,6 +255,9 @@ function collectUsedMediaKeys(slides: Slide[]): Set<string> {
   for (const slide of slides) {
     for (const block of slide.blocks) {
       if (block.type === 'image' && block.src?.startsWith('media/')) keys.add(block.src)
+    }
+    if (slide.background?.type === 'image' && slide.background.image?.startsWith('media/')) {
+      keys.add(slide.background.image)
     }
   }
   return keys

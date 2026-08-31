@@ -8,6 +8,8 @@ import { buildTimeline } from '../../ultra/timeline'
 import { getPreset, presetDuration } from '../../ultra/presets'
 import { getSlideTransition, transitionDuration } from '../../ultra/slideTransitions'
 import { runSlideTransition } from '../../ultra/slideTransitionRunner'
+import { getSlideBackgroundStyle } from '../../ultra/SlideBackground'
+import floatStyles from './BlockFloat.module.css'
 import styles from './PresentationMode.module.css'
 
 interface Props {
@@ -77,6 +79,10 @@ function AnimatedBlockWrapper({ block, isActive, exiting }: {
   const BlockComponent = BLOCKS_REGISTRY[block.type]
   if (!BlockComponent) return null
 
+  // `block` est déjà la version filtrée par viewBlock() (voir renderBlocks plus
+  // bas) : hors Ultra, `effects` est déjà vidé, donc rien de plus à vérifier ici.
+  const floatFx = block.effects?.float
+
   return (
     <div
       ref={ref}
@@ -89,11 +95,21 @@ function AnimatedBlockWrapper({ block, isActive, exiting }: {
         transform: rotation ? `rotate(${rotation}deg)` : undefined,
       }}
     >
-      <EffectLayer block={block}>
-        <div ref={textRef} style={{ width: '100%', height: '100%' }}>
-          <BlockComponent block={block} onUpdate={() => {}} isEditing={false} onStartEdit={() => {}} onStopEdit={() => {}} />
+      <div
+        className={`${floatStyles.floatOuter} ${floatFx ? floatStyles.active : ''}`}
+        style={floatFx ? {
+          '--float-amplitude': `${floatFx.amplitude}px`,
+          '--float-duration': `${floatFx.duration}s`,
+        } as React.CSSProperties : undefined}
+      >
+        <div className={`${floatStyles.floatInner} ${floatFx ? floatStyles.active : ''}`}>
+          <EffectLayer block={block}>
+            <div ref={textRef} style={{ width: '100%', height: '100%' }}>
+              <BlockComponent block={block} onUpdate={() => {}} isEditing={false} onStartEdit={() => {}} onStopEdit={() => {}} />
+            </div>
+          </EffectLayer>
         </div>
-      </EffectLayer>
+      </div>
     </div>
   )
 }
@@ -171,7 +187,12 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
       }, seconds * 1000)
     }
 
-    const wait = ultra ? exitDuration(slides[current]) : 0
+    // Reculer doit rester instantané, y compris en mode Ultra : on ne fait
+    // patienter que quand on avance, pour laisser la mise en scène se jouer.
+    // Sans ça, revenir en arrière (ex: pour répondre à une question) oblige
+    // à subir toute la sortie de la diapo courante avant de basculer.
+    const goingForward = index > current
+    const wait = ultra && goingForward ? exitDuration(slides[current]) : 0
     if (wait <= 0) {
       startTransition()
       return
@@ -282,20 +303,33 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
         >
           {/* La couche sortante n'existe que le temps de la transition. Elle est
               rendue en premier pour passer sous l'entrante. */}
-          {outgoingSlide && (
-            <div ref={outgoingRef} className={styles.slide}>
-              {renderBlocks(outgoingSlide, true, false)}
-            </div>
-          )}
-          <div
-            // La clé force un remontage à chaque changement : les blocs rejouent
-            // ainsi leur séquence d'entrée sur la nouvelle diapositive.
-            key={slide.id}
-            ref={incomingRef}
-            className={styles.slide}
-          >
-            {renderBlocks(slide, true, exiting)}
-          </div>
+          {outgoingSlide && (() => {
+            const bg = getSlideBackgroundStyle(outgoingSlide.background, ultra)
+            return (
+              <div
+                ref={outgoingRef}
+                className={`${styles.slide} ${bg.animated ? styles.slideBgAnimated : ''}`}
+                style={bg.style}
+              >
+                {renderBlocks(outgoingSlide, true, false)}
+              </div>
+            )
+          })()}
+          {(() => {
+            const bg = getSlideBackgroundStyle(slide.background, ultra)
+            return (
+              <div
+                // La clé force un remontage à chaque changement : les blocs rejouent
+                // ainsi leur séquence d'entrée sur la nouvelle diapositive.
+                key={slide.id}
+                ref={incomingRef}
+                className={`${styles.slide} ${bg.animated ? styles.slideBgAnimated : ''}`}
+                style={bg.style}
+              >
+                {renderBlocks(slide, true, exiting)}
+              </div>
+            )
+          })()}
         </div>
       </div>
 

@@ -34,27 +34,26 @@ embarquées en base64).
 
 ## Changelog
 
-Dernière version : **0.16.0** (2026-08-26).
+Dernière version : **0.17.0** (2026-08-31).
 
-**Vos images ne disparaissent plus** — Supprimer une image, enregistrer, puis annuler ramenait un cadre vide : l'enregistrement avait effacé l'image de la mémoire de l'application, et l'annulation n'avait plus rien à restituer. Le fichier .shma ne contient toujours que les images réellement utilisées, mais l'annulation retrouve désormais les autres.
+**Fond de diapositive** — Couleur unie, dégradé (statique ou animé en boucle), image importée, avec une superposition réglable pour garder le texte lisible. Un nouvel onglet « Arrière-plan » le règle diapositive par diapositive.
 
-**Fini l'écran blanc** — Annuler l'ajout d'une diapositive pouvait interrompre l'éditeur et laisser une fenêtre entièrement vide, sans explication ni retour possible. Ce cas est corrigé, et si une autre erreur survenait, un écran de récupération propose désormais de recharger — votre travail reste dans la sauvegarde automatique.
+**Grille personnalisée 10×10** — Dessinez la silhouette d'un bloc forme à la main, ou découpez une image dans cette même forme. Six presets de base (Cœur, Étoile, Diamant, Croix, Cercle, Éclair) pour démarrer sans tout dessiner soi-même.
 
-**Les projets illustrés ne saturent plus** — La sauvegarde automatique tenait dans quelques mégaoctets, vite atteints dès qu'un projet contenait des photos : passé cette limite elle échouait, et l'avertissement « Brouillon non sauvegardé » s'installait dans la barre. Elle repose maintenant sur un stockage sans ce plafond, où les images sont conservées telles quelles au lieu d'être converties en texte — l'ouverture d'un projet illustré est d'autant plus rapide.
+**Flottement** — Nouvel effet du mode Ultra Design dans le panneau Effets, disponible sur tous les types de blocs : flotte doucement en boucle et s'élève au survol de la souris.
 
 ### Nouveautés
-- Un écran de récupération remplace la fenêtre vide en cas d'erreur inattendue : il explique la situation, propose de recharger l'application et affiche le détail technique.
-- Une suite de tests automatisés couvre l'historique d'édition, le presse-papiers, la lecture des fichiers .shma et le cycle de vie des images. Elle est rejouée à chaque modification du code.
-
-### Améliorations
-- Déplacer plusieurs blocs à la fois est plus fluide : toute la sélection est repositionnée en une seule opération, au lieu d'une par bloc et soixante fois par seconde.
-- Les images circulent et sont enregistrées en binaire plutôt qu'en texte, de l'import jusqu'au fichier .shma : moins de mémoire occupée, et une écriture plus rapide.
-- L'application est verrouillée sur son propre contenu : elle refuse toute ressource extérieure, et sa fenêtre ne peut plus être détournée vers une page web. Elle fonctionne, comme avant, entièrement hors ligne.
+- Fond de diapositive : couleur, dégradé animé, image et superposition, réglables par diapositive.
+- Effet « Flottement » (Ultra Design) applicable à tous les types de blocs.
+- Grille personnalisée 10×10 pour les blocs forme et image, avec six presets de base.
+- Le menu contextuel affiche « Niveau X / Y » dans la section Ordre, et désactive les boutons déjà à l'extrémité de l'empilement.
 
 ### Corrections
-- Annuler l'ajout d'une diapositive, ou refaire une suppression, pouvait interrompre l'éditeur sur une fenêtre vide.
-- Changer le plan d'un bloc (« Mettre au premier plan », « Reculer d'un plan ») ne créait pas d'étape d'annulation distincte : le Ctrl+Z suivant défaisait aussi la modification précédente.
-- Ouvrir depuis l'accueil un projet trop volumineux pour le stockage local rouvrait silencieusement le projet précédent, au risque de l'écraser à la première sauvegarde. L'échec est désormais signalé.
-- Une image dont le nom ne comporte pas d'extension, ou dont l'extension est en majuscules (« PHOTO.JPG »), n'était pas retrouvée à la réouverture du projet.
+- Les blocs à entrée retardée restaient visibles pendant tout le délai avant de sauter à leur état caché, au lieu d'être cachés dès le montage.
+- Revenir en arrière pendant une présentation attendait la fin de l'animation de sortie de la diapositive courante ; le retour est désormais instantané.
+- Un menu déroulant ouvert près du bas de l'écran, à l'intérieur du menu contextuel, pouvait sortir de la fenêtre au lieu de s'ouvrir vers le haut.
+- Interagir avec le menu contextuel (glisser dans un champ, sélectionner du texte) pouvait faire bouger le bloc sélectionné en dessous.
+- Le fond et la transition d'une diapositive n'étaient pas conservés à la réouverture du projet, ni après un redémarrage sans sauvegarde.
+- Cliquer sur « Avancer » / « Reculer » dans le menu contextuel fermait le menu, obligeant à le rouvrir pour continuer.
 
 Historique complet : [CHANGELOG.md](CHANGELOG.md).

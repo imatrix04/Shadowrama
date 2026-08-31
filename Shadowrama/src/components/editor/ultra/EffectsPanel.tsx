@@ -13,6 +13,7 @@ const DEFAULTS = {
   gradient: { from: '#6c63ff', to: '#ff6bd6', angle: 135 },
   corners: { tl: 24, tr: 4, br: 24, bl: 4 },
   textStroke: { width: 1, color: '#ffffff' },
+  float: { amplitude: 10, duration: 3.4 },
 } as const
 
 const BLEND_MODES = ['normal', 'multiply', 'screen', 'overlay', 'difference', 'exclusion', 'luminosity'] as const
@@ -102,6 +103,23 @@ export default function EffectsPanel({ block, onUpdate, onGestureStart }: Props)
           <>
             {numberField('Intensité', fx.glow.blur, v => patch({ glow: { ...fx.glow!, blur: v } }), { min: 0, max: 80 })}
             {colorField('Couleur', fx.glow.color, v => patch({ glow: { ...fx.glow!, color: v } }))}
+          </>
+        )}
+      </div>
+
+      {/* ── Flottement ── */}
+      <div className={styles.group}>
+        <button
+          className={`${styles.toggle} ${fx.float ? styles.toggleOn : ''}`}
+          onClick={() => toggle('float')}
+        >
+          {fx.float ? '✓ Flottement' : '+ Flottement'}
+        </button>
+        {fx.float && (
+          <>
+            {numberField('Amplitude (px)', fx.float.amplitude, v => patch({ float: { ...fx.float!, amplitude: v } }), { min: 2, max: 60 })}
+            {numberField('Durée du cycle (s)', fx.float.duration, v => patch({ float: { ...fx.float!, duration: v } }), { min: 1, max: 10, step: 0.1 })}
+            <p className={styles.hint}>Flotte en boucle et s'élève un peu plus au survol de la souris.</p>
           </>
         )}
       </div>

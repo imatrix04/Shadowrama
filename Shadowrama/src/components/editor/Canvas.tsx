@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import type { BlockData, MotionPhase } from '../../types'
+import type { BlockData, MotionPhase, SlideBackground } from '../../types'
 import Block from './Block'
+import { getSlideBackgroundStyle } from '../../ultra/SlideBackground'
 import styles from './Canvas.module.css'
 
 const CANVAS_W = 960
@@ -20,6 +21,7 @@ interface SnapLine {
 
 interface Props {
   blocks: BlockData[]
+  background?: SlideBackground
   selectedBlockIds: number[]
   onSelectBlocks: (ids: number[]) => void
   onUpdateBlock: (id: number, changes: Partial<BlockData>) => void
@@ -36,9 +38,10 @@ interface Props {
 }
 
 export default function Canvas({
-  blocks, selectedBlockIds, onSelectBlocks, onUpdateBlock, onUpdateBlocks, onCommitBlocks,
+  blocks, background, selectedBlockIds, onSelectBlocks, onUpdateBlock, onUpdateBlocks, onCommitBlocks,
   onDeleteBlocks, onGestureStart, ultra, motionPreview,
 }: Props) {
+  const resolvedBackground = getSlideBackgroundStyle(background, ultra)
   const canvasRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [view, setView] = useState({ zoom: 1, offset: { x: 0, y: 0 } })
@@ -482,7 +485,12 @@ export default function Canvas({
         transformOrigin: '0 0',
         transition: isPanning ? 'none' : 'transform 0.05s',
       }}>
-        <div ref={canvasRef} className={styles.canvas} onClick={handleCanvasClick}>
+        <div
+          ref={canvasRef}
+          className={`${styles.canvas} ${resolvedBackground.animated ? styles.canvasBgAnimated : ''}`}
+          style={resolvedBackground.style}
+          onClick={handleCanvasClick}
+        >
 
           {snapLines.map((line, i) => (
             <div
@@ -494,7 +502,7 @@ export default function Canvas({
 
           {[...blocks]
             .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
-            .map(block => (
+            .map((block, layerIndex) => (
               <Block
                 key={block.id}
                 block={block}
@@ -510,6 +518,8 @@ export default function Canvas({
                 motionPreview={motionPreview?.id === block.id ? motionPreview : null}
                 onDelete={(id) => onDeleteBlocks([id])}
                 onReorder={handleReorder}
+                layerIndex={layerIndex + 1}
+                layerCount={blocks.length}
               />
             ))}
 

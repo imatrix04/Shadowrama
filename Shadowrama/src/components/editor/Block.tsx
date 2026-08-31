@@ -5,6 +5,7 @@ import { EffectLayer } from '../../ultra/effects'
 import { viewBlock } from '../../ultra/effectStyle'
 import { buildTimeline, gsapReset } from '../../ultra/timeline'
 import ContextMenu from './ContextMenu'
+import floatStyles from './BlockFloat.module.css'
 
 interface Props {
   block: BlockData
@@ -22,6 +23,9 @@ interface Props {
   /** Ouvre une entrée d'historique avant la première modification d'un geste. */
   onGestureStart: () => void
   onReorder: (id: number, direction: 'front' | 'back' | 'forward' | 'backward') => void
+  /** Position du bloc dans l'empilement (1 = tout en arrière), pour l'affichage dans le menu contextuel. */
+  layerIndex: number
+  layerCount: number
   ultra: boolean
   /** Non nul quand un aperçu de séquence est demandé pour CE bloc. */
   motionPreview: { phase: MotionPhase; nonce: number } | null
@@ -45,7 +49,7 @@ const HANDLES: { dir: ResizeHandle; style: React.CSSProperties }[] = [
 
 export default function Block({
   block, isSelected, zoom, onSelect, onUpdate, onDelete, onMove, onResize, onDragEnd, onGestureStart, onReorder,
-  ultra, motionPreview,
+  ultra, motionPreview, layerIndex, layerCount,
 }: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const isDragging = useRef(false)
@@ -59,6 +63,10 @@ export default function Block({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   const BlockComponent = BLOCKS_REGISTRY[block.type]
+
+  // Hors Ultra, même logique que le reste des effets (voir viewBlock) : le
+  // réglage reste en donnée mais n'a aucun effet au rendu.
+  const floatFx = ultra ? block.effects?.float : undefined
 
   // Couche dédiée au mouvement : GSAP y écrit `transform` et `filter`. La couche
   // d'effets est en dessous, sinon une animation de flou effacerait les ombres.
@@ -236,6 +244,14 @@ export default function Block({
       }}
     >
       {BlockComponent && (
+        <div
+          className={`${floatStyles.floatOuter} ${floatFx ? floatStyles.active : ''}`}
+          style={floatFx ? {
+            '--float-amplitude': `${floatFx.amplitude}px`,
+            '--float-duration': `${floatFx.duration}s`,
+          } as React.CSSProperties : undefined}
+        >
+        <div className={`${floatStyles.floatInner} ${floatFx ? floatStyles.active : ''}`}>
         <div ref={motionRef} style={{ width: '100%', height: '100%' }}>
         <EffectLayer block={viewBlock(block, ultra)}>
         <div ref={textRef} style={{ width: '100%', height: '100%' }}>
@@ -252,6 +268,8 @@ export default function Block({
         />
         </div>
         </EffectLayer>
+        </div>
+        </div>
         </div>
       )}
 
@@ -282,6 +300,8 @@ export default function Block({
           onReorder={onReorder}
           onDelete={onDelete}
           onClose={() => setContextMenu(null)}
+          layerIndex={layerIndex}
+          layerCount={layerCount}
         />
       )}
     </div>

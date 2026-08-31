@@ -1,5 +1,6 @@
 import type { BlockComponentProps, ShapeBlockData, ShapeKind } from '../../types'
 import { gradientCss } from '../../ultra/effectStyle'
+import { gridToPath } from '../../utils/shapeGrid'
 
 const DEFAULT_FILL = 'var(--accent)'
 const DEFAULT_STROKE = 'var(--editor-text)'
@@ -126,6 +127,40 @@ export default function ShapeBlock({ block }: BlockComponentProps<ShapeBlockData
         borderRadius: shape === 'circle' ? '50%' : `${block.borderRadius ?? 4}px`,
         border: hasBorder ? `${borderWidth}px solid ${stroke}` : 'none',
       }} />
+    )
+  }
+
+  // La grille personnalisée n'a pas de sommets à calculer : chaque cellule
+  // active devient son propre carré (voir gridToPath). Pas d'inset lié à la
+  // bordure ici, contrairement aux polygones plus bas : le tracé pixel art
+  // colle déjà aux bords du bloc.
+  if (shape === 'grid') {
+    const path = gridToPath(block.customShape, block.width, block.height)
+    return (
+      <svg
+        width="100%" height="100%"
+        viewBox={`0 0 ${block.width} ${block.height}`}
+        preserveAspectRatio="none"
+        style={{ position: 'absolute', inset: 0, display: 'block' }}
+      >
+        {gradient && (
+          <defs>
+            <linearGradient id={gradientId} gradientTransform={`rotate(${gradient.angle} 0.5 0.5)`}>
+              <stop offset="0%" stopColor={gradient.from} />
+              <stop offset="100%" stopColor={gradient.to} />
+            </linearGradient>
+          </defs>
+        )}
+        {path && (
+          <path
+            d={path}
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={borderWidth}
+            strokeLinejoin="round"
+          />
+        )}
+      </svg>
     )
   }
 

@@ -6,6 +6,8 @@ import { getBlockProperties, getBlockConfig } from '../../blocks'
 import Icon from '../ui/Icon'
 import styles from './ContextMenu.module.css'
 import CustomSelect from '../../styles/CustomSelect'
+import GridShapeEditor from './GridShapeEditor'
+import { normalizeGrid } from '../../utils/shapeGrid'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
 
 // Doivent rester alignés sur les valeurs par défaut de useBlockAnimation.
@@ -37,6 +39,10 @@ interface Props {
   /** Ouvre une entrée d'historique avant la première modification d'un champ. */
   onGestureStart: () => void
   onClose: () => void
+  /** Position du bloc dans l'empilement (1 = tout en arrière) et taille totale,
+   *  pour afficher « Niveau X / Y » et désactiver les boutons déjà à l'extrémité. */
+  layerIndex: number
+  layerCount: number
 }
 
 function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: number, changes: Partial<BlockData>) => void) {
@@ -158,12 +164,19 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
         </div>
       )
     }
+    case 'shapeGrid':
+      return (
+        <GridShapeEditor
+          value={normalizeGrid(getBlockField(block, prop.key))}
+          onChange={grid => onUpdate(block.id, setBlockField(block, prop.key, grid))}
+        />
+      )
     default:
       return null
   }
 }
 
-export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder, onGestureStart, onClose }: Props) {
+export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder, onGestureStart, onClose, layerIndex, layerCount }: Props) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ x, y })
 
@@ -191,10 +204,11 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
 
   return createPortal(
     <>
-      <div onClick={onClose} className={styles.backdrop} />
+      <div onClick={onClose} onMouseDown={e => e.stopPropagation()} className={styles.backdrop} />
       <div
         ref={menuRef}
         onWheel={e => e.stopPropagation()}
+        onMouseDown={e => e.stopPropagation()}
         className={styles.menu}
         style={{ left: pos.x, top: pos.y }}
       >
@@ -206,17 +220,20 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
         </p>
 
         <div className={styles.section}>
-          <span className={styles.sectionLabel}>Ordre</span>
+          <span className={styles.sectionLabel}>
+            Ordre <span className={styles.layerBadge}>Niveau {layerIndex} / {layerCount}</span>
+          </span>
           <div className={styles.orderButtons}>
             {([
-              { label: '⬆️ Premier plan', dir: 'front' },
-              { label: '⬇️ Arrière plan', dir: 'back' },
-              { label: '↑ Avancer', dir: 'forward' },
-              { label: '↓ Reculer', dir: 'backward' },
-            ] as const).map(({ label, dir }) => (
+              { label: '⬆️ Premier plan', dir: 'front', disabled: layerIndex === layerCount },
+              { label: '⬇️ Arrière plan', dir: 'back', disabled: layerIndex === 1 },
+              { label: '↑ Avancer', dir: 'forward', disabled: layerIndex === layerCount },
+              { label: '↓ Reculer', dir: 'backward', disabled: layerIndex === 1 },
+            ] as const).map(({ label, dir, disabled }) => (
               <button
                 key={dir}
                 className={styles.smallBtn}
+                disabled={disabled}
                 onClick={() => { onReorder(block.id, dir); onClose() }}
               >
                 {label}
@@ -227,8 +244,12 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
 
         {/* `onPointerDown`/`onFocus` ouvrent l'entrée d'historique avant la
             première modification : glisser un sélecteur de couleur ne produit
-            ainsi qu'un seul « annuler ». */}
-        {properties.map(prop => (
+            ainsi qu'un seul « annuler ». `showIf` cache un champ tant que la
+            valeur dont il dépend n'est pas la bonne (ex : la grille 10×10 ne
+            s'affiche que si « Forme » vaut « Grille personnalisée »). */}
+        {properties
+          .filter(prop => !prop.showIf || String(getBlockField(block, prop.showIf.key) ?? '') === prop.showIf.value)
+          .map(prop => (
           <div
             key={prop.key}
             className={styles.field}

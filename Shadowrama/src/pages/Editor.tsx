@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { BLOCKS_CONFIG } from '../blocks'
-import type { AnimationType, BlockData, MotionPhase, Slide, SlideTransitionSettings } from '../types'
+import type { AnimationType, BlockData, MotionPhase, Slide, SlideBackground, SlideTransitionSettings } from '../types'
 import { useEditorHistory } from '../hooks/useEditorHistory'
 import { loadDraft, saveDraft } from '../utils/fileManager'
 import type { ProjectDraft } from '../utils/fileManager'
@@ -274,6 +274,15 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
     [commit],
   )
 
+  const setSlideBackground = useCallback(
+    (index: number, background: SlideBackground | undefined) => {
+      commit(prev => prev.map((slide, i) =>
+        i === index ? { ...slide, background } : slide
+      ))
+    },
+    [commit],
+  )
+
   const selectAllBlocks = useCallback(() => {
     setSelectedBlockIds(slides[currentSlide]?.blocks.map(b => b.id) ?? [])
   }, [slides, currentSlide])
@@ -405,6 +414,7 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
         />
         <Canvas
             blocks={slides[currentSlide].blocks}
+            background={slides[currentSlide].background}
             selectedBlockIds={selectedBlockIds}
             onSelectBlocks={setSelectedBlockIds}
             onUpdateBlock={updateBlock}
@@ -425,6 +435,7 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
           onReorderSlides={onReorderSlides}
           ultra={ultra}
           onSetTransition={setSlideTransition}
+          onSetBackground={setSlideBackground}
         />
       </div>
     </div>

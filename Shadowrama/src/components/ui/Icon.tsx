@@ -2,7 +2,7 @@ export type IconName =
   | 'text' | 'title' | 'image' | 'shape'
   | 'slides' | 'chevronLeft' | 'chevronRight'
   | 'new' | 'save' | 'open' | 'play' | 'undo' | 'redo'
-  | 'ultra' | 'motion' | 'effects' | 'transition'
+  | 'ultra' | 'motion' | 'effects' | 'transition' | 'background'
   | 'animNone' | 'animFade' | 'animSlideLeft' | 'animSlideRight' | 'animSlideUp' | 'animZoom'
 
 interface Props {
@@ -71,6 +71,12 @@ const PATHS: Record<IconName, React.ReactNode> = {
     <>
       <circle cx="9" cy="9" r="6" />
       <circle cx="15" cy="15" r="6" />
+    </>
+  ),
+  background: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 15l4.5-4.5 3.5 3.5 5-6 5.5 6.5" />
     </>
   ),
   new: (

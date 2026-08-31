@@ -19,6 +19,16 @@ const imageConfig: BlockConfig = {
       ],
     },
     { key: 'borderRadius', label: 'Arrondi', type: 'number' },
+    {
+      key: 'shapeMode',
+      label: 'Forme',
+      type: 'select',
+      options: [
+        { label: 'Rectangle (par défaut)', value: 'none' },
+        { label: 'Grille personnalisée', value: 'grid' },
+      ],
+    },
+    { key: 'customShape', label: 'Grille (10×10)', type: 'shapeGrid', showIf: { key: 'shapeMode', value: 'grid' } },
   ],
 }
 

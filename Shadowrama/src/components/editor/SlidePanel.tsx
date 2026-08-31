@@ -1,13 +1,16 @@
 import { useState } from 'react'
-import type { Slide, SlideTransitionSettings } from '../../types'
+import type { Slide, SlideBackground, SlideTransitionSettings } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
 import TransitionPanel from './TransitionPanel'
+import BackgroundPanel from './BackgroundPanel'
+import { getSlideBackgroundStyle } from '../../ultra/SlideBackground'
 import Drawer, { DrawerTitle } from '../ui/Drawer'
 import type { DrawerTab } from '../ui/Drawer'
 import styles from './SlidePanel.module.css'
 
 const TABS: DrawerTab[] = [
   { key: 'slides', label: 'Diapositives', icon: 'slides' },
+  { key: 'background', label: 'Arrière-plan', icon: 'background' },
   { key: 'transitions', label: 'Transitions', icon: 'transition' },
 ]
 
@@ -19,9 +22,10 @@ interface Props {
   onDuplicateSlide: (index: number) => void
   onDeleteSlide: (index: number) => void
   onReorderSlides: (fromIndex: number, toIndex: number) => void
-  /** Le niveau « ultra » des transitions n'est proposé qu'en mode Ultra Design. */
+  /** Le niveau « ultra » des transitions et fonds n'est proposé qu'en mode Ultra Design. */
   ultra: boolean
   onSetTransition: (index: number, settings: SlideTransitionSettings | undefined) => void
+  onSetBackground: (index: number, background: SlideBackground | undefined) => void
 }
 
 export default function SlidePanel({
@@ -34,6 +38,7 @@ export default function SlidePanel({
   onReorderSlides,
   ultra,
   onSetTransition,
+  onSetBackground,
 }: Props) {
   const [openPanel, setOpenPanel] = useState<string | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
@@ -77,6 +82,16 @@ export default function SlidePanel({
             onChange={settings => onSetTransition(currentSlide, settings)}
           />
         </>
+      ) : key === 'background' ? (
+        <>
+          <DrawerTitle>Arrière-plan</DrawerTitle>
+          <BackgroundPanel
+            slideIndex={currentSlide}
+            current={slides[currentSlide]?.background}
+            ultra={ultra}
+            onChange={background => onSetBackground(currentSlide, background)}
+          />
+        </>
       ) : (
         <>
           <DrawerTitle>Diapositives</DrawerTitle>
@@ -92,7 +107,10 @@ export default function SlidePanel({
                 className={`${styles.thumb} ${i === currentSlide ? styles.thumbSelected : ''} ${dragIndex === i ? styles.thumbDragging : ''} ${dragOverIndex === i && dragIndex !== i ? styles.thumbDragOver : ''}`}
                 onClick={() => onSelectSlide(i)}
               >
-                <div className={styles.thumbPreviewBox}>
+                <div
+                  className={styles.thumbPreviewBox}
+                  style={getSlideBackgroundStyle(slide.background, ultra).style}
+                >
                   <div className={styles.thumbPreviewScaler}>
                     {slide.blocks.map(block => {
                       const Renderer = BLOCKS_REGISTRY[block.type]

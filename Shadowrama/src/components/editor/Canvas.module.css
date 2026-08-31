@@ -18,6 +18,19 @@
   overflow: hidden;
 }
 
+/* Dégradé de fond animé (mode Ultra Design) : le fond fait deux fois la taille
+   du conteneur (`background-size: 200% 200%`, posé en JS) et on en balaie la
+   position en boucle, pour un effet de mouvement doux plutôt qu'un dégradé figé. */
+@keyframes slideBgGradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.canvasBgAnimated {
+  animation: slideBgGradientShift 12s ease-in-out infinite;
+}
+
 .snapLineV {
   position: absolute;
   top: 0;

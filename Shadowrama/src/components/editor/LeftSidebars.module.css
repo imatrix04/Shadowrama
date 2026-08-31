@@ -26,9 +26,6 @@
     background-color var(--t-fast),
     border-color var(--t-fast),
     transform var(--t-fast) var(--ease-out);
-
-  /* Apparition décalée à l'ouverture du tiroir : les boutons arrivaient tous
-     ensemble, d'un bloc. Le délai est posé en style inline par le composant. */
   opacity: 0;
   transform: translateX(-6px);
   animation: itemIn var(--t-base) var(--ease-out) forwards;

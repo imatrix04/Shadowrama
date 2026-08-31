@@ -86,6 +86,9 @@
 }
 
 .sectionLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 0.65rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.4);
@@ -93,6 +96,17 @@
   letter-spacing: 1.2px;
 }
 
+.layerBadge {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  color: rgba(255, 255, 255, 0.65);
+  background: rgba(124, 92, 255, 0.15);
+  border: 1px solid rgba(124, 92, 255, 0.35);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
 .orderButtons {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -129,6 +143,12 @@
 
 .smallBtn:active {
   transform: translateY(0);
+}
+
+.smallBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
 }
 
 .field {
