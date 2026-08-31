@@ -8,7 +8,7 @@ import { buildTimeline } from '../../ultra/timeline'
 import { getPreset, presetDuration } from '../../ultra/presets'
 import { getSlideTransition, transitionDuration } from '../../ultra/slideTransitions'
 import { runSlideTransition } from '../../ultra/slideTransitionRunner'
-import { getSlideBackgroundStyle } from '../../ultra/SlideBackground'
+import { getSlideBackgroundStyle } from '../../ultra/slideBackground'
 import floatStyles from './BlockFloat.module.css'
 import styles from './PresentationMode.module.css'
 

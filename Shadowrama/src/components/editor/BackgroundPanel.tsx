@@ -1,5 +1,5 @@
 import type { SlideBackground } from '../../types'
-import { GRADIENT_PRESETS, DEFAULT_GRADIENT } from '../../ultra/SlideBackground'
+import { GRADIENT_PRESETS, DEFAULT_GRADIENT } from '../../ultra/slideBackground'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
 import styles from './PanelControls.module.css'
 

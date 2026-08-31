@@ -3,7 +3,7 @@ import type { Slide, SlideBackground, SlideTransitionSettings } from '../../type
 import { BLOCKS_REGISTRY } from '../../blocks'
 import TransitionPanel from './TransitionPanel'
 import BackgroundPanel from './BackgroundPanel'
-import { getSlideBackgroundStyle } from '../../ultra/SlideBackground'
+import { getSlideBackgroundStyle } from '../../ultra/slideBackground'
 import Drawer, { DrawerTitle } from '../ui/Drawer'
 import type { DrawerTab } from '../ui/Drawer'
 import styles from './SlidePanel.module.css'

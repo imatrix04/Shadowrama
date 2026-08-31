@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import type { BlockData, MotionPhase, SlideBackground } from '../../types'
 import Block from './Block'
-import { getSlideBackgroundStyle } from '../../ultra/SlideBackground'
+import { getSlideBackgroundStyle } from '../../ultra/slideBackground'
 import styles from './Canvas.module.css'
 
 const CANVAS_W = 960

@@ -2,6 +2,11 @@
 
 <!-- Généré depuis changelog.json par `npm run changelog`. Ne pas éditer à la main. -->
 
+## 0.17.1 — 2026-08-31
+
+### Corrections
+- correctif d'import
+
 ## 0.17.0 — 2026-08-31
 
 **Fond de diapositive** — Couleur unie, dégradé (statique ou animé en boucle), image importée, avec une superposition réglable pour garder le texte lisible. Un nouvel onglet « Arrière-plan » le règle diapositive par diapositive.
