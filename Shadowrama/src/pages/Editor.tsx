@@ -107,11 +107,12 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
   }
 
   const duplicateSlide = (index: number) => {
+    const source = slides[index]
     const copy: Slide = {
       id: nextId(),
-      // Copie profonde : `effects` et `motion` sont imbriqués, une copie de
-      // surface les ferait partager entre la diapo d'origine et son double.
-      blocks: slides[index].blocks.map(b => ({ ...structuredClone(b), id: nextId() })),
+      blocks: source.blocks.map(b => ({ ...structuredClone(b), id: nextId() })),
+      transition: source.transition ? structuredClone(source.transition) : undefined,
+      background: source.background ? structuredClone(source.background) : undefined,
     }
     commit(prev => {
       const next = [...prev]

@@ -6,8 +6,8 @@ import { getBlockProperties, getBlockConfig } from '../../blocks'
 import Icon from '../ui/Icon'
 import styles from './ContextMenu.module.css'
 import CustomSelect from '../../styles/CustomSelect'
-import GridShapeEditor from './GridShapeEditor'
-import { normalizeGrid } from '../../utils/shapeGrid'
+import PolygonShapeEditor from './PolygonShapeEditor'
+import { normalizePolygon } from '../../utils/shapePolygon'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
 
 // Doivent rester alignés sur les valeurs par défaut de useBlockAnimation.
@@ -164,13 +164,21 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
         </div>
       )
     }
-    case 'shapeGrid':
+    case 'shapePolygon': {
+      // Même conversion que polygonToMaskDataUri : l'éditeur travaille dans un
+      // repère abstrait 0–100, le rayon stocké est en pixels réels du bloc.
+      const radiusPx = Number(getBlockField(block, 'borderRadius') ?? 0)
+      const abstractRadius = radiusPx > 0
+        ? (radiusPx * 100) / Math.max(1, Math.min(block.width, block.height))
+        : 0
       return (
-        <GridShapeEditor
-          value={normalizeGrid(getBlockField(block, prop.key))}
-          onChange={grid => onUpdate(block.id, setBlockField(block, prop.key, grid))}
+        <PolygonShapeEditor
+          value={normalizePolygon(getBlockField(block, prop.key))}
+          radius={abstractRadius}
+          onChange={points => onUpdate(block.id, setBlockField(block, prop.key, points))}
         />
       )
+    }
     default:
       return null
   }

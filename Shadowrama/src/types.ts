@@ -4,7 +4,7 @@ import type { IconName } from './components/ui/Icon'
 export interface BlockProperty {
   key: string
   label: string
-  type: 'text' | 'textarea' | 'number' | 'color' | 'select' | 'float' | 'file' | 'shapeGrid'
+  type: 'text' | 'textarea' | 'number' | 'color' | 'select' | 'float' | 'file' | 'shapePolygon'
   options?: { label: string; value: string }[]
   /** N'affiche ce champ que si une autre propriété du bloc vaut cette valeur.
    *  Sert à cacher la grille 10×10 tant que « Grille personnalisée » n'est
@@ -167,9 +167,9 @@ export interface ImageBlockData extends BaseBlockData {
   alt?: string
   borderRadius?: number
   objectFit?: 'cover' | 'contain' | 'fill'
-  /** Découpe l'image dans la forme d'une grille 10×10 (voir utils/shapeGrid). */
+  /** Découpe l'image dans la forme du polygone (voir utils/shapePolygon). */
   shapeMode?: 'none' | 'grid'
-  customShape?: number[]
+  customShape?: [number, number][]
 }
 
 export type ShapeKind =
@@ -184,8 +184,8 @@ export interface ShapeBlockData extends BaseBlockData {
   borderRadius?: number
   borderColor?: string
   borderWidth?: number
-  /** Grille 10×10 dessinée à la main, utilisée quand `shape === 'grid'`. */
-  customShape?: number[]
+  /** Polygone dessiné à la main, utilisé quand `shape === 'grid'`. */
+  customShape?: [number, number][]
 }
 
 export interface TextBlockData extends BaseBlockData {

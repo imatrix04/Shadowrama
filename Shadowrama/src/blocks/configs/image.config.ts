@@ -25,10 +25,10 @@ const imageConfig: BlockConfig = {
       type: 'select',
       options: [
         { label: 'Rectangle (par défaut)', value: 'none' },
-        { label: 'Grille personnalisée', value: 'grid' },
+        { label: 'Forme personnalisée', value: 'grid' },
       ],
     },
-    { key: 'customShape', label: 'Grille (10×10)', type: 'shapeGrid', showIf: { key: 'shapeMode', value: 'grid' } },
+    { key: 'customShape', label: 'Forme personnalisée', type: 'shapePolygon', showIf: { key: 'shapeMode', value: 'grid' } },
   ],
 }
 

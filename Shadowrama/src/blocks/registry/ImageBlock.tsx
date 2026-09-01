@@ -1,16 +1,20 @@
 import type { BlockComponentProps, ImageBlockData } from '../../types'
 import { resolveMedia } from '../../utils/mediaStore'
-import { gridToMaskDataUri } from '../../utils/shapeGrid'
+import { polygonToMaskDataUri } from '../../utils/shapePolygon'
 import Icon from '../../components/ui/Icon'
 
 export default function ImageBlock({ block }: BlockComponentProps<ImageBlockData>) {
   const resolvedSrc = block.src?.startsWith('media/') ? resolveMedia(block.src) : block.src
 
-  // Le masque CSS découpe l'image dans la forme de la grille. `mask-size` en
+  // Le masque CSS découpe l'image dans la forme du polygone. `mask-size` en
   // pourcentage l'étire au bloc réel : pas de souci de distorsion vu qu'un
   // masque n'a pas de bordure à garder proportionnée (contrairement au bloc
   // forme, où le tracé est généré en pixels réels — voir ShapeBlock.tsx).
-  const maskUri = block.shapeMode === 'grid' ? gridToMaskDataUri(block.customShape) : undefined
+  // `borderRadius` (même champ Arrondi que ShapeBlock) est reconverti en
+  // interne dans l'échelle abstraite du masque — voir polygonToMaskDataUri.
+  const maskUri = block.shapeMode === 'grid'
+    ? polygonToMaskDataUri(block.customShape, block.borderRadius ?? 0, block.width, block.height)
+    : undefined
   const maskStyle = maskUri ? {
     WebkitMaskImage: `url("${maskUri}")`,
     maskImage: `url("${maskUri}")`,
