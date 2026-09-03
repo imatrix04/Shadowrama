@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Slide } from '../../types'
 import {
   saveProjectAs, saveProjectToPath, openProject, clearDraft,
@@ -35,6 +36,7 @@ export default function TopBar({
   onUndo, onRedo, canUndo, canRedo, draftFailed, ultra, onToggleUltra,
   presenting, onPresentingChange,
 }: Props) {
+  const navigate = useNavigate()
   const [nameDialogOpen, setNameDialogOpen] = useState(false)
   const [nameInput, setNameInput] = useState('mon-projet')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -194,6 +196,13 @@ export default function TopBar({
           <button className={`${styles.btn} ${styles.btnAccent}`}
             onClick={() => onPresentingChange(true)}>
             <Icon name="play" /> Présenter
+          </button>
+          <button
+            className={styles.btn}
+            onClick={() => navigate('/settings')}
+            title="Paramètres"
+          >
+            <Icon name="settings" />
           </button>
         </div>
       </div>

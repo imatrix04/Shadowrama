@@ -51,3 +51,64 @@
     --t-slow: 0ms;
   }
 }
+
+/*
+ * Thème clair — appliqué via `data-theme="light"` sur <html>, posé par
+ * utils/theme.ts (voir useTheme). L'accent violet et les couleurs d'état
+ * (danger/warning) restent identiques dans les deux thèmes : ce sont des
+ * couleurs de marque/sémantiques, pas des neutres, elles n'ont pas besoin de
+ * s'inverser pour rester lisibles sur fond clair.
+ *
+ * Premier jet : les valeurs suivent le même rôle que leur équivalent sombre
+ * (bg-panel toujours plus contrasté que bg-canvas, etc.) mais n'ont pas été
+ * vérifiées à l'écran dans l'app elle-même — à ajuster après un premier coup
+ * d'œil en conditions réelles.
+ */
+:root[data-theme='light'] {
+  --editor-bg: #f7f6fb;
+  --editor-bg-panel: #ffffff;
+  --editor-bg-canvas: #e9e7f1;
+  --editor-border: #e1dfea;
+  --editor-border-light: #d3d0de;
+
+  --editor-bg-raised: #ffffff;
+
+  --editor-btn-bg: #efedf6;
+  --editor-btn-bg-hover: #e2ddf5;
+  --editor-text: #1a1730;
+  --editor-text-muted: #6b6578;
+  --editor-text-dim: #a29cb0;
+}
+
+/*
+ * Transition circulaire entre thèmes (voir applyThemeWithTransition dans
+ * utils/theme.ts, qui pose --theme-reveal-x/y/radius juste avant de
+ * déclencher la transition). Le nouveau thème est révélé par un cercle qui
+ * grandit depuis le point cliqué ; l'ancien reste figé en dessous plutôt que
+ * de faire un fondu croisé — plus net, et ça montre littéralement d'où vient
+ * le changement.
+ */
+::view-transition-old(root) {
+  animation: none;
+}
+
+::view-transition-new(root) {
+  animation: theme-reveal 550ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0px at var(--theme-reveal-x, 50%) var(--theme-reveal-y, 50%));
+  }
+  to {
+    clip-path: circle(var(--theme-reveal-radius, 150%) at var(--theme-reveal-x, 50%) var(--theme-reveal-y, 50%));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,39 @@
+.switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.3rem;
+  height: 1.3rem;
+  padding: 2px;
+  box-sizing: border-box;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color var(--t-fast), border-color var(--t-fast);
+}
+
+.switch.on {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.knob {
+  display: block;
+  width: 0.95rem;
+  height: 0.95rem;
+  background-color: var(--editor-text);
+  border-radius: 50%;
+  /* Léger dépassement à l'arrivée (courbe "back") plutôt qu'un easing plat :
+     un seul endroit où se permettre ce petit ressort, pas partout. */
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color var(--t-fast);
+}
+
+.switch.on .knob {
+  background-color: #ffffff;
+  transform: translateX(1rem);
+}

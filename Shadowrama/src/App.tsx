@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route } from 'react-router-dom'
 import ErrorBoundary from './components/ui/ErrorBoundary'
 import Home from './pages/Home'
 import Editor from './pages/Editor'
+import Settings from './pages/Settings'
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/editor" element={<Editor />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </HashRouter>
     </ErrorBoundary>

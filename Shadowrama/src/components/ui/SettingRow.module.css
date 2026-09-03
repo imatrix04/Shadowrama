@@ -1,0 +1,91 @@
+.row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.2rem;
+  padding: 0.9rem 0 0.9rem 0.9rem;
+  border-bottom: 1px solid var(--editor-border);
+  border-radius: var(--r-sm);
+  transition: background-color var(--t-fast);
+}
+
+/* Barre d'accent qui se déploie au survol/focus, plutôt que la carte+ombre
+   générique : plus discret, et cohérent avec la timeline de l'éditeur
+   (une ligne verticale qui apparaît = une plage active). */
+.row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 2px;
+  border-radius: 2px;
+  background-color: var(--accent);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform var(--t-base) var(--ease-out);
+}
+
+.row:hover::before,
+.row:focus-within::before {
+  transform: scaleY(1);
+}
+
+.row:hover {
+  background-color: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--editor-text);
+}
+
+.description {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--editor-text-muted);
+}
+
+.control {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding-top: 0.15rem;
+}
+
+.lockedBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  background-color: var(--editor-btn-bg);
+  border-radius: var(--r-md);
+  color: var(--editor-text-dim);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  animation: lockedPulse 4s ease-in-out infinite;
+}
+
+@keyframes lockedPulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lockedBadge {
+    animation: none;
+  }
+}

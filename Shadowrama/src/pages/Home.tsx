@@ -89,14 +89,24 @@ export default function Home() {
         <span className={styles.logo}>
           Shadowrama<span className={styles.logoDot}>.</span>
         </span>
-        {whatsNew.hasChangelog && (
-          <button className={styles.navLink} onClick={whatsNew.open}>
-            Nouveautés
-            {whatsNew.currentVersion && (
-              <span className={styles.navVersion}>v{whatsNew.currentVersion}</span>
-            )}
+        <div className={styles.navActions}>
+          {whatsNew.hasChangelog && (
+            <button className={styles.navLink} onClick={whatsNew.open}>
+              Nouveautés
+              {whatsNew.currentVersion && (
+                <span className={styles.navVersion}>v{whatsNew.currentVersion}</span>
+              )}
+            </button>
+          )}
+          <button
+            className={styles.navIconBtn}
+            onClick={() => navigate('/settings')}
+            aria-label="Paramètres"
+            title="Paramètres"
+          >
+            <Icon name="settings" size={18} />
           </button>
-        )}
+        </div>
       </nav>
 
       <section className={styles.hero}>
