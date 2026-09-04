@@ -72,7 +72,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, system-ui, sans-serif', zIndex: 99999,
   },
   panel: { maxWidth: 560, width: '100%' },
-  title: { fontSize: 22, margin: '0 0 16px' },
+  title: { fontSize: 22, margin: '0 0 16px', color: '#fff' },
   text: { lineHeight: 1.6, opacity: 0.85, margin: '0 0 12px' },
   actions: { margin: '20px 0' },
   primary: {
