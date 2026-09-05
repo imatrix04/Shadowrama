@@ -1,6 +1,12 @@
 {
   "_comment": "Source unique des notes de version. Alimente (1) l'écran « Nouveautés » embarqué dans l'application, (2) le corps de la release GitHub — donc les notes affichées AVANT la mise à jour — et (3) la section Changelog du README. Régénérer avec : npm run changelog. Les versions sont listées de la plus récente à la plus ancienne.",
   "releases": [
+        {
+      "version": "0.18.1",
+      "date": "2026-08-31",
+      "summary": "Correction d'import non reconnu",
+      "fixed":["correctif d'import"]
+    },
     {
       "version": "0.18.0",
       "date": "2026-09-05",

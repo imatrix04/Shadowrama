@@ -2,6 +2,11 @@
 
 <!-- Généré depuis changelog.json par `npm run changelog`. Ne pas éditer à la main. -->
 
+## 0.18.1 — 2026-08-31
+
+### Corrections
+- correctif d'import
+
 ## 0.18.0 — 2026-09-05
 
 **Mouvement** — Le panneau Animations disparaît : ses effets rejoignent Mouvement, qui distingue maintenant Classiques (actifs même hors mode Ultra Design) et Ultra, entrée comme sortie. Chaque effet a sa mini-scène animée en boucle pour voir ce qu'il fait sans avoir à l'essayer sur un bloc.
