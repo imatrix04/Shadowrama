@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import Icon from './Icon'
 import type { IconName } from './Icon'
@@ -28,6 +28,40 @@ export default function Drawer({
 
   const isOpen = activeTab !== null
   const pointsAway = side === 'left' ? !isOpen : isOpen
+
+  // Glisser pour défiler : un `overflow: auto` ne répond nativement qu'à la
+  // molette/au trackpad, pas à un clic-glissé à la souris. On rejoue donc le
+  // geste à la main, en laissant les champs natifs (curseur, nombre...)
+  // gérer leur propre glissé.
+  const innerRef = useRef<HTMLDivElement>(null)
+  const dragState = useRef<{ startY: number; startScrollTop: number } | null>(null)
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    const el = innerRef.current
+    if (!el) return
+    if ((e.target as HTMLElement).closest('input, textarea, select')) return
+    dragState.current = { startY: e.clientY, startScrollTop: el.scrollTop }
+  }
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const drag = dragState.current
+      const el = innerRef.current
+      if (!drag || !el) return
+      const dy = e.clientY - drag.startY
+      // Sous ce seuil, on laisse passer : sinon un simple clic sur un preset
+      // ou un bouton serait interprété comme un glissé.
+      if (Math.abs(dy) < 4) return
+      el.scrollTop = drag.startScrollTop - dy
+    }
+    const handleMouseUp = () => { dragState.current = null }
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
 
   return (
     <div className={styles.wrapper} style={{ ['--drawer-width' as string]: `${width}px` }}>
@@ -67,7 +101,11 @@ export default function Drawer({
           side === 'left' ? styles.panelLeft : styles.panelRight,
         ].join(' ')}
       >
-        <div className={`${styles.inner} ${isOpen ? styles.innerVisible : ''}`}>
+        <div
+          ref={innerRef}
+          className={`${styles.inner} ${isOpen ? styles.innerVisible : ''}`}
+          onMouseDown={handleDragStart}
+        >
           {renderTab(paintedTab)}
         </div>
       </div>

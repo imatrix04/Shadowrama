@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { AnimationType, BlockConfig, BlockData, MotionPhase } from '../../types'
+import type { BlockConfig, BlockData, MotionPhase } from '../../types'
 import { BLOCKS_CONFIG } from '../../blocks'
 import Drawer, { DrawerTitle } from '../ui/Drawer'
 import type { DrawerTab } from '../ui/Drawer'
@@ -11,47 +11,24 @@ import styles from './LeftSidebars.module.css'
 
 interface Props {
   onAddBlock: (block: Partial<BlockConfig['defaultProps']> & { type: string }) => void
-  onSelectAnimation: (type: AnimationType) => void
-  /** Nombre de blocs sélectionnés : le panneau Animations en dépend. */
-  selectionCount: number
-  /** Animation commune à la sélection, pour la marquer comme active. */
-  currentAnimation: AnimationType | null
-  /** Mode Ultra Design : déverrouille les panneaux Mouvement et Effets. */
+  /** Mode Ultra Design : déverrouille les mouvements avancés et le panneau Effets. */
   ultra: boolean
-  /** Bloc unique sélectionné : les panneaux Ultra travaillent sur un seul bloc. */
+  /** Bloc unique sélectionné : Mouvement et Effets travaillent sur un seul bloc. */
   selectedBlock: BlockData | null
   onUpdateSelected: (changes: Partial<BlockData> | ((block: BlockData) => Partial<BlockData>)) => void
   onGestureStart: () => void
   onPreviewMotion: (phase: MotionPhase) => void
 }
 
-const ANIMATIONS: { label: string; value: AnimationType; demo: 'none' | 'fade' | 'slideLeft' | 'slideRight' | 'slideUp' | 'zoom' }[] = [
-  { label: 'Aucune', value: 'none', demo: 'none' },
-  { label: 'Fondu', value: 'fadeIn', demo: 'fade' },
-  { label: 'Depuis la gauche', value: 'slideInLeft', demo: 'slideLeft' },
-  { label: 'Depuis la droite', value: 'slideInRight', demo: 'slideRight' },
-  { label: 'Depuis le bas', value: 'slideInUp', demo: 'slideUp' },
-  { label: 'Zoom', value: 'zoomIn', demo: 'zoom' },
-]
-
-// Aperçu en boucle : chaque puce rejoue son effet en continu, pas besoin de
-// sélectionner un bloc pour comprendre ce que fait chaque animation.
-const DEMO_CLASS: Record<typeof ANIMATIONS[number]['demo'], string> = {
-  none: '',
-  fade: styles.demoFade,
-  slideLeft: styles.demoSlideLeft,
-  slideRight: styles.demoSlideRight,
-  slideUp: styles.demoSlideUp,
-  zoom: styles.demoZoom,
-}
-
+// Mouvement fusionne l'ancien panneau Animations : les presets basiques
+// restent utilisables sans le mode Ultra, les avancés se débloquent avec.
 const BASE_TABS: DrawerTab[] = [
   { key: 'blocs', label: 'Blocs', icon: 'shape' },
-  { key: 'animations', label: 'Animations', icon: 'animFade' },
+  { key: 'mouvement', label: 'Mouvement', icon: 'motion' },
 ]
 
+// Effets reste entièrement Ultra : pas d'équivalent basique.
 const ULTRA_TABS: DrawerTab[] = [
-  { key: 'mouvement', label: 'Mouvement', icon: 'motion', ultra: true },
   { key: 'effets', label: 'Effets', icon: 'effects', ultra: true },
 ]
 
@@ -60,8 +37,7 @@ function stagger(index: number): React.CSSProperties {
 }
 
 export default function LeftSidebars({
-  onAddBlock, onSelectAnimation, selectionCount, currentAnimation,
-  ultra, selectedBlock, onUpdateSelected, onGestureStart, onPreviewMotion,
+  onAddBlock, ultra, selectedBlock, onUpdateSelected, onGestureStart, onPreviewMotion,
 }: Props) {
   const [openPanel, setOpenPanel] = useState<string | null>(null)
 
@@ -85,57 +61,15 @@ export default function LeftSidebars({
     </>
   )
 
-  const renderAnimations = () => {
-    const hasSelection = selectionCount > 0
-    return (
-      <>
-        <DrawerTitle>Animations d'entrée</DrawerTitle>
-        {!hasSelection && (
-          <p className={styles.hint}>
-            Sélectionnez un bloc sur la diapositive pour lui appliquer une animation.
-          </p>
-        )}
-        <div className={styles.list}>
-          {ANIMATIONS.map((anim, i) => {
-            const active = hasSelection && currentAnimation === anim.value
-            return (
-              <button
-                key={anim.value}
-                className={[
-                  styles.item,
-                  active ? styles.itemActive : '',
-                  hasSelection ? '' : styles.disabled,
-                ].join(' ')}
-                style={stagger(i)}
-                disabled={!hasSelection}
-                onClick={() => onSelectAnimation(anim.value)}
-                title={
-                  hasSelection
-                    ? `Appliquer « ${anim.label} » à ${selectionCount} bloc${selectionCount > 1 ? 's' : ''}`
-                    : 'Aucun bloc sélectionné'
-                }
-              >
-                <span className={styles.animPreview}>
-                <span className={`${styles.animChip} ${DEMO_CLASS[anim.demo]}`} />
-                </span>
-                {anim.label}
-                {active && <span className={styles.check}>✓</span>}
-              </button>
-            )
-          })}
-        </div>
-      </>
-    )
-  }
-
   const renderTab = (key: string) => {
     if (key === 'blocs') return renderBlocks()
     if (key === 'mouvement') {
       return (
         <>
-          <DrawerTitle ultra>Séquences</DrawerTitle>
+          <DrawerTitle>Mouvement</DrawerTitle>
           <MotionPanel
             block={selectedBlock}
+            ultra={ultra}
             onUpdate={onUpdateSelected}
             onGestureStart={onGestureStart}
             onPreview={onPreviewMotion}
@@ -155,9 +89,8 @@ export default function LeftSidebars({
         </>
       )
     }
-    return renderAnimations()
+    return null
   }
-
   return (
     <Drawer
       side="left"

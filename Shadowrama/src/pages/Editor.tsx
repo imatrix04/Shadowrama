@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { BLOCKS_CONFIG } from '../blocks'
-import type { AnimationType, BlockData, MotionPhase, Slide, SlideBackground, SlideTransitionSettings } from '../types'
+import type { BlockData, MotionPhase, Slide, SlideBackground, SlideTransitionSettings } from '../types'
 import { useEditorHistory } from '../hooks/useEditorHistory'
 import { loadDraft, saveDraft } from '../utils/fileManager'
 import type { ProjectDraft } from '../utils/fileManager'
@@ -317,15 +317,6 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
     beginGesture: begin,
   }, !presenting)
 
-  // Animation commune à toute la sélection, sinon rien : le panneau ne peut
-  // marquer une entrée comme active que si elle vaut pour tous les blocs.
-  const currentAnimation = (() => {
-    const blocks = slides[currentSlide].blocks.filter(b => selectedBlockIds.includes(b.id))
-    if (blocks.length === 0) return null
-    const first = blocks[0].animation?.type ?? 'none'
-    return blocks.every(b => (b.animation?.type ?? 'none') === first) ? first : null
-  })()
-
   // Les panneaux Ultra travaillent sur un bloc unique : avec plusieurs blocs
   // sélectionnés, on ne saurait pas quoi afficher comme valeurs courantes.
   const selectedBlock = selectedBlockIds.length === 1
@@ -359,22 +350,6 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
     setMotionPreview({ id: selectedBlockIds[0], phase, nonce: Date.now() })
   }, [selectedBlockIds])
 
-  // ── Animations
-  const handleSelectAnimation = (type: AnimationType) => {
-    if (selectedBlockIds.length === 0) return
-    commit(prev => prev.map((slide, i) =>
-      i === currentSlide
-        ? {
-            ...slide,
-            blocks: slide.blocks.map(b =>
-              selectedBlockIds.includes(b.id)
-                ? { ...b, animation: { ...b.animation, type } }
-                : b
-            ),
-          }
-        : slide
-    ))
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#1a1a2e', color: '#fff' }}>
@@ -404,9 +379,6 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <LeftSidebars
           onAddBlock={addBlock}
-          onSelectAnimation={handleSelectAnimation}
-          selectionCount={selectedBlockIds.length}
-          currentAnimation={currentAnimation}
           ultra={ultra}
           selectedBlock={selectedBlock}
           onUpdateSelected={updateSelectedBlock}

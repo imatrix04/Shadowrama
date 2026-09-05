@@ -1,12 +1,7 @@
-import type { BlockData, BlockEffects, Gradient } from '../types'
+import type { BlockData, BlockEffects, BlockMotion, Gradient } from '../types'
+import { getPreset } from './presets'
 
-/**
- * Chaîne `filter` CSS correspondant aux effets.
- *
- * `drop-shadow` est préféré à `box-shadow` : il suit la silhouette réelle du
- * bloc, donc l'ombre d'un triangle ou d'une étoile épouse la forme au lieu de
- * dessiner un rectangle.
- */
+
 export function effectFilter(fx: BlockEffects): string | undefined {
   const parts: string[] = []
 
@@ -43,16 +38,31 @@ export function blockGradient(block: BlockData): Gradient | undefined {
 }
 
 
+/** Ne garde d'une séquence que ses phases `tier: 'basic'` : c'est ce qui
+ *  permet aux anciennes Animations — fusionnées dans Mouvement — de
+ *  continuer à jouer même le mode Ultra Design coupé, alors qu'une séquence
+ *  Ultra reste, elle, neutralisée. */
+function stripUltraMotion(motion: BlockMotion | undefined): BlockMotion | undefined {
+  if (!motion) return motion
+  const keepIn = motion.in && getPreset(motion.in.preset)?.tier !== 'ultra'
+  const keepOut = motion.out && getPreset(motion.out.preset)?.tier !== 'ultra'
+  if (keepIn && keepOut) return motion
+  if (!keepIn && !keepOut) return undefined
+  return { in: keepIn ? motion.in : undefined, out: keepOut ? motion.out : undefined }
+}
+
 /**
  * Vue d'un bloc selon le mode.
  *
- * Hors mode Ultra Design, effets et séquences sont ignorés au RENDU mais restent
- * intacts dans les données : couper le mode ne détruit rien, il montre le projet
- * tel qu'il apparaîtrait sans les fonctions avancées. La présentation doit s'y
+ * Hors mode Ultra Design, effets et séquences ULTRA sont ignorés au RENDU
+ * mais restent intacts dans les données : couper le mode ne détruit rien.
+ * Les séquences `tier: 'basic'` (l'ancien panneau Animations) restent
+ * actives, elles ne dépendent pas du mode. La présentation doit s'y
  * conformer aussi, sinon couper le mode n'a aucun effet une fois lancée.
  */
 export function viewBlock(block: BlockData, ultra: boolean): BlockData {
   if (ultra) return block
-  if (!block.effects && !block.motion) return block
-  return { ...block, effects: undefined, motion: undefined }
+  const motion = stripUltraMotion(block.motion)
+  if (!block.effects && motion === block.motion) return block
+  return { ...block, effects: undefined, motion }
 }

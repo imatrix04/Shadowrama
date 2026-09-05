@@ -1,7 +1,7 @@
 import type { MotionPreset } from '../types'
 
 /**
- * Bibliothèque de mouvements du mode Ultra Design.
+ * Bibliothèque de mouvements.
  *
  * Un preset n'est pas une transition unique mais une suite d'étapes : c'est ce
  * qui permet des mouvements composés — dépasser puis revenir, tomber puis
@@ -10,12 +10,17 @@ import type { MotionPreset } from '../types'
  *
  * Les décalages `x`/`y` sont en pixels, les rotations en degrés, `blur` en
  * pixels. `from` décrit l'état avant démarrage ; chaque étape mène au suivant.
+ *
+ * `tier: 'basic'` marque les presets issus de l'ancien panneau Animations :
+ * ils restent actifs même le mode Ultra Design coupé (voir `viewBlock` dans
+ * `ultra/effectStyle.ts`). Tout le reste est `'ultra'`.
  */
 export const MOTION_PRESETS: MotionPreset[] = [
   // ── Fondus ────────────────────────────────────────────────────────────────
   {
     id: 'fade',
     label: 'Fondu',
+    tier: 'basic',
     phase: 'in',
     family: 'fondu',
     from: { opacity: 0 },
@@ -24,6 +29,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'fade-up',
     label: 'Fondu montant',
+    tier: 'ultra',
     phase: 'in',
     family: 'fondu',
     from: { opacity: 0, y: 40 },
@@ -32,6 +38,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'fade-scale',
     label: 'Fondu ample',
+    tier: 'ultra',
     phase: 'in',
     family: 'fondu',
     from: { opacity: 0, scale: 1.12 },
@@ -42,6 +49,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'slide-left',
     label: 'Glisse depuis la gauche',
+    tier: 'basic',
     phase: 'in',
     family: 'glissement',
     from: { opacity: 0, x: -120 },
@@ -50,14 +58,25 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'slide-right',
     label: 'Glisse depuis la droite',
+    tier: 'basic',
     phase: 'in',
     family: 'glissement',
     from: { opacity: 0, x: 120 },
     steps: [{ to: { opacity: 1, x: 0 }, duration: 0.6, ease: 'power3.out' }],
   },
   {
+    id: 'slide-up',
+    label: 'Depuis le bas',
+    tier: 'basic',
+    phase: 'in',
+    family: 'glissement',
+    from: { opacity: 0, y: 40 },
+    steps: [{ to: { opacity: 1, y: 0 }, duration: 0.6, ease: 'power2.out' }],
+  },
+  {
     id: 'slide-overshoot',
     label: 'Glisse et dépasse',
+    tier: 'ultra',
     phase: 'in',
     family: 'glissement',
     from: { opacity: 0, x: -160 },
@@ -69,6 +88,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'drop-bounce',
     label: 'Tombe et rebondit',
+    tier: 'ultra',
     phase: 'in',
     family: 'glissement',
     from: { opacity: 0, y: -180 },
@@ -81,8 +101,18 @@ export const MOTION_PRESETS: MotionPreset[] = [
 
   // ── Échelle ───────────────────────────────────────────────────────────────
   {
+    id: 'zoom-in',
+    label: 'Zoom',
+    tier: 'basic',
+    phase: 'in',
+    family: 'echelle',
+    from: { opacity: 0, scale: 0.8 },
+    steps: [{ to: { opacity: 1, scale: 1 }, duration: 0.5, ease: 'power2.out' }],
+  },
+  {
     id: 'pop',
     label: 'Apparition élastique',
+    tier: 'ultra',
     phase: 'in',
     family: 'echelle',
     from: { opacity: 0, scale: 0.4 },
@@ -91,6 +121,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'pop-punch',
     label: 'Coup de poing',
+    tier: 'ultra',
     phase: 'in',
     family: 'echelle',
     from: { opacity: 0, scale: 0.6 },
@@ -103,6 +134,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'grow-wide',
     label: 'Étirement horizontal',
+    tier: 'ultra',
     phase: 'in',
     family: 'echelle',
     from: { opacity: 0, scale: 0.2, skewX: -12 },
@@ -116,6 +148,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'spin-in',
     label: 'Rotation entrante',
+    tier: 'ultra',
     phase: 'in',
     family: 'rotation',
     from: { opacity: 0, rotate: -25, scale: 0.7 },
@@ -127,6 +160,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'flip-x',
     label: 'Bascule',
+    tier: 'ultra',
     phase: 'in',
     family: 'rotation',
     from: { opacity: 0, skewY: 18, scale: 0.85 },
@@ -140,6 +174,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'blur-in',
     label: 'Sortie de flou',
+    tier: 'ultra',
     phase: 'in',
     family: 'flou',
     from: { opacity: 0, blur: 18, scale: 1.08 },
@@ -148,6 +183,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'blur-rush',
     label: 'Ruée floue',
+    tier: 'ultra',
     phase: 'in',
     family: 'flou',
     from: { opacity: 0, blur: 24, x: -90 },
@@ -161,6 +197,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'type-chars',
     label: 'Machine à écrire',
+    tier: 'ultra',
     phase: 'in',
     family: 'texte',
     from: { opacity: 0 },
@@ -170,6 +207,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'wave-chars',
     label: 'Vague par lettres',
+    tier: 'ultra',
     phase: 'in',
     family: 'texte',
     from: { opacity: 0, y: 28, rotate: -8 },
@@ -179,6 +217,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'words-up',
     label: 'Mots montants',
+    tier: 'ultra',
     phase: 'in',
     family: 'texte',
     from: { opacity: 0, y: 34, blur: 6 },
@@ -187,25 +226,56 @@ export const MOTION_PRESETS: MotionPreset[] = [
   },
 
   // ── Sorties ───────────────────────────────────────────────────────────────
+
   {
     id: 'fade-out',
     label: 'Fondu de sortie',
+    tier: 'basic',
     phase: 'out',
     family: 'fondu',
     from: {},
     steps: [{ to: { opacity: 0 }, duration: 0.4, ease: 'power2.in' }],
   },
   {
+    id: 'slide-left-out',
+    label: 'Sort vers la gauche',
+    tier: 'basic',
+    phase: 'out',
+    family: 'glissement',
+    from: {},
+    steps: [{ to: { opacity: 0, x: -120 }, duration: 0.5, ease: 'power2.in' }],
+  },
+  {
+    id: 'slide-right-out',
+    label: 'Sort vers la droite',
+    tier: 'basic',
+    phase: 'out',
+    family: 'glissement',
+    from: {},
+    steps: [{ to: { opacity: 0, x: 120 }, duration: 0.5, ease: 'power2.in' }],
+  },
+  {
     id: 'fade-down-out',
     label: 'Descend et disparaît',
+    tier: 'basic',
     phase: 'out',
     family: 'glissement',
     from: {},
     steps: [{ to: { opacity: 0, y: 40 }, duration: 0.45, ease: 'power2.in' }],
   },
   {
+    id: 'zoom-out',
+    label: 'Zoom arrière',
+    tier: 'basic',
+    phase: 'out',
+    family: 'echelle',
+    from: {},
+    steps: [{ to: { opacity: 0, scale: 0.8 }, duration: 0.5, ease: 'power2.in' }],
+  },
+  {
     id: 'shrink-out',
     label: 'Rétrécit',
+    tier: 'ultra',
     phase: 'out',
     family: 'echelle',
     from: {},
@@ -217,6 +287,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'blur-out',
     label: 'Part en flou',
+    tier: 'ultra',
     phase: 'out',
     family: 'flou',
     from: {},
@@ -225,6 +296,7 @@ export const MOTION_PRESETS: MotionPreset[] = [
   {
     id: 'spin-out',
     label: 'Rotation sortante',
+    tier: 'ultra',
     phase: 'out',
     family: 'rotation',
     from: {},
@@ -238,8 +310,9 @@ export function getPreset(id: string | undefined): MotionPreset | undefined {
   return id ? BY_ID.get(id) : undefined
 }
 
-export function presetsForPhase(phase: 'in' | 'out'): MotionPreset[] {
-  return MOTION_PRESETS.filter(p => p.phase === phase)
+
+export function presetsForPhase(phase: 'in' | 'out', ultra: boolean): MotionPreset[] {
+  return MOTION_PRESETS.filter(p => p.phase === phase && (ultra || p.tier === 'basic'))
 }
 
 /** Durée totale d'un preset, utile pour enchaîner ou afficher un aperçu. */

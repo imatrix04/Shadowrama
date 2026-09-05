@@ -6,9 +6,6 @@ export interface BlockProperty {
   label: string
   type: 'text' | 'textarea' | 'number' | 'color' | 'select' | 'float' | 'file' | 'shapePolygon'
   options?: { label: string; value: string }[]
-  /** N'affiche ce champ que si une autre propriété du bloc vaut cette valeur.
-   *  Sert à cacher la grille 10×10 tant que « Grille personnalisée » n'est
-   *  pas le mode choisi, plutôt que de l'afficher pour toutes les formes. */
   showIf?: { key: string; value: string }
 }
 
@@ -96,23 +93,14 @@ export interface AnimationStep {
 
 export type MotionPhase = 'in' | 'out'
 
-/**
- * Un preset décrit un état de départ puis une suite d'étapes enchaînées.
- * C'est ce qui permet des mouvements composés — apparaître, dépasser, revenir —
- * là où l'ancien modèle ne connaissait qu'une transition unique.
- */
 export interface MotionPreset {
   id: string
   label: string
+  tier: 'basic' | 'ultra'
   phase: MotionPhase
-  /** Famille, pour regrouper la bibliothèque dans l'interface. */
   family: 'fondu' | 'glissement' | 'echelle' | 'rotation' | 'flou' | 'texte'
   from: Keyframe
   steps: AnimationStep[]
-  /**
-   * Découpe le texte pour animer chaque caractère ou chaque mot séparément.
-   * Ignoré sur les blocs non textuels.
-   */
   split?: 'chars' | 'words'
 }
 

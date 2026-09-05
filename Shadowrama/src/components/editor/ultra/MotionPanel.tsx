@@ -1,15 +1,24 @@
 import type { BlockData, MotionPhase, MotionSettings } from '../../../types'
 import { presetsForPhase, presetDuration, getPreset } from '../../../ultra/presets'
+import { previewStyle } from '../../../ultra/presetPreview'
 import Icon from '../../ui/Icon'
 import styles from '../PanelControls.module.css'
 
 interface Props {
   block: BlockData | null
+  /** Filtre les presets Ultra de la liste ; les presets `basic` restent
+   *  toujours proposés (voir presets.ts). */
+  ultra: boolean
   onUpdate: (changes: (block: BlockData) => Partial<BlockData>) => void
   onGestureStart: () => void
   /** Joue la séquence sur le bloc, dans l'éditeur. */
   onPreview: (phase: MotionPhase) => void
 }
+
+const TIER_LABELS = {
+  basic: 'Classiques',
+  ultra: 'Ultra',
+} as const
 
 const FAMILY_LABELS: Record<string, string> = {
   fondu: 'Fondus',
@@ -20,7 +29,7 @@ const FAMILY_LABELS: Record<string, string> = {
   texte: 'Texte découpé',
 }
 
-export default function MotionPanel({ block, onUpdate, onGestureStart, onPreview }: Props) {
+export default function MotionPanel({ block, ultra, onUpdate, onGestureStart, onPreview }: Props) {
   if (!block) {
     return (
       <p className={styles.hint}>
@@ -45,16 +54,16 @@ export default function MotionPanel({ block, onUpdate, onGestureStart, onPreview
   const renderPhase = (phase: MotionPhase, title: string) => {
     const current = motion[phase]
     const preset = getPreset(current?.preset)
-    const presets = presetsForPhase(phase)
-    const byFamily = new Map<string, typeof presets>()
-    for (const p of presets) {
-      const list = byFamily.get(p.family) ?? []
-      list.push(p)
-      byFamily.set(p.family, list)
-    }
+    const presets = presetsForPhase(phase, ultra)
+
+    // Une séquence Ultra posée puis le mode coupé : elle reste enregistrée
+    // mais n'apparaît plus dans la liste ci-dessous.
+    const hiddenUltra = !ultra && preset?.tier === 'ultra'
+
+    const tiers = (['basic', 'ultra'] as const).filter(t => presets.some(p => p.tier === t))
 
     return (
-      <div className={styles.group} key={phase}>
+      <div className={`${styles.group} ${styles.phaseCard}`} key={phase}>
         <p className={styles.groupLabel}>
           {title}
           {current && (
@@ -64,60 +73,99 @@ export default function MotionPanel({ block, onUpdate, onGestureStart, onPreview
           )}
         </p>
 
-        {[...byFamily.entries()].map(([family, list]) => (
-          <div key={family}>
-            <p className={styles.family}>{FAMILY_LABELS[family] ?? family}</p>
-            <div className={styles.presetList}>
-              {list.map(p => {
-                const active = current?.preset === p.id
-                return (
-                  <div
-                    key={p.id}
-                    className={`${styles.preset} ${active ? styles.presetActive : ''}`}
-                    onClick={() => setPhase(phase, { preset: p.id, speed: current?.speed ?? 1, delay: current?.delay ?? 0 })}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        setPhase(phase, { preset: p.id, speed: 1, delay: 0 })
-                      }
-                    }}
-                  >
-                    <span className={styles.presetName}>{p.label}</span>
-                    <button
-                      className={styles.presetPlay}
-                      title="Aperçu"
-                      onClick={e => {
-                        e.stopPropagation()
-                        setPhase(phase, { preset: p.id, speed: current?.speed ?? 1, delay: current?.delay ?? 0 })
-                        // Laisse le temps à la mise à jour d'atteindre le canvas.
-                        setTimeout(() => onPreview(phase), 40)
-                      }}
-                    >
-                      <Icon name="play" size={12} />
-                    </button>
+        {hiddenUltra && (
+          <p className={styles.hint}>
+            « {preset?.label} » est un mouvement Ultra : il est conservé mais
+            reste inactif tant que le mode Ultra Design est coupé.
+          </p>
+        )}
+
+        {tiers.length === 0 && !current && (
+          <p className={styles.hint}>
+            Les séquences de {title.toLowerCase()} avancées font partie du mode Ultra Design.
+          </p>
+        )}
+
+        {tiers.map(tier => {
+          const isUltra = tier === 'ultra'
+          const tierPresets = presets.filter(p => p.tier === tier)
+          const byFamily = new Map<string, typeof tierPresets>()
+          for (const p of tierPresets) {
+            const list = byFamily.get(p.family) ?? []
+            list.push(p)
+            byFamily.set(p.family, list)
+          }
+
+          return (
+            <div key={tier}>
+              <p className={isUltra ? styles.familyUltra : styles.family}>
+                {isUltra && <Icon name="ultra" size={11} />}
+                {TIER_LABELS[tier]}
+              </p>
+
+              {[...byFamily.entries()].map(([family, list]) => (
+                <div key={family}>
+                  <p className={styles.subFamily}>{FAMILY_LABELS[family] ?? family}</p>
+                  <div className={styles.presetList}>
+                    {list.map(p => {
+                      const active = current?.preset === p.id
+                      return (
+                        <div
+                          key={p.id}
+                          className={[
+                            styles.preset,
+                            isUltra ? styles.presetUltra : '',
+                            active ? styles.presetActive : '',
+                          ].join(' ')}
+                          style={previewStyle(p)}
+                          onClick={() => setPhase(phase, { preset: p.id, speed: current?.speed ?? 1, delay: current?.delay ?? 0 })}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              setPhase(phase, { preset: p.id, speed: 1, delay: 0 })
+                            }
+                          }}
+                        >
+                          <span className={styles.motionPreview}>
+                            <span className={styles.motionChip} />
+                          </span>
+                          <span className={styles.presetName}>{p.label}</span>
+                          
+                          <button
+                            className={styles.presetPlay}
+                            title="Aperçu"
+                            onClick={e => {
+                              e.stopPropagation()
+                              setPhase(phase, { preset: p.id, speed: current?.speed ?? 1, delay: current?.delay ?? 0 })
+                              // Laisse le temps à la mise à jour d'atteindre le canvas.
+                              setTimeout(() => onPreview(phase), 40)
+                            }}
+                          >
+                            <Icon name="play" size={12} />
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
-                )
-              })}
+                </div>
+              ))}
             </div>
-          </div>
-        ))}
+          )
+        })}
 
         {current && preset && (
           <>
-            <div className={styles.fieldStacked}>
+            <div className={styles.field}>
               <span className={styles.fieldLabel}>Vitesse</span>
-              <div className={styles.rangeGroup}>
-                <input
-                  type="range"
-                  className={styles.range}
-                  min={0.25} max={3} step={0.05}
-                  value={current.speed ?? 1}
-                  onChange={e => patchPhase(phase, { speed: parseFloat(e.target.value) })}
-                />
-                <span className={styles.rangeValue}>{(current.speed ?? 1).toFixed(2)}×</span>
-              </div>
+              <input
+                type="range"
+                className={styles.range}
+                min={0.25} max={3} step={0.25}
+                value={current.speed ?? 1}
+                onChange={e => patchPhase(phase, { speed: parseFloat(e.target.value) })}
+              />
             </div>
             <div className={styles.field}>
               <span className={styles.fieldLabel}>Délai (s)</span>
