@@ -14,10 +14,10 @@
 }
 
 .group {
+  flex-shrink: 0;
   margin-bottom: 0.9rem;
   min-width: 0;
 }
-
 /* Carte de phase (Entrée / Sortie dans Mouvement) : un liseré dégradé en
    haut reprend le langage visuel du bouton Ultra Design, même hors mode
    Ultra — c'est la carte qui structure, la couleur du contenu qui informe. */
