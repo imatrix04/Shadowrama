@@ -99,3 +99,76 @@
 }
 
 .disabled:hover .itemIcon { color: var(--editor-text-muted); }
+
+/* Aperçu animé dans le panneau Animations : une puce générique rejoue
+   l'effet en boucle, pour voir ce que fait chaque option sans avoir à
+   sélectionner un bloc pour tester. */
+.animPreview {
+  flex-shrink: 0;
+  width: 40px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--editor-border-light);
+  border-radius: calc(var(--r-md) - 2px);
+  overflow: hidden;
+}
+
+.animChip {
+  width: 16px;
+  height: 11px;
+  border-radius: 3px;
+  background-color: var(--editor-text-muted);
+  transition: background-color var(--t-fast);
+}
+
+.item:hover .animChip { background-color: var(--accent); }
+.itemActive .animChip { background-color: var(--accent-hover); }
+
+@keyframes demoFade {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+.demoFade { animation: demoFade 2.2s ease-in-out infinite; }
+
+@keyframes demoSlideLeft {
+  0%   { opacity: 0; transform: translateX(-12px); }
+  20%  { opacity: 1; transform: translateX(0); }
+  75%  { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-12px); }
+}
+.demoSlideLeft { animation: demoSlideLeft 2.2s ease-in-out infinite; }
+
+@keyframes demoSlideRight {
+  0%   { opacity: 0; transform: translateX(12px); }
+  20%  { opacity: 1; transform: translateX(0); }
+  75%  { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(12px); }
+}
+.demoSlideRight { animation: demoSlideRight 2.2s ease-in-out infinite; }
+
+@keyframes demoSlideUp {
+  0%   { opacity: 0; transform: translateY(8px); }
+  20%  { opacity: 1; transform: translateY(0); }
+  75%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(8px); }
+}
+.demoSlideUp { animation: demoSlideUp 2.2s ease-in-out infinite; }
+
+@keyframes demoZoom {
+  0%   { opacity: 0; transform: scale(0.55); }
+  20%  { opacity: 1; transform: scale(1); }
+  75%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.55); }
+}
+.demoZoom { animation: demoZoom 2.2s ease-in-out infinite; }
+
+/* Une ligne désactivée (pas de sélection) fige l'aperçu au lieu de le laisser
+   tourner pour rien. */
+.disabled .animChip {
+  animation-play-state: paused;
+}

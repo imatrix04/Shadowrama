@@ -8,37 +8,21 @@ export interface DrawerTab {
   key: string
   label: string
   icon?: IconName
+  ultra?: boolean
 }
 
 interface Props {
-  /** Bord de l'éditeur auquel le tiroir est accroché. */
   side: 'left' | 'right'
   tabs: DrawerTab[]
-  /** Onglet ouvert, ou `null` si le tiroir est fermé. */
   activeTab: string | null
   onTabChange: (key: string | null) => void
-  /** Contenu de l'onglet demandé. Appelé aussi pendant la fermeture. */
   renderTab: (key: string) => ReactNode
   width?: number
 }
 
-/**
- * Tiroir latéral repliable.
- *
- * `LeftSidebars` et `SlidePanel` en avaient chacun leur copie : mêmes largeurs,
- * mêmes transitions, mêmes couleurs, mais déjà divergentes (l'un animait son
- * bouton, l'autre avait une classe « ouvert » sans effet). Tout est ici.
- */
 export default function Drawer({
   side, tabs, activeTab, onTabChange, renderTab, width = 220,
 }: Props) {
-  // Onglet à peindre : pendant la fermeture, `activeTab` est déjà `null` alors
-  // que le panneau se rétracte encore. On conserve le dernier pour l'estomper
-  // au lieu de le faire disparaître d'un coup.
-  //
-  // Ajustement d'état pendant le rendu (motif React documenté) plutôt qu'une
-  // ref : une ref lue pendant le rendu ne provoque pas de nouveau rendu et
-  // n'est pas fiable en mode concurrent.
   const [paintedTab, setPaintedTab] = useState(tabs[0]?.key ?? '')
   if (activeTab && activeTab !== paintedTab) setPaintedTab(activeTab)
 
@@ -53,7 +37,11 @@ export default function Drawer({
           return (
             <button
               key={tab.key}
-              className={`${styles.tab} ${active ? styles.tabActive : ''}`}
+              className={[
+                styles.tab,
+                tab.ultra ? styles.tabUltra : '',
+                active ? styles.tabActive : '',
+              ].join(' ')}
               onClick={() => onTabChange(active ? null : tab.key)}
               aria-expanded={active}
               title={active ? `Fermer ${tab.label}` : `Ouvrir ${tab.label}`}
@@ -88,6 +76,6 @@ export default function Drawer({
 }
 
 /** Intitulé de section, pour que tous les tiroirs se ressemblent. */
-export function DrawerTitle({ children }: { children: ReactNode }) {
-  return <p className={styles.title}>{children}</p>
+export function DrawerTitle({ children, ultra }: { children: ReactNode; ultra?: boolean }) {
+  return <p className={`${styles.title} ${ultra ? styles.titleUltra : ''}`}>{children}</p>
 }

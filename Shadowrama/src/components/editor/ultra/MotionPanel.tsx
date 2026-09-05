@@ -106,15 +106,18 @@ export default function MotionPanel({ block, onUpdate, onGestureStart, onPreview
 
         {current && preset && (
           <>
-            <div className={styles.field}>
+            <div className={styles.fieldStacked}>
               <span className={styles.fieldLabel}>Vitesse</span>
-              <input
-                type="range"
-                className={styles.range}
-                min={0.25} max={3} step={0.25}
-                value={current.speed ?? 1}
-                onChange={e => patchPhase(phase, { speed: parseFloat(e.target.value) })}
-              />
+              <div className={styles.rangeGroup}>
+                <input
+                  type="range"
+                  className={styles.range}
+                  min={0.25} max={3} step={0.05}
+                  value={current.speed ?? 1}
+                  onChange={e => patchPhase(phase, { speed: parseFloat(e.target.value) })}
+                />
+                <span className={styles.rangeValue}>{(current.speed ?? 1).toFixed(2)}×</span>
+              </div>
             </div>
             <div className={styles.field}>
               <span className={styles.fieldLabel}>Délai (s)</span>

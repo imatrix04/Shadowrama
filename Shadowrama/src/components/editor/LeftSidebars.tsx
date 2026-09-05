@@ -25,28 +25,36 @@ interface Props {
   onPreviewMotion: (phase: MotionPhase) => void
 }
 
-const ANIMATIONS: { label: string; value: AnimationType; icon: IconName }[] = [
-  { label: 'Aucune', value: 'none', icon: 'animNone' },
-  { label: 'Fondu', value: 'fadeIn', icon: 'animFade' },
-  { label: 'Depuis la gauche', value: 'slideInLeft', icon: 'animSlideLeft' },
-  { label: 'Depuis la droite', value: 'slideInRight', icon: 'animSlideRight' },
-  { label: 'Depuis le bas', value: 'slideInUp', icon: 'animSlideUp' },
-  { label: 'Zoom', value: 'zoomIn', icon: 'animZoom' },
+const ANIMATIONS: { label: string; value: AnimationType; demo: 'none' | 'fade' | 'slideLeft' | 'slideRight' | 'slideUp' | 'zoom' }[] = [
+  { label: 'Aucune', value: 'none', demo: 'none' },
+  { label: 'Fondu', value: 'fadeIn', demo: 'fade' },
+  { label: 'Depuis la gauche', value: 'slideInLeft', demo: 'slideLeft' },
+  { label: 'Depuis la droite', value: 'slideInRight', demo: 'slideRight' },
+  { label: 'Depuis le bas', value: 'slideInUp', demo: 'slideUp' },
+  { label: 'Zoom', value: 'zoomIn', demo: 'zoom' },
 ]
+
+// Aperçu en boucle : chaque puce rejoue son effet en continu, pas besoin de
+// sélectionner un bloc pour comprendre ce que fait chaque animation.
+const DEMO_CLASS: Record<typeof ANIMATIONS[number]['demo'], string> = {
+  none: '',
+  fade: styles.demoFade,
+  slideLeft: styles.demoSlideLeft,
+  slideRight: styles.demoSlideRight,
+  slideUp: styles.demoSlideUp,
+  zoom: styles.demoZoom,
+}
 
 const BASE_TABS: DrawerTab[] = [
   { key: 'blocs', label: 'Blocs', icon: 'shape' },
   { key: 'animations', label: 'Animations', icon: 'animFade' },
 ]
 
-// Les panneaux Ultra s'ajoutent aux onglets existants : le mode est une
-// surcouche, pas un éditeur parallèle.
 const ULTRA_TABS: DrawerTab[] = [
-  { key: 'mouvement', label: 'Mouvement', icon: 'motion' },
-  { key: 'effets', label: 'Effets', icon: 'effects' },
+  { key: 'mouvement', label: 'Mouvement', icon: 'motion', ultra: true },
+  { key: 'effets', label: 'Effets', icon: 'effects', ultra: true },
 ]
 
-// Décalage d'apparition, plafonné pour que les listes longues n'attendent pas.
 function stagger(index: number): React.CSSProperties {
   return { animationDelay: `${Math.min(index, 8) * 25}ms` }
 }
@@ -107,7 +115,9 @@ export default function LeftSidebars({
                     : 'Aucun bloc sélectionné'
                 }
               >
-                <span className={styles.itemIcon}><Icon name={anim.icon} /></span>
+                <span className={styles.animPreview}>
+                <span className={`${styles.animChip} ${DEMO_CLASS[anim.demo]}`} />
+                </span>
                 {anim.label}
                 {active && <span className={styles.check}>✓</span>}
               </button>
@@ -123,7 +133,7 @@ export default function LeftSidebars({
     if (key === 'mouvement') {
       return (
         <>
-          <DrawerTitle>Séquences</DrawerTitle>
+          <DrawerTitle ultra>Séquences</DrawerTitle>
           <MotionPanel
             block={selectedBlock}
             onUpdate={onUpdateSelected}
@@ -136,7 +146,7 @@ export default function LeftSidebars({
     if (key === 'effets') {
       return (
         <>
-          <DrawerTitle>Effets visuels</DrawerTitle>
+          <DrawerTitle ultra>Effets visuels</DrawerTitle>
           <EffectsPanel
             block={selectedBlock}
             onUpdate={onUpdateSelected}

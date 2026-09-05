@@ -70,6 +70,30 @@
   background-color: var(--accent-bg-soft);
 }
 
+/* Onglets Ultra Design : même langage visuel que le bouton Ultra Design de
+   la TopBar, pour que tout ce qui est verrouillé par le mode se reconnaisse
+   d'un coup d'œil. */
+.tabUltra {
+  border-color: rgba(108, 99, 255, 0.45);
+  color: var(--accent-hover);
+}
+
+.tabUltra:hover {
+  background-color: var(--accent-bg-soft);
+  border-color: var(--accent);
+}
+
+.tabUltra.tabActive {
+  background-image: linear-gradient(135deg, var(--accent), #b14dff);
+  border-color: var(--accent-border);
+  color: #fff;
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.tabUltra.tabActive:hover {
+  filter: brightness(1.08);
+}
+
 .tabIcon {
   flex-shrink: 0;
   display: flex;
@@ -139,4 +163,10 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.titleUltra {
+  padding-left: 0.5rem;
+  border-left: 2px solid transparent;
+  border-image: linear-gradient(180deg, var(--accent), #b14dff) 1;
 }

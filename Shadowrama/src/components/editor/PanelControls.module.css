@@ -41,6 +41,37 @@
   color: var(--accent);
 }
 
+.familyUltra {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: transparent;
+  background-image: linear-gradient(135deg, var(--accent), #b14dff);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.familyUltra svg {
+  color: var(--accent-hover);
+}
+
+.presetUltra {
+  border-color: rgba(108, 99, 255, 0.35);
+}
+
+.presetUltra:hover {
+  border-color: var(--accent);
+  background-color: var(--accent-bg-soft);
+}
+
+.presetUltra.presetActive {
+  background-color: transparent;
+  background-image: linear-gradient(135deg, var(--accent), #b14dff);
+  border-color: var(--accent-border);
+  color: #fff;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
 .presetList {
   display: flex;
   flex-direction: column;
@@ -159,11 +190,74 @@
   cursor: pointer;
 }
 
-.range {
-  flex: 0 0 auto;
-  width: 4.6rem;
+.fieldStacked {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
   min-width: 0;
-  accent-color: var(--accent);
+}
+
+.rangeGroup {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 6rem;
+  height: 4px;
+  min-width: 0;
+  background: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: 999px;
+  cursor: pointer;
+  outline: none;
+}
+
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--editor-bg, #14121a);
+  box-shadow: 0 0 0 1px var(--accent);
+  cursor: pointer;
+  transition: transform var(--t-fast) var(--ease-out);
+}
+
+.range::-webkit-slider-thumb:hover,
+.range:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+.range::-moz-range-track {
+  height: 4px;
+  background: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: 999px;
+}
+
+.range::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--editor-bg, #14121a);
+  cursor: pointer;
+}
+
+.rangeValue {
+  flex: 0 0 auto;
+  width: 2.6rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+  color: var(--editor-text-muted);
+  text-align: right;
 }
 
 .toggle {

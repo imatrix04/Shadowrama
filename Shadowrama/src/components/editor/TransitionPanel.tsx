@@ -1,6 +1,7 @@
 import type { SlideTransitionSettings } from '../../types'
 import { availableTransitions, getSlideTransition, transitionDuration } from '../../ultra/slideTransitions'
 import styles from './PanelControls.module.css'
+import Icon from '../ui/Icon'
 
 interface Props {
   slideIndex: number
@@ -69,37 +70,50 @@ export default function TransitionPanel({ slideIndex, current, ultra, onChange }
           </button>
         </div>
 
-        {[...byTier.entries()].map(([tier, list]) => (
-          <div key={tier}>
-            <p className={styles.family}>{TIER_LABELS[tier as 'basic' | 'ultra'] ?? tier}</p>
-            <div className={styles.presetList}>
-              {list.map(t => (
-                <button
-                  key={t.id}
-                  className={`${styles.preset} ${current?.preset === t.id ? styles.presetActive : ''}`}
-                  onClick={() => select(t.id)}
-                  title={`Durée : ${transitionDuration(t, speed).toFixed(2)} s`}
-                >
-                  <span className={styles.presetName}>{t.label}</span>
-                </button>
-              ))}
+          {[...byTier.entries()].map(([tier, list]) => {
+          const isUltra = tier === 'ultra'
+          return (
+            <div key={tier}>
+              <p className={isUltra ? styles.familyUltra : styles.family}>
+                {isUltra && <Icon name="ultra" size={11} />}
+                {TIER_LABELS[tier as 'basic' | 'ultra'] ?? tier}
+              </p>
+              <div className={styles.presetList}>
+                {list.map(t => (
+                  <button
+                    key={t.id}
+                    className={[
+                      styles.preset,
+                      isUltra ? styles.presetUltra : '',
+                      current?.preset === t.id ? styles.presetActive : '',
+                    ].join(' ')}
+                    onClick={() => select(t.id)}
+                    title={`Durée : ${transitionDuration(t, speed).toFixed(2)} s`}
+                  >
+                    <span className={styles.presetName}>{t.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {selected && (
         <div className={styles.group}>
           <p className={styles.groupLabel}>Réglages</p>
-          <div className={styles.field}>
+          <div className={styles.fieldStacked}>
             <span className={styles.fieldLabel}>Vitesse</span>
-            <input
-              type="range"
-              className={styles.range}
-              min={0.25} max={3} step={0.25}
-              value={speed}
-              onChange={e => onChange({ preset: selected.id, speed: parseFloat(e.target.value) })}
-            />
+            <div className={styles.rangeGroup}>
+              <input
+                type="range"
+                className={styles.range}
+                min={0.25} max={3} step={0.05}
+                value={speed}
+                onChange={e => onChange({ preset: selected.id, speed: parseFloat(e.target.value) })}
+              />
+              <span className={styles.rangeValue}>{speed.toFixed(2)}×</span>
+            </div>
           </div>
           <div className={styles.field}>
             <span className={styles.fieldLabel}>
