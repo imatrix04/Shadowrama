@@ -16,7 +16,7 @@ export interface RestState {
  * sans cette séparation, une animation de flou effacerait les ombres et filtres
  * réglés sur le bloc (voir EffectLayer).
  */
-function toTweenVars(frame: Keyframe, rest: RestState): gsap.TweenVars {
+export function toTweenVars(frame: Keyframe, rest: RestState): gsap.TweenVars {
   const vars: gsap.TweenVars = {}
   if (frame.opacity !== undefined) vars.opacity = frame.opacity * rest.opacity
   if (frame.x !== undefined) vars.x = frame.x
@@ -139,4 +139,10 @@ export function buildTimeline(target: HTMLElement, options: BuildOptions): Built
 /** Remet un élément animé dans son état de repos, sans transition. */
 export function gsapReset(el: HTMLElement, opacity: number) {
   gsap.set(el, { clearProps: 'transform,filter', opacity })
+}
+
+export function exitRestVars(preset: MotionPreset, rest: RestState): gsap.TweenVars {
+  let merged: Keyframe = {}
+  for (const step of preset.steps) merged = { ...merged, ...step.to }
+  return toTweenVars(merged, rest)
 }

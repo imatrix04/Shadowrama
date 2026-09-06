@@ -28,6 +28,7 @@ export default function Drawer({
 
   const isOpen = activeTab !== null
   const pointsAway = side === 'left' ? !isOpen : isOpen
+  const activeIndex = tabs.findIndex(t => t.key === activeTab)
 
   // Glisser pour défiler : un `overflow: auto` ne répond nativement qu'à la
   // molette/au trackpad, pas à un clic-glissé à la souris. On rejoue donc le
@@ -65,7 +66,8 @@ export default function Drawer({
 
   return (
     <div className={styles.wrapper} style={{ ['--drawer-width' as string]: `${width}px` }}>
-      <div className={`${styles.tabs} ${side === 'left' ? styles.tabsLeft : styles.tabsRight}`}>
+      <div className={`${styles.tabs} ${side === 'left' ? styles.tabsLeft : styles.tabsRight}`} style={{ ['--active-index' as string]: activeIndex } as React.CSSProperties}>
+        <span className={`${styles.activeTrack} ${activeIndex >= 0 ? styles.activeTrackVisible : ''}`} aria-hidden="true"/>
         {tabs.map(tab => {
           const active = activeTab === tab.key
           return (

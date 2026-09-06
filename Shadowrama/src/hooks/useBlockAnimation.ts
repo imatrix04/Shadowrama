@@ -31,6 +31,8 @@ export function useBlockAnimation(
   animation: AnimationConfig | undefined,
   play: boolean,
   rest: RestState = { opacity: 1, rotation: 0 },
+  frozen = false,
+  entranceDelay = 0,
 ) {
   const hasPlayed = useRef(false)
 
@@ -38,14 +40,20 @@ export function useBlockAnimation(
     const el = elementRef.current
     if (!el || !animation || animation.type === 'none') return
 
+    if (frozen) {
+      // Couche sortante figée : état final visible, aucune ré-animation.
+      gsap.set(el, { opacity: rest.opacity, rotation: rest.rotation, x: 0, y: 0, scale: 1 })
+      hasPlayed.current = true
+      return
+    }
+
     if (!play) {
-      // Slide pas (encore) active : on remet l'état initial sans jouer.
       gsap.set(el, { ...ANIMATION_PRESETS[animation.type], rotation: rest.rotation })
       hasPlayed.current = false
       return
     }
 
-    if (hasPlayed.current) return // déjà joué pour ce cycle "play"
+    if (hasPlayed.current) return
     hasPlayed.current = true
 
     gsap.fromTo(
@@ -58,9 +66,9 @@ export function useBlockAnimation(
         y: 0,
         scale: 1,
         duration: animation.duration ?? 0.6,
-        delay: animation.delay ?? 0,
+        delay: (animation.delay ?? 0) + entranceDelay,
         ease: animation.ease ?? 'power2.out',
       }
     )
-  }, [play, animation, elementRef, rest.opacity, rest.rotation])
+  }, [play, animation, elementRef, rest.opacity, rest.rotation, frozen, entranceDelay])
 }

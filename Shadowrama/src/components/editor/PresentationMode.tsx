@@ -4,13 +4,14 @@ import type { Slide, BlockData } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
 import { EffectLayer } from '../../ultra/effects'
 import { viewBlock } from '../../ultra/effectStyle'
-import { buildTimeline } from '../../ultra/timeline'
+import { buildTimeline, exitRestVars } from '../../ultra/timeline'
 import { getPreset, presetDuration } from '../../ultra/presets'
 import { getSlideTransition, transitionDuration } from '../../ultra/slideTransitions'
 import { runSlideTransition } from '../../ultra/slideTransitionRunner'
 import { getSlideBackgroundStyle } from '../../ultra/slideBackground'
 import floatStyles from './BlockFloat.module.css'
 import styles from './PresentationMode.module.css'
+import gsap from 'gsap'
 
 interface Props {
   slides: Slide[]
@@ -35,12 +36,16 @@ const CONTROLS_REVEAL_ZONE_PX = 80
 const CONTROLS_HIDE_DELAY_MS = 1500
 
 // Petit composant wrapper qui applique le hook par bloc
-function AnimatedBlockWrapper({ block, isActive, exiting }: {
+function AnimatedBlockWrapper({ block, isActive, exiting, animate = true, entranceDelay = 0 }: {
   block: BlockData
   isActive: boolean
-  /** La diapositive s'en va : on joue la séquence de sortie. */
   exiting: boolean
+  /** false = couche sortante figée, ne rejoue ni entrée ni sortie */
+  animate?: boolean
+  /** délai ajouté à l'entrée, le temps que la transition de diapo se termine */
+  entranceDelay?: number
 }) {
+
   const ref = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLDivElement>(null)
   const opacity = block.opacity ?? 1
@@ -53,17 +58,25 @@ function AnimatedBlockWrapper({ block, isActive, exiting }: {
   const motionOut = block.motion?.out
   // L'état de repos est communiqué au hook : sans lui, GSAP terminerait sur une
   // opacité de 1 et une rotation nulle, effaçant les réglages du bloc.
-  useBlockAnimation(ref, motionIn ? undefined : block.animation, isActive, { opacity, rotation })
+  useBlockAnimation(ref, motionIn ? undefined : block.animation, isActive, { opacity, rotation }, !animate, entranceDelay)
 
   useEffect(() => {
-    // La sortie l'emporte sur l'entrée : la diapositive est en train de partir.
-    const settings = exiting ? motionOut : motionIn
-    if (!settings || !isActive) return
     const el = ref.current
     if (!el) return
 
+    if (!animate) {
+      if (motionOut) {
+        const preset = getPreset(motionOut.preset)
+        if (preset) gsap.set(el, exitRestVars(preset, { opacity, rotation }))
+      }
+      return
+    }
+
+    const settings = exiting ? motionOut : motionIn
+    if (!settings || !isActive) return
+
     const built = buildTimeline(el, {
-      settings,
+      settings: exiting ? settings : { ...settings, delay: (settings.delay ?? 0) + entranceDelay },
       rest: { opacity, rotation },
       textElement: textRef.current?.querySelector<HTMLElement>('[data-text-content]') ?? null,
     })
@@ -74,7 +87,7 @@ function AnimatedBlockWrapper({ block, isActive, exiting }: {
       built.timeline.kill()
       built.cleanup()
     }
-  }, [motionIn, motionOut, exiting, isActive, opacity, rotation])
+  }, [motionIn, motionOut, exiting, isActive, opacity, rotation, animate, entranceDelay])
 
   const BlockComponent = BLOCKS_REGISTRY[block.type]
   if (!BlockComponent) return null
@@ -274,19 +287,29 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
   const activeTransition = getSlideTransition(slides[current]?.transition?.preset)
   const needsPerspective = outgoingSlide !== null && activeTransition?.perspective === true
 
+  const transitionSettings = slides[current]?.transition
+  const usableActiveTransition = activeTransition && (ultra || activeTransition.tier === 'basic')
+  ? activeTransition
+  : undefined
+  const transitionSeconds = outgoing !== null && usableActiveTransition
+  ? transitionDuration(usableActiveTransition, transitionSettings?.speed ?? 1)
+  : 0
+
   /** Blocs d'une couche, triés par profondeur. */
-  const renderBlocks = (source: typeof slide, active: boolean, isExiting: boolean) =>
-    source.blocks
-      .slice()
-      .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
-      .map(block => (
-        <AnimatedBlockWrapper
-          key={block.id}
-          block={viewBlock(block, ultra)}
-          isActive={active}
-          exiting={isExiting}
-        />
-      ))
+  const renderBlocks = (source: typeof slide, active: boolean, isExiting: boolean, animate = true, entranceDelay = 0) =>
+  source.blocks
+    .slice()
+    .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
+    .map(block => (
+      <AnimatedBlockWrapper
+        key={block.id}
+        block={viewBlock(block, ultra)}
+        isActive={active}
+        exiting={isExiting}
+        animate={animate}
+        entranceDelay={entranceDelay}
+      />
+    ))
 
   return (
     <div className={styles.overlay}>
@@ -311,7 +334,7 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
                 className={`${styles.slide} ${bg.animated ? styles.slideBgAnimated : ''}`}
                 style={bg.style}
               >
-                {renderBlocks(outgoingSlide, true, false)}
+                {renderBlocks(outgoingSlide, true, false, false)}
               </div>
             )
           })()}
@@ -326,7 +349,7 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
                 className={`${styles.slide} ${bg.animated ? styles.slideBgAnimated : ''}`}
                 style={bg.style}
               >
-                {renderBlocks(slide, true, exiting)}
+                {renderBlocks(slide, true, exiting, true, transitionSeconds)}
               </div>
             )
           })()}

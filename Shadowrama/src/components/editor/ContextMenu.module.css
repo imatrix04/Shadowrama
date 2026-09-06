@@ -25,8 +25,8 @@
 .menu {
   position: fixed;
   z-index: 100;
-  background: linear-gradient(145deg, rgba(30, 30, 46, 0.85), rgba(22, 22, 34, 0.9));
-  border: 1px solid rgba(124, 92, 255, 0.25);
+  background: var(--menu-bg);
+  border: 1px solid var(--accent-bg-soft);
   border-radius: 14px;
   padding: 0.85rem;
   width: 220px;
@@ -35,15 +35,13 @@
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
-    0 0 30px rgba(124, 92, 255, 0.08);
+  box-shadow: var(--menu-shadow);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   font-family: 'Bricolage Grotesque', sans-serif;
   animation: menuIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   transform-origin: top left;
+  color: var(--editor-text);
 }
 
 /* Scrollbar custom, discret mais visible au hover */
@@ -54,12 +52,12 @@
   background: transparent;
 }
 .menu::-webkit-scrollbar-thumb {
-  background: rgba(124, 92, 255, 0.25);
+  background: var(--accent-bg-soft);
   border-radius: 10px;
   transition: background var(--t-base);
 }
 .menu::-webkit-scrollbar-thumb:hover {
-  background: rgba(124, 92, 255, 0.5);
+  background: var(--accent-hover);
 }
 
 .typeLabel {
@@ -74,14 +72,14 @@
   text-transform: uppercase;
   letter-spacing: 1.5px;
   padding-bottom: 0.4rem;
-  border-bottom: 1px solid rgba(124, 92, 255, 0.15);
+  border-bottom: 1px solid var(--accent-bg-soft);
 }
 
 .section {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--overlay-2);
   padding-bottom: 0.55rem;
 }
 
@@ -91,7 +89,7 @@
   justify-content: space-between;
   font-size: 0.65rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--overlay-text-dim);
   text-transform: uppercase;
   letter-spacing: 1.2px;
 }
@@ -101,9 +99,9 @@
   font-weight: 600;
   letter-spacing: 0.3px;
   text-transform: none;
-  color: rgba(255, 255, 255, 0.65);
-  background: rgba(124, 92, 255, 0.15);
-  border: 1px solid rgba(124, 92, 255, 0.35);
+  color: var(--overlay-text-soft);
+  background: var(--accent-bg-soft);
+  border: 1px solid var(--accent-border);
   border-radius: 5px;
   padding: 1px 6px;
 }
@@ -124,10 +122,10 @@
   align-items: center;
   justify-content: center;
   padding: 0.32rem 0.55rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--overlay-1);
+  border: 1px solid var(--overlay-3);
   border-radius: 7px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--overlay-text-strong);
   font-size: 0.74rem;
   font-family: inherit;
   cursor: pointer;
@@ -135,9 +133,9 @@
 }
 
 .smallBtn:hover {
-  background: rgba(124, 92, 255, 0.15);
-  border-color: rgba(124, 92, 255, 0.5);
-  color: #fff;
+  background: var(--accent-bg-soft);
+  border-color: var(--accent-hover);
+  color: var(--editor-text);
   transform: translateY(-1px);
 }
 
@@ -161,17 +159,17 @@
 .fieldLabel {
   font-size: 0.65rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--overlay-text-dim);
   text-transform: uppercase;
   letter-spacing: 1.2px;
 }
 
 .input {
   padding: 0.4rem 0.5rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--overlay-1);
+  border: 1px solid var(--overlay-3);
   border-radius: 7px;
-  color: #fff;
+  color: var(--editor-text);
   font-size: 0.82rem;
   font-family: inherit;
   width: 100%;
@@ -180,14 +178,14 @@
 }
 
 .input:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--overlay-2);
 }
 
 .input:focus-visible,
 .input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
+  box-shadow: 0 0 0 3px var(--accent-bg-soft);
 }
 
 .input[type="color"] {
@@ -206,7 +204,7 @@ select.input {
 }
 
 .deleteSection {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--overlay-2);
   margin-top: 0.3rem;
   padding-top: 0.55rem;
 }
