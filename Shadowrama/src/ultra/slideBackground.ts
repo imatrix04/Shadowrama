@@ -1,4 +1,5 @@
-import type { SlideBackground } from '../types'
+import type { ParticleSettings, SlideBackground } from '../types'
+import { mergeParticles } from './particles'
 import { resolveMedia } from '../utils/mediaStore'
 
 /** Dégradés prêts à l'emploi, dans la palette de l'app (accent violet inclus). */
@@ -83,4 +84,14 @@ export function getSlideBackgroundStyle(
   }
 
   return { style: {}, animated: false }
+}
+
+export function getSlideParticles(
+  background: SlideBackground | undefined,
+  ultra: boolean,
+): ParticleSettings | undefined {
+  if (!ultra) return undefined
+  const p = background?.particles
+  if (!p?.enabled || p.count <= 0) return undefined
+  return mergeParticles(p)
 }

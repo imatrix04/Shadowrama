@@ -1,0 +1,14 @@
+/* Couche de particules : posée en premier enfant de la diapositive, elle passe
+   donc sous les blocs. `pointer-events: none` est indispensable — le canvas
+   recouvre toute la surface et intercepterait sinon la sélection des blocs.
+   La réaction à la souris ne passe pas par cet élément mais par un écouteur
+   global converti en coordonnées locales (voir ultra/particles). */
+.layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  z-index: 0;
+}

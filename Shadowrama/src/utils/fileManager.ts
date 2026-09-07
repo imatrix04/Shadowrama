@@ -4,6 +4,8 @@ import { registerMedia, getAllMediaForSave, clearMediaStore } from './mediaStore
 import { clipboardMediaKeys } from './clipboard'
 import { nextId } from './ids'
 import { DRAFT_STORE, withStore } from './idb'
+import { DEFAULT_PARTICLES, mergeParticles } from '../ultra/particles'
+import type { ParticleSettings } from '../types'
 
 /** Ancien emplacement du brouillon (localStorage), conservé pour la reprise. */
 const DRAFT_KEY = 'shadowrama-draft'
@@ -218,7 +220,62 @@ function normalizeBackground(raw: unknown): SlideBackground | undefined {
     }
   }
 
+  const particles = normalizeParticles(b.particles)
+  if (particles) background.particles = particles
+
   return background
+}
+
+/**
+ * Les particules sont arrivées en 0.19 : un projet plus ancien n'a tout
+ * simplement pas le champ, et un projet plus récent peut en avoir un incomplet
+ * si les réglages évoluent encore. On ne valide donc que les types, et
+ * `mergeParticles` comble le reste avec les valeurs par défaut.
+ */
+function normalizeParticles(raw: unknown): ParticleSettings | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const p = raw as Record<string, unknown>
+
+  const partial: Partial<ParticleSettings> = {}
+  if (typeof p.enabled === 'boolean') partial.enabled = p.enabled
+  if (typeof p.count === 'number') partial.count = Math.max(0, Math.min(600, p.count))
+  if (typeof p.shape === 'string') partial.shape = p.shape as ParticleSettings['shape']
+  if (typeof p.motion === 'string') partial.motion = p.motion as ParticleSettings['motion']
+  if (typeof p.speed === 'number') partial.speed = p.speed
+  if (typeof p.size === 'number') partial.size = p.size
+  if (typeof p.sizeVariation === 'number') partial.sizeVariation = p.sizeVariation
+  if (typeof p.opacity === 'number') partial.opacity = p.opacity
+  if (typeof p.glow === 'number') partial.glow = p.glow
+  if (typeof p.additive === 'boolean') partial.additive = p.additive
+  if (typeof p.twinkle === 'boolean') partial.twinkle = p.twinkle
+  if (typeof p.rotate === 'boolean') partial.rotate = p.rotate
+  if (typeof p.direction === 'number') partial.direction = p.direction
+
+  if (Array.isArray(p.colors)) {
+    const colors = p.colors.filter((c): c is string => typeof c === 'string').slice(0, 4)
+    if (colors.length) partial.colors = colors
+  }
+
+  if (p.links && typeof p.links === 'object') {
+    const l = p.links as Record<string, unknown>
+    partial.links = {
+      enabled: typeof l.enabled === 'boolean' ? l.enabled : DEFAULT_PARTICLES.links.enabled,
+      distance: typeof l.distance === 'number' ? l.distance : DEFAULT_PARTICLES.links.distance,
+      width: typeof l.width === 'number' ? l.width : DEFAULT_PARTICLES.links.width,
+      color: typeof l.color === 'string' ? l.color : undefined,
+    }
+  }
+
+  if (p.mouse && typeof p.mouse === 'object') {
+    const m = p.mouse as Record<string, unknown>
+    partial.mouse = {
+      mode: typeof m.mode === 'string' ? (m.mode as ParticleSettings['mouse']['mode']) : DEFAULT_PARTICLES.mouse.mode,
+      radius: typeof m.radius === 'number' ? m.radius : DEFAULT_PARTICLES.mouse.radius,
+      strength: typeof m.strength === 'number' ? m.strength : DEFAULT_PARTICLES.mouse.strength,
+    }
+  }
+
+  return mergeParticles(partial)
 }
 
 function isUsableBlock(block: unknown): boolean {

@@ -1,7 +1,8 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import type { BlockData, MotionPhase, SlideBackground } from '../../types'
 import Block from './Block'
-import { getSlideBackgroundStyle } from '../../ultra/slideBackground'
+import ParticleLayer from './ParticleLayer'
+import { getSlideBackgroundStyle, getSlideParticles } from '../../ultra/slideBackground'
 import styles from './Canvas.module.css'
 
 const CANVAS_W = 960
@@ -42,6 +43,7 @@ export default function Canvas({
   onDeleteBlocks, onGestureStart, ultra, motionPreview,
 }: Props) {
   const resolvedBackground = getSlideBackgroundStyle(background, ultra)
+  const particles = getSlideParticles(background, ultra)
   const canvasRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [view, setView] = useState({ zoom: 1, offset: { x: 0, y: 0 } })
@@ -485,12 +487,15 @@ export default function Canvas({
         transformOrigin: '0 0',
         transition: isPanning ? 'none' : 'transform 0.05s',
       }}>
-        <div
+                <div
           ref={canvasRef}
           className={`${styles.canvas} ${resolvedBackground.animated ? styles.canvasBgAnimated : ''}`}
           style={resolvedBackground.style}
           onClick={handleCanvasClick}
         >
+          {/* En premier enfant : la couche reste sous les blocs sans avoir à
+              jouer sur leur z-index. */}
+          <ParticleLayer settings={particles} interactive />
 
           {snapLines.map((line, i) => (
             <div

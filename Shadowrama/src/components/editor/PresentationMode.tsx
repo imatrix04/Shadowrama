@@ -8,9 +8,10 @@ import { buildTimeline, exitRestVars } from '../../ultra/timeline'
 import { getPreset, presetDuration } from '../../ultra/presets'
 import { getSlideTransition, transitionDuration } from '../../ultra/slideTransitions'
 import { runSlideTransition } from '../../ultra/slideTransitionRunner'
-import { getSlideBackgroundStyle } from '../../ultra/slideBackground'
+import { getSlideBackgroundStyle, getSlideParticles } from '../../ultra/slideBackground'
 import floatStyles from './BlockFloat.module.css'
 import styles from './PresentationMode.module.css'
+import ParticleLayer from './ParticleLayer'
 import gsap from 'gsap'
 
 interface Props {
@@ -334,6 +335,12 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
                 className={`${styles.slide} ${bg.animated ? styles.slideBgAnimated : ''}`}
                 style={bg.style}
               >
+                {/* La diapo qui s'en va ne réagit plus au curseur : deux champs
+                    interactifs superposés donneraient un rendu confus. */}
+                <ParticleLayer
+                  settings={getSlideParticles(outgoingSlide.background, ultra)}
+                  interactive={false}
+                />
                 {renderBlocks(outgoingSlide, true, false, false)}
               </div>
             )
@@ -349,6 +356,7 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
                 className={`${styles.slide} ${bg.animated ? styles.slideBgAnimated : ''}`}
                 style={bg.style}
               >
+                <ParticleLayer settings={getSlideParticles(slide.background, ultra)} interactive />
                 {renderBlocks(slide, true, exiting, true, transitionSeconds)}
               </div>
             )

@@ -249,12 +249,86 @@ export interface SlideTransitionSettings {
   speed?: number
 }
 
+// ── Particules d'arrière-plan (mode Ultra Design) ───────────────────────────
+
+export type ParticleShape =
+  | 'circle' | 'glow' | 'square' | 'triangle' | 'star' | 'ring' | 'line' | 'cross'
+
+export type ParticleMotion =
+  /** Dérive libre, direction aléatoire par particule. */
+  | 'drift'
+  /** Flux dirigé, orienté par `direction`. */
+  | 'stream'
+  /** Bulles montantes. */
+  | 'rise'
+  /** Neige / pluie. */
+  | 'fall'
+  /** Rotation autour du centre de la diapositive. */
+  | 'swirl'
+  /** Ondulation sinusoïdale horizontale. */
+  | 'wave'
+  /** Quasi immobiles, respiration d'échelle. */
+  | 'pulse'
+
+export type ParticleMouseMode = 'none' | 'repel' | 'attract' | 'grow' | 'connect'
+
+export interface ParticleLinks {
+  enabled: boolean
+  /** Distance maximale, en pixels, entre deux particules reliées. */
+  distance: number
+  width: number
+  /** Vide = la couleur de la particule d'origine. */
+  color?: string
+}
+
+export interface ParticleMouse {
+  mode: ParticleMouseMode
+  /** Rayon d'influence du curseur, en pixels. */
+  radius: number
+  /** 0–2. */
+  strength: number
+}
+
+/**
+ * Champ de particules posé par-dessus le fond, sous les blocs.
+ *
+ * Tous les champs sont requis : la lecture d'un projet passe par
+ * `mergeParticles` (voir ultra/particles), qui complète ce qui manque.
+ */
+export interface ParticleSettings {
+  enabled: boolean
+  count: number
+  shape: ParticleShape
+  motion: ParticleMotion
+  /** Multiplicateur. 1 = vitesse de référence. */
+  speed: number
+  /** Rayon moyen, en pixels. */
+  size: number
+  /** 0–1 : dispersion des tailles autour de `size`. */
+  sizeVariation: number
+  opacity: number
+  /** 1 à 4 couleurs, tirées au sort par particule. */
+  colors: string[]
+  /** Halo, en pixels (0 = aucun). */
+  glow: number
+  /** Fusion additive : les particules s'éclaircissent en se superposant. */
+  additive: boolean
+  /** Scintillement de l'opacité. */
+  twinkle: boolean
+  /** Rotation propre des formes non circulaires. */
+  rotate: boolean
+  /** Degrés, utilisé par `motion: 'stream'`. 0 = vers la droite. */
+  direction: number
+  links: ParticleLinks
+  mouse: ParticleMouse
+}
+
 /**
  * Fond d'une diapositive.
  *
  * Hors mode Ultra Design, seul `type: 'color'` a un effet au rendu (voir
- * `getSlideBackgroundStyle`) : dégradé et image restent enregistrés dans le
- * projet mais inertes, comme les transitions et séquences Ultra.
+ * `getSlideBackgroundStyle`) : dégradé, image et particules restent enregistrés
+ * dans le projet mais inertes, comme les transitions et séquences Ultra.
  */
 export interface SlideBackground {
   type: 'color' | 'gradient' | 'image'
@@ -269,6 +343,8 @@ export interface SlideBackground {
   /** Superposition unie par-dessus le fond, pour garder le texte lisible sur
    *  une image ou un dégradé chargé. */
   overlay?: { color: string; opacity: number }
+  /** Champ de particules animé, indépendant du type de fond. */
+  particles?: ParticleSettings
 }
 
 export interface Slide {
