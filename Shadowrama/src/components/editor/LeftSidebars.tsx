@@ -44,7 +44,7 @@ export default function LeftSidebars({
     <>
       <DrawerTitle>Blocs</DrawerTitle>
       <div className={styles.list}>
-        {BLOCKS_CONFIG.map((config, i) => (
+          {BLOCKS_CONFIG.filter(config => !config.ultraOnly || ultra).map((config, i) => (
           <button
             key={config.type}
             className={styles.item}

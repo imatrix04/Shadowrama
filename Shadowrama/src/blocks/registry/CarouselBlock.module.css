@@ -1,0 +1,128 @@
+.frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Toutes les vues sont empilées : seule la courante et celle qui s'en va
+   portent une transition, les autres sont garées hors cadre sans animation
+   (voir CarouselBlock.tsx). */
+.layer {
+  position: absolute;
+  inset: 0;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+.surface {
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes carouselKenBurns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.12); }
+}
+
+/* Sur un conteneur intérieur : le `transform` de .layer appartient à la
+   transition, les deux ne peuvent pas cohabiter sur le même élément. */
+.kenBurns {
+  width: 100%;
+  height: 100%;
+  animation: carouselKenBurns 12s ease-in-out infinite alternate;
+}
+
+.caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.75rem 0.9rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
+/* `pointer-events: auto` est indispensable : en présentation, la couche de
+   diapositive est en `pointer-events: none` pour laisser passer les clics de
+   navigation. Les commandes du carrousel doivent les récupérer. */
+.arrow,
+.dots {
+  pointer-events: auto;
+}
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.42);
+  color: var(--carousel-control, #ffffff);
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  z-index: 5;
+}
+
+.arrow:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.65);
+}
+
+.arrowLeft { left: 8px; }
+.arrowRight { right: 8px; }
+
+.dots {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 5;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--carousel-control, #ffffff);
+  opacity: 0.4;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.dot:hover { opacity: 0.75; }
+
+.dotActive {
+  opacity: 1;
+  transform: scale(1.3);
+}
+
+.empty {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  background-color: var(--editor-bg-canvas);
+  color: var(--editor-text-muted);
+  border: 2px dashed var(--editor-border-light);
+  font-size: 0.8rem;
+  user-select: none;
+}

@@ -4,7 +4,8 @@ import type { IconName } from './components/ui/Icon'
 export interface BlockProperty {
   key: string
   label: string
-  type: 'text' | 'textarea' | 'number' | 'color' | 'select' | 'float' | 'file' | 'shapePolygon'
+  type: 'text' | 'textarea' | 'number' | 'color' | 'select' | 'float' | 'file'
+      | 'shapePolygon' | 'boolean' | 'carouselItems'
   options?: { label: string; value: string }[]
   showIf?: { key: string; value: string }
 }
@@ -149,15 +150,62 @@ export interface BaseBlockData {
 
 // ── Un type par bloc, avec SES props spécifiques ──
 
-export interface ImageBlockData extends BaseBlockData {
-  type: 'image'
+export type ImageFit = 'cover' | 'contain' | 'fill'
+
+/**
+ * Champs de rendu d'une image, partagés par le bloc image et par chaque vue
+ * d'un carrousel. Source de vérité unique : ajouter un réglage ici le rend
+ * disponible des deux côtés (voir blocks/registry/ImageSurface).
+ */
+export interface ImageRenderData {
   src: string
   alt?: string
   borderRadius?: number
-  objectFit?: 'cover' | 'contain' | 'fill'
+  objectFit?: ImageFit
   /** Découpe l'image dans la forme du polygone (voir utils/shapePolygon). */
   shapeMode?: 'none' | 'grid'
   customShape?: [number, number][]
+}
+
+export interface ImageBlockData extends BaseBlockData, ImageRenderData {
+  type: 'image'
+}
+
+// ── Carrousel (mode Ultra Design) ───────────────────────────────────────────
+
+/** Une vue du carrousel : tous les réglages d'un bloc image, par image. */
+export interface CarouselItem extends ImageRenderData {
+  id: number
+  /** Légende en surimpression. Vide = aucune. */
+  caption?: string
+}
+
+export type CarouselTransition =
+  | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down'
+  | 'fade' | 'zoom' | 'flip' | 'stack'
+
+export interface CarouselBlockData extends BaseBlockData {
+  type: 'carousel'
+  items: CarouselItem[]
+  transition?: CarouselTransition
+  /** Durée d'un changement de vue, en secondes. */
+  transitionSeconds?: number
+  /** Courbe CSS (`cubic-bezier(...)`, `ease-in-out`…). */
+  ease?: string
+  autoplay?: boolean
+  /** Secondes d'affichage d'une vue avant la suivante. */
+  interval?: number
+  /** Revient à la première vue après la dernière. */
+  loop?: boolean
+  pauseOnHover?: boolean
+  showArrows?: boolean
+  showDots?: boolean
+  controlColor?: string
+  /** Arrondi du cadre, indépendant de celui de chaque image. */
+  borderRadius?: number
+  backgroundColor?: string
+  /** Lent zoom sur la vue affichée (effet Ken Burns). */
+  kenBurns?: boolean
 }
 
 export type ShapeKind =
@@ -222,14 +270,16 @@ export type BlockData =
   | ShapeBlockData
   | TextBlockData
   | TitleBlockData
-// | VideoBlockData  (à ajouter au fur et à mesure)
+  | CarouselBlockData
 
 export interface BlockConfig {
   type: BlockData['type']
   label: string
-  /** Nom d'icône (voir components/ui/Icon). L'icône était auparavant un emoji
-   *  collé dans `label`, donc ni stylable ni indépendant du système. */
+  /** Nom d'icône (voir components/ui/Icon). */
   icon: IconName
+  /** Réservé au mode Ultra Design : masqué de la palette sans lui, mais un
+   *  bloc déjà posé reste dans le projet (rendu dégradé, voir CarouselBlock). */
+  ultraOnly?: boolean
   defaultProps: Partial<BlockData>
   properties: BlockProperty[]
 }
@@ -240,6 +290,8 @@ export interface BlockComponentProps<T extends BlockData = BlockData> {
   isEditing?: boolean
   onStartEdit?: () => void
   onStopEdit?: () => void
+  /** Mode Ultra Design. Absent = rendu statique (vignettes du panneau diapos). */
+  ultra?: boolean
 }
 
 /** Transition appliquée EN ENTRANT sur cette diapositive. */

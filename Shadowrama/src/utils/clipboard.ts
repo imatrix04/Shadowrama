@@ -68,8 +68,14 @@ export function readClipboard(targetSlideId: number): { blocks: BlockData[]; shi
  */
 export function clipboardMediaKeys(): string[] {
   if (!entry) return []
-  return entry.blocks
-    .filter((b): b is Extract<BlockData, { type: 'image' }> => b.type === 'image')
-    .map(b => b.src)
-    .filter(src => src?.startsWith('media/'))
+  const keys: string[] = []
+  for (const block of entry.blocks) {
+    if (block.type === 'image' && block.src?.startsWith('media/')) keys.push(block.src)
+    if (block.type === 'carousel') {
+      for (const item of block.items ?? []) {
+        if (item.src?.startsWith('media/')) keys.push(item.src)
+      }
+    }
+  }
+  return keys
 }

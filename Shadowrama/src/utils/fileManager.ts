@@ -294,6 +294,17 @@ function normalizeBlock(block: BlockData): BlockData {
   const clean = { ...block } as BlockData & { properties?: unknown }
   delete clean.properties
   if (typeof clean.id !== 'number') clean.id = nextId()
+
+  // Un carrousel sans tableau `items` ferait planter le rendu : même principe
+  // que normalizeBackground, on ne garde que ce qui est exploitable.
+  if (clean.type === 'carousel') {
+    const raw = (clean as { items?: unknown }).items
+    const items = Array.isArray(raw) ? raw : []
+    ;(clean as { items: unknown }).items = items
+      .filter((it): it is Record<string, unknown> => !!it && typeof it === 'object' && typeof it.src === 'string')
+      .map(it => ({ ...it, id: typeof it.id === 'number' ? it.id : nextId() }))
+  }
+
   return clean as BlockData
 }
 
@@ -312,6 +323,11 @@ function collectUsedMediaKeys(slides: Slide[]): Set<string> {
   for (const slide of slides) {
     for (const block of slide.blocks) {
       if (block.type === 'image' && block.src?.startsWith('media/')) keys.add(block.src)
+      if (block.type === 'carousel') {
+        for (const item of block.items ?? []) {
+          if (item.src?.startsWith('media/')) keys.add(item.src)
+        }
+      }
     }
     if (slide.background?.type === 'image' && slide.background.image?.startsWith('media/')) {
       keys.add(slide.background.image)

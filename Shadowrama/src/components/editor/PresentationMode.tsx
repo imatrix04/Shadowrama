@@ -37,7 +37,7 @@ const CONTROLS_REVEAL_ZONE_PX = 80
 const CONTROLS_HIDE_DELAY_MS = 1500
 
 // Petit composant wrapper qui applique le hook par bloc
-function AnimatedBlockWrapper({ block, isActive, exiting, animate = true, entranceDelay = 0 }: {
+function AnimatedBlockWrapper({ block, isActive, exiting, animate = true, entranceDelay = 0, ultra }: {
   block: BlockData
   isActive: boolean
   exiting: boolean
@@ -45,6 +45,8 @@ function AnimatedBlockWrapper({ block, isActive, exiting, animate = true, entran
   animate?: boolean
   /** délai ajouté à l'entrée, le temps que la transition de diapo se termine */
   entranceDelay?: number
+  /** Transmis aux blocs qui ont un rendu Ultra propre (carrousel). */
+  ultra?: boolean
 }) {
 
   const ref = useRef<HTMLDivElement>(null)
@@ -119,7 +121,7 @@ function AnimatedBlockWrapper({ block, isActive, exiting, animate = true, entran
         <div className={`${floatStyles.floatInner} ${floatFx ? floatStyles.active : ''}`}>
           <EffectLayer block={block}>
             <div ref={textRef} style={{ width: '100%', height: '100%' }}>
-              <BlockComponent block={block} onUpdate={() => {}} isEditing={false} onStartEdit={() => {}} onStopEdit={() => {}} />
+              <BlockComponent block={block} onUpdate={() => {}} isEditing={false} ultra={ultra} onStartEdit={() => {}} onStopEdit={() => {}} />
             </div>
           </EffectLayer>
         </div>
@@ -309,6 +311,7 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
         exiting={isExiting}
         animate={animate}
         entranceDelay={entranceDelay}
+        ultra={ultra}
       />
     ))
 

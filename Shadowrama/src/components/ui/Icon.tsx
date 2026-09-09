@@ -1,5 +1,5 @@
 export type IconName =
-  | 'text' | 'title' | 'image' | 'shape'
+  | 'text' | 'title' | 'image' | 'shape' | 'carousel'
   | 'slides' | 'chevronLeft' | 'chevronRight'
   | 'new' | 'save' | 'open' | 'play' | 'undo' | 'redo'
   | 'ultra' | 'motion' | 'effects' | 'transition' | 'background'
@@ -31,6 +31,13 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <rect x="3" y="5" width="18" height="14" rx="2" />
       <circle cx="8.5" cy="10" r="1.5" />
       <path d="M21 16l-5-5-6 6" />
+    </>
+  ),
+  carousel: (
+    <>
+      <rect x="7" y="5" width="10" height="14" rx="2" />
+      <path d="M4 8v8" />
+      <path d="M20 8v8" />
     </>
   ),
   shape: (

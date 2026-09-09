@@ -5,17 +5,20 @@ import textConfig from './configs/text.config'
 import titleConfig from './configs/title.config'
 import imageConfig from './configs/image.config'
 import shapeConfig from './configs/shape.config'
+import carouselConfig from './configs/carousel.config'
 
 import TextBlock from './registry/TextBlock'
 import TitleBlock from './registry/TitleBlock'
 import ImageBlock from './registry/ImageBlock'
 import ShapeBlock from './registry/ShapeBlock'
+import CarouselBlock from './registry/CarouselBlock'
 
 export const BLOCKS_CONFIG: BlockConfig[] = [
   textConfig,
   titleConfig,
   imageConfig,
   shapeConfig,
+  carouselConfig,
 ]
 
 export const BLOCKS_REGISTRY: Record<string, ComponentType<BlockComponentProps>> = {
@@ -23,8 +26,8 @@ export const BLOCKS_REGISTRY: Record<string, ComponentType<BlockComponentProps>>
   title: TitleBlock as ComponentType<BlockComponentProps>,
   image: ImageBlock as ComponentType<BlockComponentProps>,
   shape: ShapeBlock as ComponentType<BlockComponentProps>,
+  carousel: CarouselBlock as ComponentType<BlockComponentProps>,
 }
-
 /**
  * Champs valables pour tous les blocs, ajoutés après ceux du type.
  * Les déclarer ici évite de les recopier dans les quatre configs — et de les

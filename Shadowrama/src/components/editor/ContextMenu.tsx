@@ -7,6 +7,9 @@ import Icon from '../ui/Icon'
 import styles from './ContextMenu.module.css'
 import CustomSelect from '../../styles/CustomSelect'
 import PolygonShapeEditor from './PolygonShapeEditor'
+import Switch from '../ui/Switch'
+import CarouselItemsEditor from './CarouselItemsEditor'
+import type { CarouselItem } from '../../types'
 import { normalizePolygon } from '../../utils/shapePolygon'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
 
@@ -176,6 +179,25 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
           value={normalizePolygon(getBlockField(block, prop.key))}
           radius={abstractRadius}
           onChange={points => onUpdate(block.id, setBlockField(block, prop.key, points))}
+        />
+      )
+    }
+    case 'boolean':
+      return (
+        <Switch
+          checked={Boolean(getBlockField(block, prop.key))}
+          label={prop.label}
+          onChange={v => onUpdate(block.id, setBlockField(block, prop.key, v))}
+        />
+      )
+    case 'carouselItems': {
+      const raw = getBlockField(block, prop.key)
+      return (
+        <CarouselItemsEditor
+          items={Array.isArray(raw) ? (raw as CarouselItem[]) : []}
+          blockWidth={block.width}
+          blockHeight={block.height}
+          onChange={items => onUpdate(block.id, setBlockField(block, prop.key, items))}
         />
       )
     }
