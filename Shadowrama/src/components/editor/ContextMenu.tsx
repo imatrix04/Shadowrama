@@ -264,7 +264,7 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
                 key={dir}
                 className={styles.smallBtn}
                 disabled={disabled}
-                onClick={() => { onReorder(block.id, dir); onClose() }}
+                onClick={() => onReorder(block.id, dir)}
               >
                 {label}
               </button>
