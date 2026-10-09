@@ -155,7 +155,7 @@ export const PARTICLE_PRESETS: { id: string; label: string; settings: ParticleSe
 
 // ── Moteur ──────────────────────────────────────────────────────────────────
 
-interface Particle {
+export interface Particle {
   x: number; y: number
   /** Ancre : point de repos pour `pulse`, ligne de base pour `wave`. */
   bx: number; by: number
@@ -177,9 +177,15 @@ interface Particle {
   cx: number; cy: number; cr: number; ca: number
 }
 
+export interface ParticleSnapshot {
+  list: Particle[]
+  t: number
+}
+
 export interface ParticleField {
   update(next: ParticleSettings): void
   setInteractive(value: boolean): void
+  snapshot(): ParticleSnapshot
   destroy(): void
 }
 
@@ -196,6 +202,7 @@ function hexToRgba(hex: string, alpha: number): string {
 const NOOP_FIELD: ParticleField = {
   update: () => {},
   setInteractive: () => {},
+  snapshot: () => ({ list: [], t: 0 }),
   destroy: () => {},
 }
 
@@ -209,7 +216,7 @@ const NOOP_FIELD: ParticleField = {
 export function createParticleField(
   canvas: HTMLCanvasElement,
   initial: ParticleSettings,
-  options: { interactive?: boolean } = {},
+  options: { interactive?: boolean; resume?: ParticleSnapshot } = {},
 ): ParticleField {
   const ctx = canvas.getContext('2d')
   if (!ctx) return NOOP_FIELD
@@ -612,6 +619,11 @@ export function createParticleField(
     else start()
   }
 
+  if (options.resume) {
+    list = options.resume.list.map(p => ({ ...p }))
+    t = options.resume.t
+  }
+
   // ── Amorçage ──
 
   const observer = new ResizeObserver(() => resize())
@@ -643,6 +655,9 @@ export function createParticleField(
     setInteractive(value: boolean) {
       interactive = value
       if (!value) pointer.active = false
+    },
+    snapshot(): ParticleSnapshot {
+      return { list: list.map(p => ({ ...p })), t }
     },
     destroy() {
       stop()

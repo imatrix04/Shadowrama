@@ -7,21 +7,6 @@
 ### Corrections
 - problème d'affichage par rapport à l'animation de la slide
 
-## 0.19.3 — 2026-10-09
-
-### Corrections
-- problème d'affichage par rapport à l'animation de la slide
-
-## 0.19.2 — 2026-10-09
-
-### Corrections
-- problème d'affichage par rapport à l'animation de la slide
-
-## 0.19.1 — 2026-10-09
-
-### Corrections
-- problème d'affichage par rapport à l'animation de la slide
-
 ## 0.19.0 — 2026-09-09
 
 > **✦ Particules** *(Ultra Design)*

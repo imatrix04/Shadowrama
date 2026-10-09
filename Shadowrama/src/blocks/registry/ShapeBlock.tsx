@@ -134,7 +134,7 @@ export default function ShapeBlock({ block }: BlockComponentProps<ShapeBlockData
     const gridInset = borderWidth / 2
     const gridW = Math.max(1, block.width - borderWidth)
     const gridH = Math.max(1, block.height - borderWidth)
-    const path = polygonToPath(block.customShape, gridW, gridH)
+    const path = polygonToPath(block.customShape, gridW, gridH, block.borderRadius ?? 0)
     return (
       <svg
         width="100%" height="100%"

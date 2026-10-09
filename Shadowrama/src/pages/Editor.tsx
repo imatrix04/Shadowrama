@@ -11,6 +11,7 @@ import { applyBlockUpdates } from '../utils/blockUpdates'
 import type { BlockUpdate } from '../utils/blockUpdates'
 import { useUltraMode } from '../hooks/useUltraMode'
 import { useEditorShortcuts } from '../hooks/useEditorShortcuts'
+import { readableTextColor } from '../utils/textContrast'
 import Canvas from '../components/editor/Canvas'
 import LeftSidebars from '../components/editor/LeftSidebars'
 import TopBar from '../components/editor/TopBar'
@@ -157,6 +158,9 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
       ...config.defaultProps, ...block,
       id: nextId(),
     } as BlockData
+    if ((newBlock.type === 'text' || newBlock.type === 'title') && newBlock.color === '#ffffff') {
+      newBlock.color = readableTextColor(slides[currentSlide]?.background, ultra)
+    }
     commit(prev => prev.map((s, i) =>
       i === currentSlide ? { ...s, blocks: [...s.blocks, newBlock] } : s
     ))
