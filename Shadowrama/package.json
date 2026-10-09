@@ -1,6 +1,6 @@
 {
   "name": "Shadowrama",
-  "version": "0.19.2",
+  "version": "0.19.3",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
