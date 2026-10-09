@@ -52,6 +52,7 @@
   inset: 0;
   width: 960px;
   height: 540px;
+  z-index: 1;
   background-color: var(--editor-bg-canvas);
   border-radius: 8px;
   backface-visibility: hidden;
