@@ -81,6 +81,7 @@ export interface BuildOptions {
   rest: RestState
   /** Élément portant le texte, si le preset découpe. */
   textElement?: HTMLElement | null
+  preset?: MotionPreset
 }
 
 export interface BuiltTimeline {
@@ -96,7 +97,7 @@ export interface BuiltTimeline {
  * en cascade plutôt que l'élément entier.
  */
 export function buildTimeline(target: HTMLElement, options: BuildOptions): BuiltTimeline | null {
-  const preset: MotionPreset | undefined = getPreset(options.settings.preset)
+  const preset: MotionPreset | undefined = options.preset ?? getPreset(options.settings.preset)
   if (!preset) return null
 
   const speed = options.settings.speed && options.settings.speed > 0 ? options.settings.speed : 1

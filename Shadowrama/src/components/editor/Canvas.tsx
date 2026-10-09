@@ -1,7 +1,8 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import type { BlockData, MotionPhase, SlideBackground } from '../../types'
+import type { BlockData, MotionPhase, SlideNumbering, SlideBackground } from '../../types'
 import Block from './Block'
 import ParticleLayer from './ParticleLayer'
+import SlideNumber from './SlideNumber'
 import { getSlideBackgroundStyle, getSlideParticles } from '../../ultra/slideBackground'
 import styles from './Canvas.module.css'
 
@@ -23,6 +24,12 @@ interface SnapLine {
 interface Props {
   blocks: BlockData[]
   background?: SlideBackground
+  numbering: SlideNumbering
+  /** Rang de la diapositive affichée et nombre total : le numéro en dépend. */
+  slideIndex: number
+  slideCount: number
+  /** Nonce de l'aperçu de l'animation du numéro (0 = aucun). */
+  numberingPreview: number
   selectedBlockIds: number[]
   onSelectBlocks: (ids: number[]) => void
   onUpdateBlock: (id: number, changes: Partial<BlockData>) => void
@@ -39,7 +46,7 @@ interface Props {
 }
 
 export default function Canvas({
-  blocks, background, selectedBlockIds, onSelectBlocks, onUpdateBlock, onUpdateBlocks, onCommitBlocks,
+  blocks, background, numbering, slideIndex, slideCount, numberingPreview, selectedBlockIds, onSelectBlocks, onUpdateBlock, onUpdateBlocks, onCommitBlocks,
   onDeleteBlocks, onGestureStart, ultra, motionPreview,
 }: Props) {
   const resolvedBackground = getSlideBackgroundStyle(background, ultra)
@@ -527,6 +534,15 @@ export default function Canvas({
                 layerCount={blocks.length}
               />
             ))}
+
+          <SlideNumber
+            index={slideIndex}
+            total={slideCount}
+            numbering={numbering}
+            background={background}
+            ultra={ultra}
+            playKey={numberingPreview}
+          />
 
           {selectionRect && (
             <div style={{

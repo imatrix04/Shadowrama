@@ -4,8 +4,7 @@ import {
   openProject, openProjectAt, saveDraft, loadRecents, rememberRecent,
   forgetRecent, projectNameFromPath, ProjectFormatError,
 } from '../utils/fileManager'
-import type { RecentProject } from '../utils/fileManager'
-import type { Slide } from '../types'
+import type { OpenedProject, RecentProject } from '../utils/fileManager'
 import Dialog from '../components/ui/Dialog'
 import WhatsNew from '../components/ui/WhatsNew'
 import { useWhatsNew } from '../hooks/useWhatsNew'
@@ -32,13 +31,13 @@ export default function Home() {
 
   // L'éditeur restaure son état depuis le brouillon au montage : y déposer le
   // projet ouvert évite de faire transiter les diapositives par le routeur.
-  const openInEditor = async (slides: Slide[], filePath: string) => {
+  const openInEditor = async ({ slides, numbering, filePath }: OpenedProject) => {
     const name = projectNameFromPath(filePath)
     // Le projet transite par le brouillon, que l'éditeur relit au montage. Si
     // l'écriture échoue, l'éditeur rouvrirait l'ANCIEN brouillon : l'utilisateur
     // croirait éditer le fichier qu'il vient d'ouvrir et écraserait son travail
     // à la première sauvegarde. Mieux vaut refuser bruyamment.
-    if (!await saveDraft(name, filePath, slides)) {
+    if (!await saveDraft(name, filePath, slides, numbering)) {
       setError(
         "Impossible de préparer ce projet : le stockage local de l'application "
         + "est inaccessible ou saturé. Fermez puis rouvrez l'application, et "
@@ -54,7 +53,7 @@ export default function Home() {
     try {
       const result = await openProject()
       if (!result) return
-      await openInEditor(result.slides, result.filePath)
+      await openInEditor(result)
     } catch (err) {
       console.error('[home:open]', err)
       setError(
@@ -68,7 +67,7 @@ export default function Home() {
   const handleOpenRecent = async (recent: RecentProject) => {
     try {
       const result = await openProjectAt(recent.filePath)
-      await openInEditor(result.slides, result.filePath)
+      await openInEditor(result)
     } catch (err) {
       console.error('[home:recent]', err)
       // Fichier déplacé, renommé ou supprimé : on retire l'entrée obsolète

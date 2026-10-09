@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { ProjectFormatError, parseManifestSlides } from './fileManager'
+import { ProjectFormatError, parseManifestNumbering, parseManifestSlides } from './fileManager'
+import { DEFAULT_NUMBERING } from './numbering'
 import type { TextBlockData } from '../types'
 
 const validBlock = {
@@ -100,5 +101,28 @@ describe('parseManifestSlides', () => {
 
     const block = slides[0].blocks[0] as TextBlockData
     expect(block.motion?.in).toEqual({ preset: 'fondu', speed: 2 })
+  })
+})
+
+describe('parseManifestNumbering', () => {
+  it('relit la numérotation enregistrée', () => {
+    const json = JSON.stringify({
+      version: 2, slides: [],
+      numbering: { enabled: true, format: 'roman', position: 'top-left', size: 30 },
+    })
+    const n = parseManifestNumbering(json)
+    expect(n.enabled).toBe(true)
+    expect(n.format).toBe('roman')
+    expect(n.position).toBe('top-left')
+    expect(n.size).toBe(30)
+  })
+
+  it("donne les défauts à un projet antérieur, sans le champ", () => {
+    expect(parseManifestNumbering(manifest([]))).toEqual(DEFAULT_NUMBERING)
+  })
+
+  it('donne les défauts à un manifeste v1 (tableau) ou illisible', () => {
+    expect(parseManifestNumbering('[]')).toEqual(DEFAULT_NUMBERING)
+    expect(parseManifestNumbering('pas du json')).toEqual(DEFAULT_NUMBERING)
   })
 })

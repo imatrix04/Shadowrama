@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useBlockAnimation } from '../../hooks/useBlockAnimation'
-import type { Slide, BlockData } from '../../types'
+import type { Slide, SlideNumbering, BlockData } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
 import { EffectLayer } from '../../ultra/effects'
 import { viewBlock } from '../../ultra/effectStyle'
@@ -12,10 +12,12 @@ import { getSlideBackgroundStyle, getSlideParticles } from '../../ultra/slideBac
 import floatStyles from './BlockFloat.module.css'
 import styles from './PresentationMode.module.css'
 import ParticleLayer from './ParticleLayer'
+import SlideNumber from './SlideNumber'
 import gsap from 'gsap'
 
 interface Props {
   slides: Slide[]
+  numbering: SlideNumbering
   onClose: () => void
   /** Hors mode Ultra, la présentation ignore effets et séquences. */
   ultra: boolean
@@ -130,7 +132,7 @@ function AnimatedBlockWrapper({ block, isActive, exiting, animate = true, entran
   )
 }
 
-export default function PresentationMode({ slides, onClose, ultra }: Props) {
+export default function PresentationMode({ slides, numbering, onClose, ultra }: Props) {
   const [current, setCurrent] = useState(0)
   // Diapositive en cours de sortie : on laisse les séquences se dérouler avant
   // de basculer, sinon les blocs disparaîtraient d'un coup.
@@ -345,6 +347,13 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
                   interactive={false}
                 />
                 {renderBlocks(outgoingSlide, true, false, false)}
+                <SlideNumber
+                  index={slides.indexOf(outgoingSlide)}
+                  total={slides.length}
+                  numbering={numbering}
+                  background={outgoingSlide.background}
+                  ultra={ultra}
+                />
               </div>
             )
           })()}
@@ -361,6 +370,15 @@ export default function PresentationMode({ slides, onClose, ultra }: Props) {
               >
                 <ParticleLayer settings={getSlideParticles(slide.background, ultra)} interactive />
                 {renderBlocks(slide, true, exiting, true, transitionSeconds)}
+                <SlideNumber
+                  index={current}
+                  total={slides.length}
+                  numbering={numbering}
+                  background={slide.background}
+                  ultra={ultra}
+                  playKey={1}
+                  entranceDelay={transitionSeconds}
+                />
               </div>
             )
           })()}

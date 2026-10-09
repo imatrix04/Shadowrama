@@ -1,0 +1,57 @@
+/* Grille 3×2 de la position : elle reprend la disposition réelle des coins. */
+.positions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.pos {
+  box-sizing: border-box;
+  height: 1.7rem;
+  padding: 0;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-sm);
+  color: var(--editor-text-muted);
+  cursor: pointer;
+  transition: border-color var(--t-fast), background-color var(--t-fast);
+}
+
+.pos:hover {
+  border-color: var(--accent);
+}
+
+.posActive {
+  border-color: var(--accent);
+  background-color: var(--accent-bg-soft);
+}
+
+/* Le point figure où se pose le numéro dans la case. */
+.dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.posActive .dot {
+  background-color: var(--accent);
+}
+
+.dotLeft { margin-left: 4px; }
+.dotCenter { margin-left: auto; margin-right: auto; }
+.dotRight { margin-left: auto; margin-right: 4px; }
+
+.separator {
+  margin: 0.7rem 0;
+  border: 0;
+  border-top: 1px solid var(--editor-border-light);
+}
+
+.previewRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.4rem;
+}

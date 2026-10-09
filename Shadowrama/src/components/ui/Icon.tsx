@@ -4,7 +4,7 @@ export type IconName =
   | 'new' | 'save' | 'open' | 'play' | 'undo' | 'redo'
   | 'ultra' | 'motion' | 'effects' | 'transition' | 'background'
   | 'animNone' | 'animFade' | 'animSlideLeft' | 'animSlideRight' | 'animSlideUp' | 'animZoom'
-  | 'settings' | 'sun' | 'moon' | 'monitor' | 'lock'
+  | 'settings' | 'sun' | 'moon' | 'monitor' | 'lock' | 'hash'
 
 interface Props {
   name: IconName
@@ -104,6 +104,14 @@ const PATHS: Record<IconName, React.ReactNode> = {
   open: (
     <>
       <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+    </>
+  ),
+  hash: (
+    <>
+      <path d="M5 9h14" />
+      <path d="M5 15h14" />
+      <path d="M10 4L8 20" />
+      <path d="M16 4l-2 16" />
     </>
   ),
   play: <path d="M7 4l12 8-12 8z" />,

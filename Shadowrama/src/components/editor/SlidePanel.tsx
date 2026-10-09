@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import type { Slide, SlideBackground, SlideTransitionSettings } from '../../types'
+import type { SlideNumbering, Slide, SlideBackground, SlideTransitionSettings } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
 import TransitionPanel from './TransitionPanel'
 import BackgroundPanel from './BackgroundPanel'
+import NumberingPanel from './NumberingPanel'
 import { getSlideBackgroundStyle } from '../../ultra/slideBackground'
 import Drawer, { DrawerTitle } from '../ui/Drawer'
 import type { DrawerTab } from '../ui/Drawer'
@@ -12,6 +13,7 @@ const TABS: DrawerTab[] = [
   { key: 'slides', label: 'Diapositives', icon: 'slides' },
   { key: 'background', label: 'Arrière-plan', icon: 'background' },
   { key: 'transitions', label: 'Transitions', icon: 'transition' },
+  { key: 'numbering', label: 'Numérotation', icon: 'hash' },
 ]
 
 interface Props {
@@ -26,6 +28,9 @@ interface Props {
   ultra: boolean
   onSetTransition: (index: number, settings: SlideTransitionSettings | undefined) => void
   onSetBackground: (index: number, background: SlideBackground | undefined) => void
+  numbering: SlideNumbering
+  onNumberingChange: (numbering: SlideNumbering) => void
+  onPreviewNumbering: () => void
 }
 
 export default function SlidePanel({
@@ -39,6 +44,9 @@ export default function SlidePanel({
   ultra,
   onSetTransition,
   onSetBackground,
+  numbering,
+  onNumberingChange,
+  onPreviewNumbering,
 }: Props) {
   const [openPanel, setOpenPanel] = useState<string | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
@@ -80,6 +88,16 @@ export default function SlidePanel({
             current={slides[currentSlide]?.transition}
             ultra={ultra}
             onChange={settings => onSetTransition(currentSlide, settings)}
+          />
+        </>
+      ) : key === 'numbering' ? (
+        <>
+          <DrawerTitle>Numérotation</DrawerTitle>
+          <NumberingPanel
+            numbering={numbering}
+            ultra={ultra}
+            onChange={onNumberingChange}
+            onPreview={onPreviewNumbering}
           />
         </>
       ) : key === 'background' ? (

@@ -1,0 +1,26 @@
+/* Numéro de diapositive : posé au-dessus des blocs mais jamais interactif —
+   `pointer-events: none` laisse passer sélection et navigation. Le z-index reste
+   sous le rectangle de sélection de l'éditeur (10000). */
+.number {
+  position: absolute;
+  z-index: 9000;
+  padding: 20px 28px;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* L'élément animé : inline-block pour que transform/filter s'appliquent. */
+.text {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+.top-left { top: 0; left: 0; }
+.top-right { top: 0; right: 0; }
+.bottom-left { bottom: 0; left: 0; }
+.bottom-right { bottom: 0; right: 0; }
+.top-center { top: 0; left: 0; right: 0; text-align: center; }
+.bottom-center { bottom: 0; left: 0; right: 0; text-align: center; }

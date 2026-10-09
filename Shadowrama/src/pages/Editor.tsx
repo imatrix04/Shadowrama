@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { BLOCKS_CONFIG } from '../blocks'
-import type { BlockData, MotionPhase, Slide, SlideBackground, SlideTransitionSettings } from '../types'
+import type { BlockData, MotionPhase, Slide, SlideNumbering, SlideBackground, SlideTransitionSettings } from '../types'
 import { useEditorHistory } from '../hooks/useEditorHistory'
 import { loadDraft, saveDraft } from '../utils/fileManager'
 import type { ProjectDraft } from '../utils/fileManager'
 import { hydrateMediaStore } from '../utils/mediaStore'
 import { readClipboard, writeClipboard } from '../utils/clipboard'
 import { nextId } from '../utils/ids'
+import { DEFAULT_NUMBERING } from '../utils/numbering'
 import { applyBlockUpdates } from '../utils/blockUpdates'
 import type { BlockUpdate } from '../utils/blockUpdates'
 import { useUltraMode } from '../hooks/useUltraMode'
@@ -69,6 +70,11 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
   // L'état de présentation vit ici et non dans la barre : le canvas doit savoir
   // qu'il ne doit plus réagir au clavier tant qu'on présente.
   const [presenting, setPresenting] = useState(false)
+  // Réglage de projet, hors historique : Ctrl+Z n'annule pas un changement de
+  // numérotation (comme le nom ou le chemin du projet).
+  const [numbering, setNumbering] = useState<SlideNumbering>(initialDraft?.numbering ?? DEFAULT_NUMBERING)
+  // Aperçu de l'animation du numéro ; le nonce rejoue la même demande.
+  const [numberingPreview, setNumberingPreview] = useState(0)
 
   const { slides, begin, commit, patch, undo, redo, reset, canUndo, canRedo } = useEditorHistory(
     initialDraft?.slides ?? [{ id: nextId(), blocks: [] }]
@@ -91,7 +97,7 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
     const timer = setTimeout(() => {
       // L'écriture est asynchrone (IndexedDB) : une autosauvegarde encore en vol
       // au démontage ne doit plus toucher à l'état.
-      void saveDraft(projectName, filePath, slides).then(ok => {
+      void saveDraft(projectName, filePath, slides, numbering).then(ok => {
         if (!cancelled) setDraftFailed(!ok)
       })
     }, AUTOSAVE_DELAY_MS)
@@ -99,7 +105,7 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [slides, projectName, filePath])
+  }, [slides, numbering, projectName, filePath])
 
   // ── Slides
   const addSlide = () => {
@@ -189,6 +195,7 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
 
   const handleNewProject = () => {
     reset([{ id: nextId(), blocks: [] }])
+    setNumbering(DEFAULT_NUMBERING)
     setProjectName(null)
     setFilePath(null)
     setRequestedSlide(0)
@@ -359,12 +366,14 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#1a1a2e', color: '#fff' }}>
       <TopBar
         slides={slides}
+        numbering={numbering}
         projectName={projectName}
         setProjectName={setProjectName}
         filePath={filePath}
         setFilePath={setFilePath}
-        onLoad={(loaded, name) => {
+        onLoad={(loaded, name, loadedNumbering) => {
           reset(loaded)
+          setNumbering(loadedNumbering)
           setRequestedSlide(0)
           setSelectedBlockIds([])
           setProjectName(name)
@@ -392,6 +401,10 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
         <Canvas
             blocks={slides[currentSlide].blocks}
             background={slides[currentSlide].background}
+            numbering={numbering}
+            slideIndex={currentSlide}
+            slideCount={slides.length}
+            numberingPreview={numberingPreview}
             selectedBlockIds={selectedBlockIds}
             onSelectBlocks={setSelectedBlockIds}
             onUpdateBlock={updateBlock}
@@ -413,6 +426,9 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
           ultra={ultra}
           onSetTransition={setSlideTransition}
           onSetBackground={setSlideBackground}
+          numbering={numbering}
+          onNumberingChange={setNumbering}
+          onPreviewNumbering={() => setNumberingPreview(Date.now())}
         />
       </div>
     </div>

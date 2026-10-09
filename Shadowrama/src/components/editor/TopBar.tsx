@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Slide } from '../../types'
+import type { Slide, SlideNumbering } from '../../types'
 import {
   saveProjectAs, saveProjectToPath, openProject, clearDraft,
   rememberRecent, projectNameFromPath, ProjectFormatError,
@@ -13,11 +13,12 @@ import styles from './TopBar.module.css'
 
 interface Props {
   slides: Slide[]
+  numbering: SlideNumbering
   projectName: string | null
   setProjectName: (name: string) => void
   filePath: string | null
   setFilePath: (path: string | null) => void
-  onLoad: (slides: Slide[], name: string) => void
+  onLoad: (slides: Slide[], name: string, numbering: SlideNumbering) => void
   onNew: () => void
   onUndo: () => void
   onRedo: () => void
@@ -32,7 +33,7 @@ interface Props {
 }
 
 export default function TopBar({
-  slides, projectName, setProjectName, filePath, setFilePath, onLoad, onNew,
+  slides, numbering, projectName, setProjectName, filePath, setFilePath, onLoad, onNew,
   onUndo, onRedo, canUndo, canRedo, draftFailed, ultra, onToggleUltra,
   presenting, onPresentingChange,
 }: Props) {
@@ -41,20 +42,16 @@ export default function TopBar({
   const [nameInput, setNameInput] = useState('mon-projet')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [confirmNewOpen, setConfirmNewOpen] = useState(false)
-  // Dernier état sauvegardé, comparé par référence : les diapos étant
-  // immuables, une simple égalité de référence remplace le JSON.stringify de
-  // toutes les diapos à chaque frappe. Bonus : un Ctrl+Z ramenant à l'état
-  // sauvegardé restaure la même référence, donc le projet redevient « propre ».
   const [savedSlides, setSavedSlides] = useState<Slide[] | null>(filePath ? slides : null)
-  const isDirty = savedSlides !== slides
-
-  // handleSave est stable ([] en dépendances) et lit tout depuis ces refs, mises
-  // à jour après chaque rendu — le raccourci Ctrl+S n'est donc jamais périmé.
+  const [savedNumbering, setSavedNumbering] = useState<SlideNumbering | null>(filePath ? numbering : null)
+  const isDirty = savedSlides !== slides || savedNumbering !== numbering
   const slidesRef = useRef(slides)
+  const numberingRef = useRef(numbering)
   const filePathRef = useRef(filePath)
   const projectNameRef = useRef(projectName)
   useEffect(() => {
     slidesRef.current = slides
+    numberingRef.current = numbering
     filePathRef.current = filePath
     projectNameRef.current = projectName
   })
@@ -69,6 +66,7 @@ export default function TopBar({
     await new Promise(resolve => setTimeout(resolve, 0))
 
     const currentSlides = slidesRef.current
+    const currentNumbering = numberingRef.current
     const currentFilePath = filePathRef.current
 
     if (!currentFilePath) {
@@ -78,8 +76,9 @@ export default function TopBar({
     }
 
     try {
-      await saveProjectToPath(currentSlides, currentFilePath)
+      await saveProjectToPath(currentSlides, currentFilePath, currentNumbering)
       setSavedSlides(currentSlides)
+      setSavedNumbering(currentNumbering)
       rememberRecent(currentFilePath, projectNameFromPath(currentFilePath))
     } catch (err) {
       console.error('[save] erreur:', err)
@@ -103,9 +102,10 @@ export default function TopBar({
       const result = await openProject()
       if (!result) return
       const name = projectNameFromPath(result.filePath)
-      onLoad(result.slides, name)
+      onLoad(result.slides, name, result.numbering)
       setFilePath(result.filePath)
       setSavedSlides(result.slides)
+      setSavedNumbering(result.numbering)
       rememberRecent(result.filePath, name)
     } catch (err) {
       console.error('[open] ERREUR:', err)
@@ -121,13 +121,15 @@ export default function TopBar({
     const name = nameInput.trim()
     if (!name) return
     const currentSlides = slidesRef.current
+    const currentNumbering = numberingRef.current
     try {
-      const path = await saveProjectAs(currentSlides, name)
+      const path = await saveProjectAs(currentSlides, name, currentNumbering)
       setNameDialogOpen(false)
       if (!path) return // l'utilisateur a annulé la boîte système
       setProjectName(name)
       setFilePath(path)
       setSavedSlides(currentSlides)
+      setSavedNumbering(currentNumbering)
       rememberRecent(path, name)
     } catch (err) {
       console.error('[saveAs] ERREUR:', err)
@@ -140,6 +142,7 @@ export default function TopBar({
     clearDraft()
     clearMediaStore()
     setSavedSlides(null)
+    setSavedNumbering(null)
     setFilePath(null)
     setConfirmNewOpen(false)
     onNew()
@@ -245,6 +248,7 @@ export default function TopBar({
       {presenting && (
         <PresentationMode
           slides={slides}
+          numbering={numbering}
           onClose={() => onPresentingChange(false)}
           ultra={ultra}
         />

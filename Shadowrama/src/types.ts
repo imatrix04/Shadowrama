@@ -406,6 +406,50 @@ export interface Slide {
   background?: SlideBackground
 }
 
+// ── Numérotation des diapositives ────────────────────────────────────────────
+// Réglage de PROJET (et non de diapositive) : il vit hors de l'historique.
+
+export type NumberingFormat = 'n' | 'n-total' | 'nn' | 'roman'
+
+export type NumberingPosition =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right'
+
+/** Pose de départ du mode manuel : le numéro rejoint son état de repos. */
+export interface NumberingCustomMotion {
+  from: Keyframe
+  /** Secondes. */
+  duration: number
+  ease: string
+}
+
+/** Animation d'entrée du numéro. Réservée au mode Ultra Design (enregistrée,
+ *  mais inerte hors Ultra). */
+export interface NumberingAnimation {
+  /** Id d'un preset d'entrée, `count` (compteur) ou `custom` (manuel). */
+  preset: string
+  speed?: number
+  delay?: number
+  custom?: NumberingCustomMotion
+}
+
+export interface SlideNumbering {
+  enabled: boolean
+  format: NumberingFormat
+  position: NumberingPosition
+  /** Pixels, sur la diapositive de 960×540. */
+  size: number
+  /** Absent = couleur automatique, lisible sur le fond de la diapositive. */
+  color?: string
+  opacity: number
+  bold: boolean
+  /** Numéro de la première diapositive. */
+  startAt: number
+  /** Pas de numéro sur la première diapositive (page de titre). */
+  skipFirst: boolean
+  animation?: NumberingAnimation
+}
+
 /** État d'une couche de diapositive pendant une transition. */
 export interface SlideKeyframe {
   opacity?: number

@@ -1,8 +1,9 @@
-import type { BlockData, Slide, SlideBackground, SlideTransitionSettings } from '../types'
+import type { BlockData, Slide, SlideBackground, SlideNumbering, SlideTransitionSettings } from '../types'
 import { isKnownBlockType } from '../blocks'
 import { registerMedia, getAllMediaForSave, clearMediaStore } from './mediaStore'
 import { clipboardMediaKeys } from './clipboard'
 import { nextId } from './ids'
+import { normalizeNumbering } from './numbering'
 import { DRAFT_STORE, withStore } from './idb'
 import { DEFAULT_PARTICLES, mergeParticles } from '../ultra/particles'
 import type { ParticleSettings } from '../types'
@@ -16,6 +17,7 @@ export interface ProjectDraft {
   projectName: string | null
   filePath: string | null
   slides: Slide[]
+  numbering: SlideNumbering
   savedAt: number
 }
 
@@ -47,8 +49,9 @@ export async function saveDraft(
   projectName: string | null,
   filePath: string | null,
   slides: Slide[],
+  numbering: SlideNumbering,
 ): Promise<boolean> {
-  const draft: StoredDraft = { id: DRAFT_ID, projectName, filePath, slides, savedAt: Date.now() }
+  const draft: StoredDraft = { id: DRAFT_ID, projectName, filePath, slides, numbering, savedAt: Date.now() }
   try {
     await withStore(DRAFT_STORE, 'readwrite', s => s.put(draft))
     return true
@@ -95,6 +98,7 @@ function parseDraft(parsed: unknown): ProjectDraft | null {
       projectName: typeof draft.projectName === 'string' ? draft.projectName : null,
       filePath: typeof draft.filePath === 'string' ? draft.filePath : null,
       slides: normalizeSlides(draft.slides),
+      numbering: normalizeNumbering(draft.numbering),
       savedAt: typeof draft.savedAt === 'number' ? draft.savedAt : Date.now(),
     }
   } catch {
@@ -310,8 +314,8 @@ function normalizeBlock(block: BlockData): BlockData {
 
 // ── Lecture / écriture ──────────────────────────────────────────────────────
 
-function serializeManifest(slides: Slide[]): string {
-  return JSON.stringify({ version: 2, slides })
+function serializeManifest(slides: Slide[], numbering: SlideNumbering): string {
+  return JSON.stringify({ version: 2, slides, numbering })
 }
 
 // Médias réellement référencés par un bloc image : tout le reste est du déchet
@@ -340,24 +344,38 @@ function mediaToWrite(slides: Slide[]) {
   return getAllMediaForSave(collectUsedMediaKeys(slides))
 }
 
-export async function saveProjectAs(slides: Slide[], defaultName: string): Promise<string | null> {
-  return window.fileAPI.saveProjectAs(serializeManifest(slides), mediaToWrite(slides), defaultName)
+export async function saveProjectAs(
+  slides: Slide[],
+  defaultName: string,
+  numbering: SlideNumbering,
+): Promise<string | null> {
+  return window.fileAPI.saveProjectAs(serializeManifest(slides, numbering), mediaToWrite(slides), defaultName)
 }
 
-export async function saveProjectToPath(slides: Slide[], filePath: string): Promise<string> {
-  return window.fileAPI.saveProject(filePath, serializeManifest(slides), mediaToWrite(slides))
+export async function saveProjectToPath(
+  slides: Slide[],
+  filePath: string,
+  numbering: SlideNumbering,
+): Promise<string> {
+  return window.fileAPI.saveProject(filePath, serializeManifest(slides, numbering), mediaToWrite(slides))
 }
 
-export async function openProject(): Promise<{ slides: Slide[]; filePath: string } | null> {
+export interface OpenedProject {
+  slides: Slide[]
+  numbering: SlideNumbering
+  filePath: string
+}
+
+export async function openProject(): Promise<OpenedProject | null> {
   const result = await window.fileAPI.openProject()
   if (!result) return null
-  return { slides: readManifest(result.manifestJson, result.media), filePath: result.filePath }
+  return { ...readManifest(result.manifestJson, result.media), filePath: result.filePath }
 }
 
 /** Ouvre un chemin connu (projets récents), sans boîte de dialogue. */
-export async function openProjectAt(filePath: string): Promise<{ slides: Slide[]; filePath: string }> {
+export async function openProjectAt(filePath: string): Promise<OpenedProject> {
   const result = await window.fileAPI.openProjectAt(filePath)
-  return { slides: readManifest(result.manifestJson, result.media), filePath: result.filePath }
+  return { ...readManifest(result.manifestJson, result.media), filePath: result.filePath }
 }
 
 /**
@@ -381,15 +399,34 @@ export function parseManifestSlides(manifestJson: string): Slide[] {
   return normalizeSlides(rawSlides)
 }
 
-function readManifest(manifestJson: string, media: { key: string; data: Uint8Array }[]): Slide[] {
+/**
+ * Numérotation d'un manifeste. Jamais bloquante : `parseManifestSlides` a déjà
+ * validé le fichier, et un champ absent ou abîmé retombe sur les défauts
+ * (numérotation coupée) plutôt que de refuser le projet.
+ */
+export function parseManifestNumbering(manifestJson: string): SlideNumbering {
+  try {
+    const parsed = JSON.parse(manifestJson) as { numbering?: unknown } | unknown[] | null
+    if (!parsed || Array.isArray(parsed)) return normalizeNumbering(undefined)
+    return normalizeNumbering(parsed.numbering)
+  } catch {
+    return normalizeNumbering(undefined)
+  }
+}
+
+function readManifest(
+  manifestJson: string,
+  media: { key: string; data: Uint8Array }[],
+): { slides: Slide[]; numbering: SlideNumbering } {
   const slides = parseManifestSlides(manifestJson)
+  const numbering = parseManifestNumbering(manifestJson)
 
   clearMediaStore()
   for (const m of media) {
     registerMedia(m.key, m.data, guessMimeType(m.key))
   }
 
-  return slides
+  return { slides, numbering }
 }
 
 function guessMimeType(filename: string): string {
