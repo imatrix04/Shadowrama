@@ -1,6 +1,12 @@
 {
   "_comment": "Source unique des notes de version. Alimente (1) l'écran « Nouveautés » embarqué dans l'application, (2) le corps de la release GitHub — donc les notes affichées AVANT la mise à jour — et (3) la section Changelog du README. Régénérer avec : npm run changelog. Les versions sont listées de la plus récente à la plus ancienne.",
   "releases": [
+    {
+      "version": "0.19.4",
+      "date": "2026-10-09",
+      "summary": "Correction d'affichage de la slide par rapport à son animation",
+      "fixed": ["problème d'affichage par rapport à l'animation de la slide"]
+      },
       {
       "version": "0.19.3",
       "date": "2026-10-09",
