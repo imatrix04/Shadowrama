@@ -123,7 +123,17 @@ function AnimatedBlockWrapper({ block, isActive, exiting, animate = true, entran
         <div className={`${floatStyles.floatInner} ${floatFx ? floatStyles.active : ''}`}>
           <EffectLayer block={block}>
             <div ref={textRef} style={{ width: '100%', height: '100%' }}>
-              <BlockComponent block={block} onUpdate={() => {}} isEditing={false} ultra={ultra} onStartEdit={() => {}} onStopEdit={() => {}} />
+                            <BlockComponent
+                block={block}
+                onUpdate={() => {}}
+                isEditing={false}
+                ultra={ultra}
+                // La couche sortante (`animate` faux) reste inerte : une page web
+                // y serait rechargée le temps d'une transition.
+                mode={animate ? 'present' : undefined}
+                onStartEdit={() => {}}
+                onStopEdit={() => {}}
+              />
             </div>
           </EffectLayer>
         </div>

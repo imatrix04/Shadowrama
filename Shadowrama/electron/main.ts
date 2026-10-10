@@ -3,6 +3,7 @@ import { autoUpdater } from 'electron-updater'
 import log from 'electron-log'
 import { join } from 'path'
 import './fileHandlers'
+import { secureWebviews } from './webviewSecurity'
 import { openUpdateDialog } from './update-window/updateWindow'
 
 let mainWindow: BrowserWindow | null = null
@@ -23,11 +24,13 @@ function createWindow() {
       // n'importent que le module `electron`, seul module accessible dans un
       // preload sandboxé — rien à adapter.
       sandbox: true,
+      webviewTag: true,
       preload: join(__dirname, 'preload.js'),
     },
   })
 
   hardenNavigation(win)
+  secureWebviews(win)
 
   win.maximize()
   win.show()

@@ -5,7 +5,7 @@ export interface BlockProperty {
   key: string
   label: string
   type: 'text' | 'textarea' | 'number' | 'color' | 'select' | 'float' | 'file'
-      | 'shapePolygon' | 'boolean' | 'carouselItems'
+      | 'shapePolygon' | 'boolean' | 'carouselItems' | 'url'
   options?: { label: string; value: string }[]
   showIf?: { key: string; value: string }
 }
@@ -256,7 +256,23 @@ export interface TitleBlockData extends BaseBlockData {
   letterSpacing?: number
 }
 
-// Futurs blocs : vidéo, graphique, carrousel...
+// ── Page web ────────────────────────────────────────────────────────────────
+
+/**
+ * Une page web vivante, affichée dans un `<webview>` Electron : on peut y
+ * naviguer, cliquer, saisir, aussi bien dans l'éditeur (après un double-clic)
+ * qu'en présentation.
+ */
+export interface WebviewBlockData extends BaseBlockData {
+  type: 'webview'
+  /** Page de départ, toujours en http(s) (voir utils/webUrl). Vide = pas encore choisie. */
+  url: string
+  /** Barre de navigation (précédent, suivant, recharger, adresse). Vrai par défaut. */
+  showToolbar?: boolean
+  borderRadius?: number
+}
+
+// Futurs blocs : vidéo, graphique...
 // export interface VideoBlockData extends BaseBlockData {
 //   type: 'video'
 //   src: string
@@ -271,6 +287,7 @@ export type BlockData =
   | TextBlockData
   | TitleBlockData
   | CarouselBlockData
+  | WebviewBlockData
 
 export interface BlockConfig {
   type: BlockData['type']
@@ -292,6 +309,7 @@ export interface BlockComponentProps<T extends BlockData = BlockData> {
   onStopEdit?: () => void
   /** Mode Ultra Design. Absent = rendu statique (vignettes du panneau diapos). */
   ultra?: boolean
+  mode?: 'edit' | 'present'
 }
 
 /** Transition appliquée EN ENTRANT sur cette diapositive. */

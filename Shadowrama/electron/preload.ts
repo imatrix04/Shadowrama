@@ -4,6 +4,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setFullScreen: (value: boolean) => ipcRenderer.send('set-fullscreen', value),
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+
+  onWebviewEvent: (callback: (event: { type: 'escape' | 'pointer'; id: number }) => void) => {
+    const listener = (_e: unknown, event: { type: 'escape' | 'pointer'; id: number }) => callback(event)
+    ipcRenderer.on('webview-event', listener)
+    return () => { ipcRenderer.removeListener('webview-event', listener) }
+  },
 })
 
 contextBridge.exposeInMainWorld('fileAPI', {

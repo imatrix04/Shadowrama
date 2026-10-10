@@ -18,6 +18,7 @@ interface Window {
     setFullScreen: (value: boolean) => void
     getAppVersion: () => Promise<string>
     checkForUpdates: () => Promise<UpdateCheckResult>
+    onWebviewEvent: (callback: (event: { type: 'escape' | 'pointer'; id: number }) => void) => () => void
   }
   fileAPI: {
     saveProjectAs: (manifestJson: string, media: MediaPayload[], defaultName: string) => Promise<string | null>

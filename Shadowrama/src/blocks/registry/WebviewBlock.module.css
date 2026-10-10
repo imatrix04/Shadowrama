@@ -1,0 +1,206 @@
+.root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+  color: #e8e8f0;
+  font-family: inherit;
+  /* Indispensable : en présentation, la diapositive et chaque bloc sont en
+     `pointer-events: none` pour laisser passer les clics de navigation. Sans
+     ça, la page serait affichée mais intouchable. */
+  pointer-events: auto;
+}
+
+/* ── Barre de navigation ─────────────────────────────────────────────────── */
+
+.toolbar {
+  position: relative;
+  flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  background: #1b1b26;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: default;
+}
+
+.navBtn {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.navBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.navBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.address {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: #0f0f17;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+  user-select: text;
+}
+
+.address:focus {
+  border-color: var(--accent, #aa3bff);
+}
+
+.addressInvalid,
+.addressInvalid:focus {
+  border-color: #ff6b6b;
+}
+
+.doneBtn {
+  flex: 0 0 auto;
+  height: 24px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent, #aa3bff);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 35%;
+  background: var(--accent, #aa3bff);
+  animation: sweep 1.1s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(290%); }
+}
+
+/* ── Page ────────────────────────────────────────────────────────────────── */
+
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.host {
+  position: absolute;
+  inset: 0;
+}
+
+/* Voile transparent posé sur la page tant qu'elle n'est pas « active » : la
+   balise <webview> avale tous les clics, le bloc ne serait plus déplaçable. */
+.shield {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  cursor: inherit;
+}
+
+.hint {
+  margin-bottom: 10px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.shield:hover .hint {
+  opacity: 1;
+}
+
+.empty,
+.error {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  background: #14141d;
+  color: #c9c9d6;
+}
+
+.error strong {
+  font-size: 15px;
+  color: #fff;
+}
+
+.retryBtn {
+  margin-top: 6px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent, #aa3bff);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ── Rendu inerte (vignettes, couche sortante) ───────────────────────────── */
+
+.inert {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  overflow: hidden;
+  background: #14141d;
+  color: #c9c9d6;
+  font-size: 13px;
+}
+
+.inertHost {
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inertNote {
+  font-size: 11px;
+  opacity: 0.7;
+}

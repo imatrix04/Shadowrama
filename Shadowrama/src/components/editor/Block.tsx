@@ -260,6 +260,7 @@ export default function Block({
           onUpdate={onUpdate}
           isEditing={isEditing}
           ultra={ultra}
+          mode="edit"
           onStartEdit={() => {
             // Toute la session de saisie ne forme qu'une seule entrée d'historique.
             onGestureStart()

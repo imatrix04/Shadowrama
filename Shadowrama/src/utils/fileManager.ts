@@ -6,6 +6,7 @@ import { nextId } from './ids'
 import { DEFAULT_NUMBERING, normalizeNumbering } from './numbering'
 import { PptxFormatError, importPptx } from './pptx/import'
 import type { ImportReport } from './pptx/import'
+import { sanitizeWebUrl } from './webUrl'
 import { DRAFT_STORE, withStore } from './idb'
 import { DEFAULT_PARTICLES, mergeParticles } from '../ultra/particles'
 import type { ParticleSettings } from '../types'
@@ -309,6 +310,10 @@ function normalizeBlock(block: BlockData): BlockData {
     ;(clean as { items: unknown }).items = items
       .filter((it): it is Record<string, unknown> => !!it && typeof it === 'object' && typeof it.src === 'string')
       .map(it => ({ ...it, id: typeof it.id === 'number' ? it.id : nextId() }))
+  }
+
+  if (clean.type === 'webview') {
+    clean.url = sanitizeWebUrl((clean as { url?: unknown }).url)
   }
 
   return clean as BlockData

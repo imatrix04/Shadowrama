@@ -12,6 +12,7 @@ import CarouselItemsEditor from './CarouselItemsEditor'
 import type { CarouselItem } from '../../types'
 import { normalizePolygon } from '../../utils/shapePolygon'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
+import { normalizeWebUrl } from '../../utils/webUrl'
 
 // Doivent rester alignés sur les valeurs par défaut de useBlockAnimation.
 const DEFAULT_DURATION = 0.6
@@ -46,6 +47,45 @@ interface Props {
    *  pour afficher « Niveau X / Y » et désactiver les boutons déjà à l'extrémité. */
   layerIndex: number
   layerCount: number
+}
+
+/**
+ * Adresse d'une page web : validée à la validation (Entrée ou sortie du champ),
+ * pas à chaque frappe, sinon la page se rechargerait sur « h », « ht », « htt »…
+ */
+function UrlField({ value, onCommit }: { value: string; onCommit: (url: string) => void }) {
+  const [draft, setDraft] = useState(value)
+  const [invalid, setInvalid] = useState(false)
+
+  const commit = () => {
+    if (!draft.trim()) {
+      setInvalid(false)
+      if (value) onCommit('')
+      return
+    }
+    const url = normalizeWebUrl(draft)
+    if (!url) {
+      setInvalid(true)
+      return
+    }
+    setInvalid(false)
+    setDraft(url)
+    if (url !== value) onCommit(url)
+  }
+
+  return (
+    <input
+      type="text"
+      className={styles.input}
+      style={invalid ? { borderColor: '#ff6b6b' } : undefined}
+      value={draft}
+      placeholder="localhost:3000, youtube.com…"
+      spellCheck={false}
+      onChange={e => { setDraft(e.target.value); setInvalid(false) }}
+      onBlur={commit}
+      onKeyDown={e => { if (e.key === 'Enter') commit() }}
+    />
+  )
 }
 
 function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: number, changes: Partial<BlockData>) => void) {
@@ -106,6 +146,13 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
         </div>
       )
     }
+    case 'url':
+      return (
+        <UrlField
+          value={String(getBlockField(block, prop.key) ?? '')}
+          onCommit={url => onUpdate(block.id, setBlockField(block, prop.key, url))}
+        />
+      )
     case 'text':
       return (
         <input
