@@ -3,7 +3,9 @@ import { isKnownBlockType } from '../blocks'
 import { registerMedia, getAllMediaForSave, clearMediaStore } from './mediaStore'
 import { clipboardMediaKeys } from './clipboard'
 import { nextId } from './ids'
-import { normalizeNumbering } from './numbering'
+import { DEFAULT_NUMBERING, normalizeNumbering } from './numbering'
+import { PptxFormatError, importPptx } from './pptx/import'
+import type { ImportReport } from './pptx/import'
 import { DRAFT_STORE, withStore } from './idb'
 import { DEFAULT_PARTICLES, mergeParticles } from '../ultra/particles'
 import type { ParticleSettings } from '../types'
@@ -376,6 +378,47 @@ export async function openProject(): Promise<OpenedProject | null> {
 export async function openProjectAt(filePath: string): Promise<OpenedProject> {
   const result = await window.fileAPI.openProjectAt(filePath)
   return { ...readManifest(result.manifestJson, result.media), filePath: result.filePath }
+}
+
+export interface ImportedPresentation {
+  slides: Slide[]
+  numbering: SlideNumbering
+  /** Nom du fichier sans extension, repris comme nom de projet. */
+  name: string
+  report: ImportReport
+}
+
+/**
+ * Importe un diaporama PowerPoint (.pptx).
+ *
+ * Le projet obtenu n'a pas de fichier .shma : il reste « non enregistré » jusqu'à
+ * la première sauvegarde. Les diapositives repassent par `parseManifestSlides`,
+ * comme tout ce qui vient de l'extérieur du programme.
+ */
+export async function importPowerPoint(): Promise<ImportedPresentation | null> {
+  const picked = await window.fileAPI.openPptx()
+  if (!picked) return null
+
+  let result: Awaited<ReturnType<typeof importPptx>>
+  try {
+    result = await importPptx(picked.data)
+  } catch (err) {
+    if (err instanceof PptxFormatError) throw new ProjectFormatError(err.message)
+    throw err
+  }
+
+  const slides = parseManifestSlides(JSON.stringify({ version: 2, slides: result.slides }))
+
+  // Le projet importé remplace l'actuel : ses médias aussi.
+  clearMediaStore()
+  for (const m of result.media) registerMedia(m.key, m.data, m.mimeType)
+
+  return {
+    slides,
+    numbering: DEFAULT_NUMBERING,
+    name: picked.filePath.split(/[\\/]/).pop()!.replace(/\.pptx$/i, ''),
+    report: result.report,
+  }
 }
 
 /**

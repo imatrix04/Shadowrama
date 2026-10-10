@@ -37,6 +37,24 @@ ipcMain.handle('open-project-at', async (_e, filePath: string) => {
   return readProject(filePath)
 })
 
+// Import PowerPoint : la boîte de dialogue reste côté processus principal et seul
+// le contenu du fichier choisi traverse l'IPC. Aucun chemin fourni par le
+// renderer n'est lu ici, contrairement à `open-project-at`.
+const MAX_PPTX_BYTES = 200 * 1024 * 1024
+
+ipcMain.handle('open-pptx', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    filters: [{ name: 'PowerPoint', extensions: ['pptx'] }],
+    properties: ['openFile'],
+  })
+  if (canceled || !filePaths[0]) return null
+  const buffer = await readFile(filePaths[0])
+  if (buffer.length > MAX_PPTX_BYTES) {
+    throw new Error('Ce fichier PowerPoint dépasse 200 Mo et ne peut pas être importé.')
+  }
+  return { filePath: filePaths[0], data: new Uint8Array(buffer) }
+})
+
 /**
  * Refuse tout chemin qui n'est pas un projet Shadowrama.
  *

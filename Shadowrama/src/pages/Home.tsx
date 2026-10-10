@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  openProject, openProjectAt, saveDraft, loadRecents, rememberRecent,
+  openProject, openProjectAt, importPowerPoint, saveDraft, loadRecents, rememberRecent,
   forgetRecent, projectNameFromPath, ProjectFormatError,
 } from '../utils/fileManager'
 import type { OpenedProject, RecentProject } from '../utils/fileManager'
+import { formatImportReport } from '../utils/pptx/import'
 import Dialog from '../components/ui/Dialog'
 import WhatsNew from '../components/ui/WhatsNew'
 import { useWhatsNew } from '../hooks/useWhatsNew'
@@ -24,6 +25,7 @@ export default function Home() {
   // inutile de passer par un effet et un rendu supplémentaire.
   const [recents, setRecents] = useState<RecentProject[]>(loadRecents)
   const [error, setError] = useState<string | null>(null)
+  const [importReport, setImportReport] = useState<string | null>(null)
   const whatsNew = useWhatsNew()
   const { enableUltra } = useUltraMode()
 
@@ -60,6 +62,30 @@ export default function Home() {
         err instanceof ProjectFormatError
           ? err.message
           : 'Impossible de lire ce fichier .shma.'
+      )
+    }
+  }
+
+  const handleImportPptx = async () => {
+    try {
+      const result = await importPowerPoint()
+      if (!result) return
+      // Même passage par le brouillon que pour un projet ouvert, sans fichier.
+      if (!await saveDraft(result.name, null, result.slides, result.numbering)) {
+        setError(
+          "Impossible de préparer ce projet : le stockage local de l'application "
+          + "est inaccessible ou saturé. Fermez puis rouvrez l'application, et "
+          + 'réessayez.'
+        )
+        return
+      }
+      setImportReport(formatImportReport(result.report))
+    } catch (err) {
+      console.error('[home:import]', err)
+      setError(
+        err instanceof ProjectFormatError
+          ? err.message
+          : "Impossible d'importer ce fichier PowerPoint."
       )
     }
   }
@@ -125,6 +151,9 @@ export default function Home() {
             <button className={styles.ctaSecondary} onClick={handleOpen}>
               Ouvrir un projet
             </button>
+            <button className={styles.ctaSecondary} onClick={handleImportPptx}>
+              Importer PowerPoint
+            </button>
           </div>
 
           {/* Entrée directe dans le mode Ultra Design : le mode est une
@@ -175,6 +204,15 @@ export default function Home() {
           mode={whatsNew.mode}
           currentVersion={whatsNew.currentVersion}
           onClose={whatsNew.close}
+        />
+      )}
+
+      {importReport && (
+        <Dialog
+          title="Import PowerPoint terminé"
+          message={importReport}
+          onDismiss={goToEditor}
+          actions={[{ label: "Ouvrir dans l'éditeur", onClick: goToEditor, variant: 'accent' }]}
         />
       )}
 

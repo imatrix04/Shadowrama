@@ -2,10 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Slide, SlideNumbering } from '../../types'
 import {
-  saveProjectAs, saveProjectToPath, openProject, clearDraft,
+  saveProjectAs, saveProjectToPath, openProject, importPowerPoint, clearDraft,
   rememberRecent, projectNameFromPath, ProjectFormatError,
 } from '../../utils/fileManager'
 import { clearMediaStore } from '../../utils/mediaStore'
+import { formatImportReport } from '../../utils/pptx/import'
 import Dialog from '../ui/Dialog'
 import Icon from '../ui/Icon'
 import PresentationMode from './PresentationMode'
@@ -42,6 +43,7 @@ export default function TopBar({
   const [nameInput, setNameInput] = useState('mon-projet')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [confirmNewOpen, setConfirmNewOpen] = useState(false)
+  const [importReport, setImportReport] = useState<string | null>(null)
   const [savedSlides, setSavedSlides] = useState<Slide[] | null>(filePath ? slides : null)
   const [savedNumbering, setSavedNumbering] = useState<SlideNumbering | null>(filePath ? numbering : null)
   const isDirty = savedSlides !== slides || savedNumbering !== numbering
@@ -113,6 +115,26 @@ export default function TopBar({
         err instanceof ProjectFormatError
           ? err.message
           : "Impossible de lire ce fichier .shma. Il est peut-être corrompu ou inaccessible."
+      )
+    }
+  }
+
+  const handleImportPptx = async () => {
+    try {
+      const result = await importPowerPoint()
+      if (!result) return
+      onLoad(result.slides, result.name, result.numbering)
+      // Un import n'a pas de fichier .shma : le projet reste à enregistrer.
+      setFilePath(null)
+      setSavedSlides(null)
+      setSavedNumbering(null)
+      setImportReport(formatImportReport(result.report))
+    } catch (err) {
+      console.error('[import] ERREUR:', err)
+      setErrorMessage(
+        err instanceof ProjectFormatError
+          ? err.message
+          : "Impossible d'importer ce fichier PowerPoint. Il est peut-être corrompu ou inaccessible."
       )
     }
   }
@@ -190,6 +212,13 @@ export default function TopBar({
             <Icon name="open" /> Ouvrir
           </button>
           <button
+            className={styles.btn}
+            onClick={handleImportPptx}
+            title="Importer un diaporama PowerPoint (.pptx)"
+          >
+            <Icon name="open" /> Importer
+          </button>
+          <button
             className={`${styles.btn} ${ultra ? styles.btnUltraOn : styles.btnUltra}`}
             onClick={onToggleUltra}
             title={ultra ? 'Quitter le mode Ultra Design' : 'Activer le mode Ultra Design : effets et séquences avancées'}
@@ -233,6 +262,15 @@ export default function TopBar({
             { label: 'Annuler', onClick: () => setConfirmNewOpen(false) },
             { label: 'Continuer', onClick: startNewProject, variant: 'danger' },
           ]}
+        />
+      )}
+
+      {importReport && (
+        <Dialog
+          title="Import PowerPoint terminé"
+          message={importReport}
+          onDismiss={() => setImportReport(null)}
+          actions={[{ label: 'Fermer', onClick: () => setImportReport(null), variant: 'accent' }]}
         />
       )}
 

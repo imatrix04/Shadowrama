@@ -24,5 +24,7 @@ interface Window {
     saveProject: (filePath: string, manifestJson: string, media: MediaPayload[]) => Promise<string>
     openProject: () => Promise<{ filePath: string; manifestJson: string; media: MediaPayload[] } | null>
     openProjectAt: (filePath: string) => Promise<{ filePath: string; manifestJson: string; media: MediaPayload[] }>
+    /** Boîte de dialogue « Importer PowerPoint » : renvoie le contenu du .pptx choisi. */
+    openPptx: () => Promise<{ filePath: string; data: Uint8Array } | null>
   }
 }
