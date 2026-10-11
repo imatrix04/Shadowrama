@@ -1,4 +1,5 @@
 import type { BlockData } from '../types'
+import { blockMediaKeys } from './blockMedia'
 
 /**
  * Presse-papiers interne aux blocs (Ctrl+C / Ctrl+X / Ctrl+V).
@@ -70,12 +71,7 @@ export function clipboardMediaKeys(): string[] {
   if (!entry) return []
   const keys: string[] = []
   for (const block of entry.blocks) {
-    if (block.type === 'image' && block.src?.startsWith('media/')) keys.push(block.src)
-    if (block.type === 'carousel') {
-      for (const item of block.items ?? []) {
-        if (item.src?.startsWith('media/')) keys.push(item.src)
-      }
-    }
+    keys.push(...blockMediaKeys(block))
   }
   return keys
 }

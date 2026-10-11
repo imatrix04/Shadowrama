@@ -137,8 +137,8 @@ export default function EffectsPanel({ block, onUpdate, onGestureStart }: Props)
             {colorField('Départ', fx.gradient.from, v => patch({ gradient: { ...fx.gradient!, from: v } }))}
             {colorField('Arrivée', fx.gradient.to, v => patch({ gradient: { ...fx.gradient!, to: v } }))}
             {numberField('Angle', fx.gradient.angle, v => patch({ gradient: { ...fx.gradient!, angle: v } }), { min: 0, max: 360, step: 5 })}
-            {block.type === 'image' && (
-              <p className={styles.hint}>Le dégradé ne s'applique pas aux images.</p>
+            {(block.type === 'image' || block.type === 'video') && (
+              <p className={styles.hint}>Le dégradé ne s'applique pas aux images ni aux vidéos.</p>
             )}
           </>
         )}

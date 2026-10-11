@@ -101,7 +101,7 @@ async function writeZip(filePath: string, manifestJson: string, media: MediaEntr
   for (const m of media) {
     // Garde-fou : un média ne doit jamais pouvoir écraser le manifest.
     if (m.key === 'manifest.json' || !m.key.startsWith('media/')) continue
-    zip.file(m.key, m.data)
+    zip.file(m.key, m.data, { compression: /^media\/vid-/.test(m.key) ? 'STORE' : 'DEFLATE' })
   }
   const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
   await writeFile(filePath, buffer)

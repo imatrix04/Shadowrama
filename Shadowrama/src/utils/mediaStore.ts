@@ -104,13 +104,13 @@ export function getAllMediaForSave(usedKeys: Set<string>): { key: string; data: 
   return out
 }
 
-export function generateMediaKey(originalName: string): string {
+export function generateMediaKey(originalName: string, kind: 'img' | 'vid' = 'img'): string {
   // `split('.').pop()` rendait le nom ENTIER quand il ne contient aucun point :
   // un fichier « photo » donnait la clé « …-photo ». L'extension est aussi
   // ramenée en minuscules — `guessMimeType` compare des suffixes en minuscules,
   // si bien qu'un « IMG.JPG » était typé `application/octet-stream` et ne
   // réapparaissait pas à la réouverture du projet.
   const match = /\.([a-z0-9]+)$/i.exec(originalName)
-  const ext = match ? match[1].toLowerCase() : 'png'
-  return `media/img-${Date.now()}-${Math.floor(Math.random() * 1000)}.${ext}`
+  const ext = match ? match[1].toLowerCase() : (kind === 'vid' ? 'mp4' : 'png')
+  return `media/${kind}-${Date.now()}-${Math.floor(Math.random() * 1000)}.${ext}`
 }

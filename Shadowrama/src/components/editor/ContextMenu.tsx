@@ -11,7 +11,7 @@ import Switch from '../ui/Switch'
 import CarouselItemsEditor from './CarouselItemsEditor'
 import type { CarouselItem } from '../../types'
 import { normalizePolygon } from '../../utils/shapePolygon'
-import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
+import MediaFileField from './MediaFileField'
 import { normalizeWebUrl } from '../../utils/webUrl'
 
 // Doivent rester alignés sur les valeurs par défaut de useBlockAnimation.
@@ -182,38 +182,8 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
           onChange={e => onUpdate(block.id, setBlockField(block, prop.key, parseFloat(e.target.value)))}
         />
       )
-    case 'file': {
-      const currentKey = String(getBlockField(block, prop.key) ?? '')
-      const previewSrc = currentKey.startsWith('media/') ? resolveMedia(currentKey) : currentKey
-
-      return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {previewSrc && (
-            <img
-              src={previewSrc}
-              style={{ width: '100%', height: '60px', objectFit: 'cover', borderRadius: '4px' }}
-              alt=""
-            />
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            className={styles.input}
-            onChange={async e => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              // `arrayBuffer()` remplace le FileReader + découpage de data URL :
-              // on garde les octets bruts, sans passer par une chaîne base64
-              // 33 % plus grosse qu'il fallait ensuite redécoder.
-              const bytes = new Uint8Array(await file.arrayBuffer())
-              const key = generateMediaKey(file.name)
-              registerMedia(key, bytes, file.type)
-              onUpdate(block.id, setBlockField(block, prop.key, key))
-            }}
-          />
-        </div>
-      )
-    }
+      case 'file':
+        return <MediaFileField fieldKey={prop.key} accept={prop.accept} block={block} onUpdate={onUpdate} />
     case 'shapePolygon': {
       // Même conversion que polygonToMaskDataUri : l'éditeur travaille dans un
       // repère abstrait 0–100, le rayon stocké est en pixels réels du bloc.

@@ -1,0 +1,51 @@
+.root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  /* Hors présentation avec commandes, la vidéo ne capte rien : le bloc reste
+     déplaçable et le clic traverse jusqu'à la navigation. */
+  pointer-events: none;
+}
+
+/* En présentation, la diapositive et chaque bloc sont en `pointer-events: none`
+   pour laisser passer les clics de navigation : seules les commandes demandées
+   rendent la vidéo touchable. */
+.interactive,
+.interactive .video {
+  pointer-events: auto;
+}
+
+.preview {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.root:hover .preview,
+.preview:focus-visible {
+  opacity: 1;
+}
+
+.preview:hover {
+  background: var(--accent, #aa3bff);
+}

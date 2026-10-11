@@ -7,6 +7,7 @@ export interface BlockProperty {
   type: 'text' | 'textarea' | 'number' | 'color' | 'select' | 'float' | 'file'
       | 'shapePolygon' | 'boolean' | 'carouselItems' | 'url'
   options?: { label: string; value: string }[]
+  accept?: string
   showIf?: { key: string; value: string }
 }
 
@@ -157,14 +158,17 @@ export type ImageFit = 'cover' | 'contain' | 'fill'
  * d'un carrousel. Source de vérité unique : ajouter un réglage ici le rend
  * disponible des deux côtés (voir blocks/registry/ImageSurface).
  */
-export interface ImageRenderData {
-  src: string
-  alt?: string
+export interface MediaFrameData {
   borderRadius?: number
   objectFit?: ImageFit
-  /** Découpe l'image dans la forme du polygone (voir utils/shapePolygon). */
+  /** Découpe le média dans la forme du polygone (voir utils/shapePolygon). */
   shapeMode?: 'none' | 'grid'
   customShape?: [number, number][]
+}
+
+export interface ImageRenderData extends MediaFrameData {
+  src: string
+  alt?: string
 }
 
 export interface ImageBlockData extends BaseBlockData, ImageRenderData {
@@ -272,13 +276,27 @@ export interface WebviewBlockData extends BaseBlockData {
   borderRadius?: number
 }
 
-// Futurs blocs : vidéo, graphique...
-// export interface VideoBlockData extends BaseBlockData {
-//   type: 'video'
-//   src: string
-//   autoplay?: boolean
-//   loop?: boolean
-// }
+     // ── Vidéo ───────────────────────────────────────────────────────────────────
+
+export interface VideoBlockData extends BaseBlockData, MediaFrameData {
+  type: 'video'
+  /** Clé média (`media/vid-….mp4`). Vide = pas encore choisie. */
+  src: string
+  autoplay?: boolean
+  loop?: boolean
+  muted?: boolean
+  /** 0–1. */
+  volume?: number
+  showControls?: boolean
+  /** Multiplicateur de vitesse, 1 = normale. */
+  playbackRate?: number
+  /** Secondes. */
+  startTime?: number
+  /** Secondes ; 0 ou absent = jusqu'à la fin. */
+  endTime?: number
+}
+
+// Futurs blocs : graphique...
 
 // ── L'union discriminée ──
 export type BlockData =
@@ -288,6 +306,7 @@ export type BlockData =
   | TitleBlockData
   | CarouselBlockData
   | WebviewBlockData
+  | VideoBlockData
 
 export interface BlockConfig {
   type: BlockData['type']

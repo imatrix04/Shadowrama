@@ -7,6 +7,8 @@ import { DEFAULT_NUMBERING, normalizeNumbering } from './numbering'
 import { PptxFormatError, importPptx } from './pptx/import'
 import type { ImportReport } from './pptx/import'
 import { sanitizeWebUrl } from './webUrl'
+import { normalizeVideoBlock } from './video'
+import { blockMediaKeys } from './blockMedia'
 import { DRAFT_STORE, withStore } from './idb'
 import { DEFAULT_PARTICLES, mergeParticles } from '../ultra/particles'
 import type { ParticleSettings } from '../types'
@@ -316,6 +318,8 @@ function normalizeBlock(block: BlockData): BlockData {
     clean.url = sanitizeWebUrl((clean as { url?: unknown }).url)
   }
 
+  if (clean.type === 'video') return normalizeVideoBlock(clean)
+
   return clean as BlockData
 }
 
@@ -333,12 +337,7 @@ function collectUsedMediaKeys(slides: Slide[]): Set<string> {
   const keys = new Set<string>(clipboardMediaKeys())
   for (const slide of slides) {
     for (const block of slide.blocks) {
-      if (block.type === 'image' && block.src?.startsWith('media/')) keys.add(block.src)
-      if (block.type === 'carousel') {
-        for (const item of block.items ?? []) {
-          if (item.src?.startsWith('media/')) keys.add(item.src)
-        }
-      }
+      for (const key of blockMediaKeys(block)) keys.add(key)
     }
     if (slide.background?.type === 'image' && slide.background.image?.startsWith('media/')) {
       keys.add(slide.background.image)
@@ -482,5 +481,10 @@ function guessMimeType(filename: string): string {
   if (filename.endsWith('.jpg') || filename.endsWith('.jpeg')) return 'image/jpeg'
   if (filename.endsWith('.webp')) return 'image/webp'
   if (filename.endsWith('.gif')) return 'image/gif'
+  if (filename.endsWith('.mp4') || filename.endsWith('.m4v')) return 'video/mp4'
+  if (filename.endsWith('.webm')) return 'video/webm'
+  if (filename.endsWith('.ogv') || filename.endsWith('.ogg')) return 'video/ogg'
+  if (filename.endsWith('.mov')) return 'video/quicktime'
+  if (filename.endsWith('.mkv')) return 'video/x-matroska'
   return 'application/octet-stream'
 }

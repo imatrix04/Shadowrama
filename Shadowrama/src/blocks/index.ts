@@ -7,6 +7,7 @@ import imageConfig from './configs/image.config'
 import shapeConfig from './configs/shape.config'
 import carouselConfig from './configs/carousel.config'
 import webviewConfig from './configs/webview.config'
+import videoConfig from './configs/video.config'
 
 import TextBlock from './registry/TextBlock'
 import TitleBlock from './registry/TitleBlock'
@@ -14,6 +15,7 @@ import ImageBlock from './registry/ImageBlock'
 import ShapeBlock from './registry/ShapeBlock'
 import CarouselBlock from './registry/CarouselBlock'
 import WebviewBlock from './registry/WebviewBlock'
+import VideoBlock from './registry/VideoBlock'
 
 export const BLOCKS_CONFIG: BlockConfig[] = [
   textConfig,
@@ -21,6 +23,7 @@ export const BLOCKS_CONFIG: BlockConfig[] = [
   imageConfig,
   shapeConfig,
   carouselConfig,
+  videoConfig,
   webviewConfig,
 ]
 
@@ -30,6 +33,7 @@ export const BLOCKS_REGISTRY: Record<string, ComponentType<BlockComponentProps>>
   image: ImageBlock as ComponentType<BlockComponentProps>,
   shape: ShapeBlock as ComponentType<BlockComponentProps>,
   carousel: CarouselBlock as ComponentType<BlockComponentProps>,
+  video: VideoBlock as ComponentType<BlockComponentProps>,
   webview: WebviewBlock as ComponentType<BlockComponentProps>,
 }
 /**
