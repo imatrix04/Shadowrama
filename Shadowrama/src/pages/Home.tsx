@@ -5,8 +5,9 @@ import {
   forgetRecent, projectNameFromPath, ProjectFormatError,
 } from '../utils/fileManager'
 import type { OpenedProject, RecentProject } from '../utils/fileManager'
-import { formatImportReport } from '../utils/pptx/import'
+import type { ImportReport } from '../utils/pptx/import'
 import Dialog from '../components/ui/Dialog'
+import ImportReportDialog from '../components/ui/ImportReportDialog'
 import WhatsNew from '../components/ui/WhatsNew'
 import { useWhatsNew } from '../hooks/useWhatsNew'
 import { useUltraMode } from '../hooks/useUltraMode'
@@ -25,7 +26,7 @@ export default function Home() {
   // inutile de passer par un effet et un rendu supplémentaire.
   const [recents, setRecents] = useState<RecentProject[]>(loadRecents)
   const [error, setError] = useState<string | null>(null)
-  const [importReport, setImportReport] = useState<string | null>(null)
+  const [importReport, setImportReport] = useState<ImportReport | null>(null)
   const whatsNew = useWhatsNew()
   const { enableUltra } = useUltraMode()
 
@@ -79,7 +80,7 @@ export default function Home() {
         )
         return
       }
-      setImportReport(formatImportReport(result.report))
+      setImportReport(result.report)
     } catch (err) {
       console.error('[home:import]', err)
       setError(
@@ -208,11 +209,10 @@ export default function Home() {
       )}
 
       {importReport && (
-        <Dialog
-          title="Import PowerPoint terminé"
-          message={importReport}
-          onDismiss={goToEditor}
-          actions={[{ label: "Ouvrir dans l'éditeur", onClick: goToEditor, variant: 'accent' }]}
+        <ImportReportDialog
+          report={importReport}
+          actionLabel="Ouvrir dans l'éditeur"
+          onClose={goToEditor}
         />
       )}
 

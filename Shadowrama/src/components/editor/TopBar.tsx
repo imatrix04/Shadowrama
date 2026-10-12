@@ -6,7 +6,8 @@ import {
   rememberRecent, projectNameFromPath, ProjectFormatError,
 } from '../../utils/fileManager'
 import { clearMediaStore } from '../../utils/mediaStore'
-import { formatImportReport } from '../../utils/pptx/import'
+  import type { ImportReport } from '../../utils/pptx/import'
+  import ImportReportDialog from '../ui/ImportReportDialog'
 import Dialog from '../ui/Dialog'
 import Icon from '../ui/Icon'
 import PresentationMode from './PresentationMode'
@@ -43,7 +44,7 @@ export default function TopBar({
   const [nameInput, setNameInput] = useState('mon-projet')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [confirmNewOpen, setConfirmNewOpen] = useState(false)
-  const [importReport, setImportReport] = useState<string | null>(null)
+  const [importReport, setImportReport] = useState<ImportReport | null>(null)
   const [savedSlides, setSavedSlides] = useState<Slide[] | null>(filePath ? slides : null)
   const [savedNumbering, setSavedNumbering] = useState<SlideNumbering | null>(filePath ? numbering : null)
   const isDirty = savedSlides !== slides || savedNumbering !== numbering
@@ -128,7 +129,7 @@ export default function TopBar({
       setFilePath(null)
       setSavedSlides(null)
       setSavedNumbering(null)
-      setImportReport(formatImportReport(result.report))
+      setImportReport(result.report)
     } catch (err) {
       console.error('[import] ERREUR:', err)
       setErrorMessage(
@@ -266,11 +267,10 @@ export default function TopBar({
       )}
 
       {importReport && (
-        <Dialog
-          title="Import PowerPoint terminé"
-          message={importReport}
-          onDismiss={() => setImportReport(null)}
-          actions={[{ label: 'Fermer', onClick: () => setImportReport(null), variant: 'accent' }]}
+        <ImportReportDialog
+          report={importReport}
+          actionLabel="Fermer"
+          onClose={() => setImportReport(null)}
         />
       )}
 
