@@ -31,11 +31,11 @@ describe('mediaStore', () => {
     expect(mediaStore.resolveMedia('media/absent.png')).toBeUndefined()
   })
 
-  it("n'écrit dans le fichier que les médias encore référencés", () => {
+  it("n'écrit dans le fichier que les médias encore référencés", async () => {
     mediaStore.registerMedia('media/gardee.png', bytes(1), 'image/png')
     mediaStore.registerMedia('media/orpheline.png', bytes(9), 'image/png')
 
-    const written = mediaStore.getAllMediaForSave(new Set(['media/gardee.png']))
+    const written = await mediaStore.getAllMediaForSave(new Set(['media/gardee.png']))
 
     expect(written.map(m => m.key)).toEqual(['media/gardee.png'])
   })
@@ -46,36 +46,36 @@ describe('mediaStore', () => {
    * média avait disparu du cache et d'IndexedDB — une perte définitive, alors
    * qu'un Ctrl+Z est précisément censé l'empêcher.
    */
-  it('conserve les médias non référencés, pour que lannulation les retrouve', () => {
+  it('conserve les médias non référencés, pour que lannulation les retrouve', async () => {
     mediaStore.registerMedia('media/supprimee.png', bytes(9), 'image/png')
 
-    mediaStore.getAllMediaForSave(new Set())
+    await mediaStore.getAllMediaForSave(new Set())
 
     expect(mediaStore.resolveMedia('media/supprimee.png')).toMatch(/^blob:/)
   })
 
-  it('rend les octets tels quels, sans passer par du base64', () => {
+  it('rend les octets tels quels, sans passer par du base64', async () => {
     mediaStore.registerMedia('media/a.png', bytes(1), 'image/png')
 
-    const [entry] = mediaStore.getAllMediaForSave(new Set(['media/a.png']))
+    const [entry] = await mediaStore.getAllMediaForSave(new Set(['media/a.png']))
     expect(entry.data).toBeInstanceOf(Uint8Array)
     expect(Array.from(entry.data)).toEqual([1, 2, 3])
   })
 
-  it('remplace un média réenregistré sous la même clé', () => {
+  it('remplace un média réenregistré sous la même clé', async () => {
     mediaStore.registerMedia('media/a.png', bytes(1), 'image/png')
     mediaStore.registerMedia('media/a.png', bytes(7), 'image/png')
 
-    const [entry] = mediaStore.getAllMediaForSave(new Set(['media/a.png']))
+    const [entry] = await mediaStore.getAllMediaForSave(new Set(['media/a.png']))
     expect(Array.from(entry.data)).toEqual([7, 8, 9])
   })
 
-  it('vide tout le store', () => {
+  it('vide tout le store', async () => {
     mediaStore.registerMedia('media/a.png', bytes(1), 'image/png')
     mediaStore.clearMediaStore()
 
     expect(mediaStore.resolveMedia('media/a.png')).toBeUndefined()
-    expect(mediaStore.getAllMediaForSave(new Set(['media/a.png']))).toEqual([])
+    expect(await mediaStore.getAllMediaForSave(new Set(['media/a.png']))).toEqual([])
   })
 
   it('décode le format base64 hérité des versions antérieures', () => {
@@ -99,8 +99,23 @@ describe('mediaStore', () => {
   it('génère des clés distinctes pour deux imports du même fichier', () => {
     const keys = new Set(Array.from({ length: 50 }, () => mediaStore.generateMediaKey('a.png')))
 
-    // Collision possible mais très improbable : on vérifie surtout que la clé
-    // n'est pas purement dérivée du nom de fichier.
-    expect(keys.size).toBeGreaterThan(1)
+    // Identifiant aléatoire : aucune collision, même dans la même milliseconde.
+    expect(keys.size).toBe(50)
+  })
+
+  /**
+   * La purge n'a lieu qu'au démarrage, quand plus aucun Ctrl+Z ne peut ramener
+   * un bloc supprimé : elle retire les orphelins et rien d'autre.
+   */
+  it('purge les médias orphelins sans toucher à ceux qui servent', async () => {
+    mediaStore.registerMedia('media/gardee.png', bytes(1), 'image/png')
+    mediaStore.registerMedia('media/orpheline.png', bytes(9), 'image/png')
+
+    mediaStore.pruneMediaStore(new Set(['media/gardee.png']))
+
+    expect(mediaStore.resolveMedia('media/gardee.png')).toMatch(/^blob:/)
+    expect(mediaStore.resolveMedia('media/orpheline.png')).toBeUndefined()
+    const [kept] = await mediaStore.getAllMediaForSave(new Set(['media/gardee.png', 'media/orpheline.png']))
+    expect(Array.from(kept.data)).toEqual([1, 2, 3])
   })
 })

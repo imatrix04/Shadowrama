@@ -126,8 +126,8 @@ describe('utilitaires vidéo', () => {
   })
 
   it('nomme les clés selon le type de média', () => {
-    expect(generateMediaKey('clip.MP4', 'vid')).toMatch(/^media\/vid-\d+-\d+\.mp4$/)
-    expect(generateMediaKey('photo.png')).toMatch(/^media\/img-\d+-\d+\.png$/)
+    expect(generateMediaKey('clip.MP4', 'vid')).toMatch(/^media\/vid-[0-9a-f-]{36}\.mp4$/)
+    expect(generateMediaKey('photo.png')).toMatch(/^media\/img-[0-9a-f-]{36}\.png$/)
     expect(generateMediaKey('sans-extension', 'vid')).toMatch(/\.mp4$/)
   })
 })

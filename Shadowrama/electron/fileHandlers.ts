@@ -1,5 +1,7 @@
 import { dialog, ipcMain } from 'electron'
-import { readFile, writeFile } from 'fs/promises'
+import { createWriteStream } from 'fs'
+import { readFile, rename, rm, stat } from 'fs/promises'
+import { pipeline } from 'stream/promises'
 import JSZip from 'jszip'
 
 // Octets bruts. L'ancien format transportait du base64 : +33 % de volume sur
@@ -95,6 +97,19 @@ async function readProject(filePath: string) {
   return { filePath, manifestJson, media }
 }
 
+/**
+ * Écrit le projet de façon atomique : d'abord dans un fichier temporaire voisin,
+ * renommé par-dessus la cible une fois l'écriture terminée ET vérifiée.
+ *
+ * Écrire directement dans le `.shma` laissait un projet tronqué — donc perdu —
+ * dès qu'un plantage, une coupure ou un disque plein survenait en cours de
+ * route. Avec le renommage, le fichier d'origine reste intact jusqu'au dernier
+ * instant : on a soit l'ancienne version, soit la nouvelle, jamais un mélange.
+ *
+ * Le zip est produit en flux vers le disque : l'archive complète n'est plus
+ * montée en mémoire (un projet avec des vidéos pèse vite plusieurs centaines de
+ * mégaoctets).
+ */
 async function writeZip(filePath: string, manifestJson: string, media: MediaEntry[]) {
   const zip = new JSZip()
   zip.file('manifest.json', manifestJson)
@@ -103,16 +118,30 @@ async function writeZip(filePath: string, manifestJson: string, media: MediaEntr
     if (m.key === 'manifest.json' || !m.key.startsWith('media/')) continue
     zip.file(m.key, m.data, { compression: /^media\/vid-/.test(m.key) ? 'STORE' : 'DEFLATE' })
   }
-  const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
-  await writeFile(filePath, buffer)
 
-  // Vérifie que l'écriture a bien eu lieu (Windows Controlled Folder Access peut bloquer
-  // silencieusement en retournant succès sans écrire)
-  const verify = await readFile(filePath)
-  if (verify.length !== buffer.length) {
-    throw new Error(
-      `Échec d'écriture silencieux : ${verify.length} octets sur disque au lieu de ${buffer.length}. ` +
-      `Vérifiez que Windows n'a pas bloqué l'accès (Accès contrôlé aux dossiers / Antivirus).`
-    )
+  // Même dossier que la cible : un renommage n'est atomique qu'au sein d'un
+  // même volume.
+  const tempPath = `${filePath}.${process.pid}-${Date.now()}.tmp`
+  try {
+    let written = 0
+    const source = zip.generateNodeStream({ type: 'nodebuffer', compression: 'DEFLATE', streamFiles: true })
+    source.on('data', (chunk: Buffer) => { written += chunk.length })
+    await pipeline(source, createWriteStream(tempPath))
+
+    // Vérifie que l'écriture a bien eu lieu (Windows Controlled Folder Access peut
+    // bloquer silencieusement en retournant succès sans écrire). La taille
+    // suffit : relire le fichier entier doublait le coût de chaque sauvegarde.
+    const { size } = await stat(tempPath)
+    if (size !== written) {
+      throw new Error(
+        `Échec d'écriture silencieux : ${size} octets sur disque au lieu de ${written}. ` +
+        `Vérifiez que Windows n'a pas bloqué l'accès (Accès contrôlé aux dossiers / Antivirus).`
+      )
+    }
+
+    await rename(tempPath, filePath)
+  } catch (err) {
+    await rm(tempPath, { force: true }).catch(() => {})
+    throw err
   }
 }

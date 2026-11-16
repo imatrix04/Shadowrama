@@ -6,8 +6,8 @@ import {
   rememberRecent, projectNameFromPath, ProjectFormatError,
 } from '../../utils/fileManager'
 import { clearMediaStore } from '../../utils/mediaStore'
-  import type { ImportReport } from '../../utils/pptx/import'
-  import ImportReportDialog from '../ui/ImportReportDialog'
+import type { ImportReport } from '../../utils/pptx/import'
+import ImportReportDialog from '../ui/ImportReportDialog'
 import Dialog from '../ui/Dialog'
 import Icon from '../ui/Icon'
 import PresentationMode from './PresentationMode'
@@ -28,26 +28,61 @@ interface Props {
   canRedo: boolean
   /** Vrai quand la dernière autosauvegarde a échoué (quota du navigateur). */
   draftFailed: boolean
+  /**
+   * Vrai quand le brouillon restauré contient des modifications jamais écrites
+   * dans le `.shma`. Sans ça, un projet rattaché à un fichier était toujours
+   * présenté comme enregistré après un redémarrage.
+   */
+  initialDirty: boolean
+  /** Prévient l'éditeur, qui recopie l'information dans le brouillon. */
+  onDirtyChange: (dirty: boolean) => void
   ultra: boolean
   onToggleUltra: () => void
   presenting: boolean
   onPresentingChange: (value: boolean) => void
 }
 
+type ReplaceAction = 'new' | 'open' | 'import'
+
+const REPLACE_MESSAGES: Record<ReplaceAction, string> = {
+  new: 'Les modifications en cours seront perdues. Créer un nouveau projet malgré tout ?',
+  open: 'Les modifications en cours seront perdues. Ouvrir un autre projet malgré tout ?',
+  import: 'Les modifications en cours seront perdues. Importer un PowerPoint malgré tout ?',
+}
+
+/** Une seule diapositive, sans bloc ni réglage : rien qui vaille d'être gardé. */
+function isBlankProject(slides: Slide[]): boolean {
+  if (slides.length !== 1) return false
+  const [slide] = slides
+  return slide.blocks.length === 0 && !slide.background && !slide.transition
+}
+
 export default function TopBar({
   slides, numbering, projectName, setProjectName, filePath, setFilePath, onLoad, onNew,
-  onUndo, onRedo, canUndo, canRedo, draftFailed, ultra, onToggleUltra,
+  onUndo, onRedo, canUndo, canRedo, draftFailed, initialDirty, onDirtyChange, ultra, onToggleUltra,
   presenting, onPresentingChange,
 }: Props) {
   const navigate = useNavigate()
   const [nameDialogOpen, setNameDialogOpen] = useState(false)
   const [nameInput, setNameInput] = useState('mon-projet')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [confirmNewOpen, setConfirmNewOpen] = useState(false)
+  // Action en attente de confirmation : toutes remplacent le projet en cours.
+  const [pendingReplace, setPendingReplace] = useState<ReplaceAction | null>(null)
   const [importReport, setImportReport] = useState<ImportReport | null>(null)
-  const [savedSlides, setSavedSlides] = useState<Slide[] | null>(filePath ? slides : null)
-  const [savedNumbering, setSavedNumbering] = useState<SlideNumbering | null>(filePath ? numbering : null)
+  const startsSaved = filePath !== null && !initialDirty
+  const [savedSlides, setSavedSlides] = useState<Slide[] | null>(startsSaved ? slides : null)
+  const [savedNumbering, setSavedNumbering] = useState<SlideNumbering | null>(startsSaved ? numbering : null)
   const isDirty = savedSlides !== slides || savedNumbering !== numbering
+  // Un projet vierge jamais enregistré est « modifié » au sens strict, mais il
+  // n'y a rien à perdre : inutile de demander une confirmation pour le quitter.
+  const hasUnsavedWork = isDirty && !(filePath === null && isBlankProject(slides))
+  // Une seule sauvegarde à la fois : deux Ctrl+S rapprochés lançaient deux
+  // écritures concurrentes du même fichier.
+  const savingRef = useRef(false)
+
+  useEffect(() => {
+    onDirtyChange(isDirty)
+  }, [isDirty, onDirtyChange])
   const slidesRef = useRef(slides)
   const numberingRef = useRef(numbering)
   const filePathRef = useRef(filePath)
@@ -60,32 +95,38 @@ export default function TopBar({
   })
 
   const handleSave = useCallback(async () => {
-    // Un bloc de texte en cours d'édition n'a pas encore propagé son contenu :
-    // on le fait perdre le focus, puis on laisse React appliquer les mises à
-    // jour en attente avant de lire les refs.
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur()
-    }
-    await new Promise(resolve => setTimeout(resolve, 0))
-
-    const currentSlides = slidesRef.current
-    const currentNumbering = numberingRef.current
-    const currentFilePath = filePathRef.current
-
-    if (!currentFilePath) {
-      setNameInput(projectNameRef.current ?? 'mon-projet')
-      setNameDialogOpen(true)
-      return
-    }
-
+    if (savingRef.current) return
+    savingRef.current = true
     try {
-      await saveProjectToPath(currentSlides, currentFilePath, currentNumbering)
-      setSavedSlides(currentSlides)
-      setSavedNumbering(currentNumbering)
-      rememberRecent(currentFilePath, projectNameFromPath(currentFilePath))
-    } catch (err) {
-      console.error('[save] erreur:', err)
-      setErrorMessage(`La sauvegarde a échoué.\n\n${err instanceof Error ? err.message : String(err)}`)
+      // Un bloc de texte en cours d'édition n'a pas encore propagé son contenu :
+      // on le fait perdre le focus, puis on laisse React appliquer les mises à
+      // jour en attente avant de lire les refs.
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur()
+      }
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      const currentSlides = slidesRef.current
+      const currentNumbering = numberingRef.current
+      const currentFilePath = filePathRef.current
+
+      if (!currentFilePath) {
+        setNameInput(projectNameRef.current ?? 'mon-projet')
+        setNameDialogOpen(true)
+        return
+      }
+
+      try {
+        await saveProjectToPath(currentSlides, currentFilePath, currentNumbering)
+        setSavedSlides(currentSlides)
+        setSavedNumbering(currentNumbering)
+        rememberRecent(currentFilePath, projectNameFromPath(currentFilePath))
+      } catch (err) {
+        console.error('[save] erreur:', err)
+        setErrorMessage(`La sauvegarde a échoué.\n\n${err instanceof Error ? err.message : String(err)}`)
+      }
+    } finally {
+      savingRef.current = false
     }
   }, [])
 
@@ -100,7 +141,7 @@ export default function TopBar({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleSave])
 
-  const handleOpen = async () => {
+  const openAnotherProject = async () => {
     try {
       const result = await openProject()
       if (!result) return
@@ -120,7 +161,7 @@ export default function TopBar({
     }
   }
 
-  const handleImportPptx = async () => {
+  const importAnotherProject = async () => {
     try {
       const result = await importPowerPoint()
       if (!result) return
@@ -142,7 +183,8 @@ export default function TopBar({
 
   const confirmSaveWithName = async () => {
     const name = nameInput.trim()
-    if (!name) return
+    if (!name || savingRef.current) return
+    savingRef.current = true
     const currentSlides = slidesRef.current
     const currentNumbering = numberingRef.current
     try {
@@ -158,6 +200,8 @@ export default function TopBar({
       console.error('[saveAs] ERREUR:', err)
       setNameDialogOpen(false)
       setErrorMessage(`La sauvegarde a échoué.\n\n${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      savingRef.current = false
     }
   }
 
@@ -167,14 +211,28 @@ export default function TopBar({
     setSavedSlides(null)
     setSavedNumbering(null)
     setFilePath(null)
-    setConfirmNewOpen(false)
     onNew()
   }
 
-  const handleNew = () => {
-    if (isDirty) setConfirmNewOpen(true)
-    else startNewProject()
+  const runReplace = (action: ReplaceAction) => {
+    setPendingReplace(null)
+    if (action === 'new') startNewProject()
+    else if (action === 'open') void openAnotherProject()
+    else void importAnotherProject()
   }
+
+  // Nouveau, Ouvrir et Importer remplacent tous le projet en cours — et ses
+  // médias, ce qu'aucun Ctrl+Z ne rattrape. Seul « Nouveau » demandait une
+  // confirmation : ouvrir un fichier par-dessus un travail non enregistré le
+  // faisait disparaître sans un mot.
+  const requestReplace = (action: ReplaceAction) => {
+    if (hasUnsavedWork) setPendingReplace(action)
+    else runReplace(action)
+  }
+
+  const handleNew = () => requestReplace('new')
+  const handleOpen = () => requestReplace('open')
+  const handleImportPptx = () => requestReplace('import')
 
   return (
     <>
@@ -254,14 +312,14 @@ export default function TopBar({
         />
       )}
 
-      {confirmNewOpen && (
+      {pendingReplace && (
         <Dialog
           title="Modifications non sauvegardées"
-          message="Les modifications en cours seront perdues. Créer un nouveau projet malgré tout ?"
-          onDismiss={() => setConfirmNewOpen(false)}
+          message={REPLACE_MESSAGES[pendingReplace]}
+          onDismiss={() => setPendingReplace(null)}
           actions={[
-            { label: 'Annuler', onClick: () => setConfirmNewOpen(false) },
-            { label: 'Continuer', onClick: startNewProject, variant: 'danger' },
+            { label: 'Annuler', onClick: () => setPendingReplace(null) },
+            { label: 'Continuer', onClick: () => runReplace(pendingReplace), variant: 'danger' },
           ]}
         />
       )}

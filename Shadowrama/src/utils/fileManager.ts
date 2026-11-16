@@ -23,6 +23,12 @@ export interface ProjectDraft {
   filePath: string | null
   slides: Slide[]
   numbering: SlideNumbering
+  /**
+   * Vrai quand le brouillon contient des modifications absentes du `.shma`.
+   * Sans ce drapeau, l'éditeur relancé considérait tout brouillon rattaché à un
+   * fichier comme enregistré, et n'avertissait plus avant de l'écraser.
+   */
+  dirty: boolean
   savedAt: number
 }
 
@@ -55,8 +61,9 @@ export async function saveDraft(
   filePath: string | null,
   slides: Slide[],
   numbering: SlideNumbering,
+  dirty = false,
 ): Promise<boolean> {
-  const draft: StoredDraft = { id: DRAFT_ID, projectName, filePath, slides, numbering, savedAt: Date.now() }
+  const draft: StoredDraft = { id: DRAFT_ID, projectName, filePath, slides, numbering, dirty, savedAt: Date.now() }
   try {
     await withStore(DRAFT_STORE, 'readwrite', s => s.put(draft))
     return true
@@ -104,6 +111,9 @@ function parseDraft(parsed: unknown): ProjectDraft | null {
       filePath: typeof draft.filePath === 'string' ? draft.filePath : null,
       slides: normalizeSlides(draft.slides),
       numbering: normalizeNumbering(draft.numbering),
+      // Brouillon d'une version antérieure, sans le drapeau : dans le doute, on
+      // le tient pour modifié. Un avertissement de trop vaut mieux qu'une perte.
+      dirty: typeof draft.dirty === 'boolean' ? draft.dirty : true,
       savedAt: typeof draft.savedAt === 'number' ? draft.savedAt : Date.now(),
     }
   } catch {
@@ -333,7 +343,7 @@ function serializeManifest(slides: Slide[], numbering: SlideNumbering): string {
 // laissé par un bloc supprimé ou une image remplacée. Le presse-papiers compte
 // comme une référence, sinon couper une image puis enregistrer avant de coller
 // la ferait disparaître.
-function collectUsedMediaKeys(slides: Slide[]): Set<string> {
+export function collectUsedMediaKeys(slides: Slide[]): Set<string> {
   const keys = new Set<string>(clipboardMediaKeys())
   for (const slide of slides) {
     for (const block of slide.blocks) {
@@ -355,7 +365,7 @@ export async function saveProjectAs(
   defaultName: string,
   numbering: SlideNumbering,
 ): Promise<string | null> {
-  return window.fileAPI.saveProjectAs(serializeManifest(slides, numbering), mediaToWrite(slides), defaultName)
+  return window.fileAPI.saveProjectAs(serializeManifest(slides, numbering), await mediaToWrite(slides), defaultName)
 }
 
 export async function saveProjectToPath(
@@ -363,7 +373,7 @@ export async function saveProjectToPath(
   filePath: string,
   numbering: SlideNumbering,
 ): Promise<string> {
-  return window.fileAPI.saveProject(filePath, serializeManifest(slides, numbering), mediaToWrite(slides))
+  return window.fileAPI.saveProject(filePath, serializeManifest(slides, numbering), await mediaToWrite(slides))
 }
 
 export interface OpenedProject {

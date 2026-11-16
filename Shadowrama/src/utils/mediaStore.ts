@@ -2,8 +2,13 @@ import { MEDIA_STORE, withStore } from './idb'
 
 interface MediaEntry {
   blobUrl: string
-  /** Octets bruts de l'image. */
-  bytes: Uint8Array
+  /**
+   * Contenu du média. On garde le Blob et NON les octets : conserver les deux
+   * doublait l'empreinte mémoire de chaque fichier (une vidéo de 300 Mo en
+   * occupait 600), alors que Chromium sait décharger un gros Blob sur disque.
+   * Les octets ne sont relus qu'au moment d'enregistrer le projet.
+   */
+  blob: Blob
   mimeType: string
 }
 
@@ -26,10 +31,11 @@ interface PersistedMedia {
   mimeType: string
 }
 
-function createBlobUrl(bytes: Uint8Array, mimeType: string): string {
+function createEntry(bytes: Uint8Array, mimeType: string): MediaEntry {
   // `slice()` détache la vue de son tampon d'origine : un Blob construit sur une
   // vue partagée resterait solidaire du tampon complet.
-  return URL.createObjectURL(new Blob([bytes.slice()], { type: mimeType }))
+  const blob = new Blob([bytes.slice()], { type: mimeType })
+  return { blobUrl: URL.createObjectURL(blob), blob, mimeType }
 }
 
 /** Décode le format hérité (base64) vers des octets bruts. */
@@ -59,21 +65,21 @@ export async function hydrateMediaStore(): Promise<void> {
     // cours perdrait ses images à la première mise à jour.
     const bytes = entry.bytes ?? (entry.base64 ? base64ToBytes(entry.base64) : undefined)
     if (!bytes) continue
-    store.set(entry.key, {
-      blobUrl: createBlobUrl(bytes, entry.mimeType),
-      bytes,
-      mimeType: entry.mimeType,
-    })
+    store.set(entry.key, createEntry(bytes, entry.mimeType))
   }
 }
 
 export function registerMedia(key: string, bytes: Uint8Array, mimeType: string): string {
-  const blobUrl = createBlobUrl(bytes, mimeType)
-  store.set(key, { blobUrl, bytes, mimeType })
+  // Réenregistrer sous la même clé remplace le média : l'ancienne URL ne doit
+  // pas retenir son Blob en mémoire.
+  const previous = store.get(key)
+  if (previous) URL.revokeObjectURL(previous.blobUrl)
+  const entry = createEntry(bytes, mimeType)
+  store.set(key, entry)
   // Persistance opportuniste : un échec d'écriture IndexedDB ne doit pas
   // empêcher l'insertion de l'image dans la diapo en cours.
   void withStore(MEDIA_STORE, 'readwrite', s => s.put({ key, bytes, mimeType })).catch(() => {})
-  return blobUrl
+  return entry.blobUrl
 }
 
 export function resolveMedia(key: string): string | undefined {
@@ -96,12 +102,31 @@ export function clearMediaStore() {
  * qu'un Ctrl+Z est censé justement empêcher. Le fichier, lui, ne contient bien
  * que ce qui sert : il ne grossit pas.
  */
-export function getAllMediaForSave(usedKeys: Set<string>): { key: string; data: Uint8Array }[] {
+export async function getAllMediaForSave(usedKeys: Set<string>): Promise<{ key: string; data: Uint8Array }[]> {
   const out: { key: string; data: Uint8Array }[] = []
   for (const [key, entry] of store) {
-    if (usedKeys.has(key)) out.push({ key, data: entry.bytes })
+    if (usedKeys.has(key)) out.push({ key, data: new Uint8Array(await entry.blob.arrayBuffer()) })
   }
   return out
+}
+
+/**
+ * Supprime les médias que plus rien ne référence — du cache ET d'IndexedDB.
+ *
+ * À n'appeler qu'au démarrage de l'éditeur, quand l'historique d'annulation est
+ * vide : c'est le seul moment où « non référencé » veut vraiment dire « perdu
+ * pour de bon ». En cours de session, un Ctrl+Z peut encore ramener un bloc
+ * supprimé (voir `getAllMediaForSave`). Sans cette purge, les médias orphelins
+ * s'accumulaient en base de session en session, tant que l'utilisateur
+ * n'ouvrait pas un autre projet.
+ */
+export function pruneMediaStore(usedKeys: Set<string>) {
+  for (const [key, entry] of store) {
+    if (usedKeys.has(key)) continue
+    URL.revokeObjectURL(entry.blobUrl)
+    store.delete(key)
+    void withStore(MEDIA_STORE, 'readwrite', s => s.delete(key)).catch(() => {})
+  }
 }
 
 export function generateMediaKey(originalName: string, kind: 'img' | 'vid' = 'img'): string {
@@ -112,5 +137,9 @@ export function generateMediaKey(originalName: string, kind: 'img' | 'vid' = 'im
   // réapparaissait pas à la réouverture du projet.
   const match = /\.([a-z0-9]+)$/i.exec(originalName)
   const ext = match ? match[1].toLowerCase() : (kind === 'vid' ? 'mp4' : 'png')
-  return `media/${kind}-${Date.now()}-${Math.floor(Math.random() * 1000)}.${ext}`
+  // Identifiant aléatoire de 122 bits : `Date.now()` suivi d'un nombre entre 0
+  // et 999 pouvait donner deux fois la même clé à deux fichiers importés dans la
+  // même milliseconde (sélection multiple d'un carrousel) — le second écrasait
+  // alors le premier.
+  return `media/${kind}-${crypto.randomUUID()}.${ext}`
 }

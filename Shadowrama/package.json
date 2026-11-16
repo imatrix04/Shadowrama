@@ -11,9 +11,9 @@
     "preview": "vite preview",
     "dist": "npm run build && electron-builder",
     "release": "npm run changelog && dotenv -- electron-builder --publish always",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "check": "tsc -b && eslint . && vitest run"
+    "test": "node scripts/vitest.mjs run",
+    "test:watch": "node scripts/vitest.mjs",
+    "check": "tsc -b && eslint . && node scripts/vitest.mjs run"
   },
   "build": {
     "appId": "com.shadowrama.desktop",

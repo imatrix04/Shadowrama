@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { BLOCKS_CONFIG } from '../blocks'
 import type { BlockData, MotionPhase, Slide, SlideNumbering, SlideBackground, SlideTransitionSettings } from '../types'
 import { useEditorHistory } from '../hooks/useEditorHistory'
-import { loadDraft, saveDraft } from '../utils/fileManager'
+import { collectUsedMediaKeys, loadDraft, saveDraft } from '../utils/fileManager'
 import type { ProjectDraft } from '../utils/fileManager'
-import { hydrateMediaStore } from '../utils/mediaStore'
+import { hydrateMediaStore, pruneMediaStore } from '../utils/mediaStore'
 import { readClipboard, writeClipboard } from '../utils/clipboard'
 import { nextId } from '../utils/ids'
 import { DEFAULT_NUMBERING } from '../utils/numbering'
@@ -36,7 +36,12 @@ export default function Editor() {
   useEffect(() => {
     let cancelled = false
     Promise.all([loadDraft(), hydrateMediaStore()])
-      .then(([draft]) => { if (!cancelled) setBoot({ draft }) })
+      .then(([draft]) => {
+        // L'historique est vide à l'amorçage : un média que le brouillon ne
+        // référence plus est définitivement inutile, on libère sa place.
+        pruneMediaStore(collectUsedMediaKeys(draft?.slides ?? []))
+        if (!cancelled) setBoot({ draft })
+      })
       // Un stockage inaccessible ne doit pas bloquer l'éditeur sur son écran de
       // chargement : on démarre alors sur un projet vierge.
       .catch(() => { if (!cancelled) setBoot({ draft: null }) })
@@ -47,9 +52,11 @@ export default function Editor() {
   return <EditorView initialDraft={boot.draft} />
 }
 
+// Couleurs du thème (clair ou sombre), et non des valeurs figées : l'écran de
+// chargement et le fond de l'éditeur restaient sombres en thème clair.
 const BOOT_STYLE: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  height: '100vh', backgroundColor: '#1a1a2e', color: '#fff', opacity: 0.6,
+  height: '100vh', backgroundColor: 'var(--editor-bg)', color: 'var(--editor-text-muted)',
 }
 
 function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
@@ -62,6 +69,10 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
   // L'autosauvegarde peut échouer (quota du navigateur saturé) : on le signale
   // dans la barre plutôt que de laisser croire que tout est enregistré.
   const [draftFailed, setDraftFailed] = useState(false)
+  // Le projet diffère-t-il de son fichier ? Calculé par la barre du haut, qui
+  // connaît le dernier état enregistré, et recopié dans le brouillon pour que
+  // l'information survive à un redémarrage.
+  const [dirty, setDirty] = useState(initialDraft?.dirty ?? true)
   const { ultra, toggleUltra } = useUltraMode()
   // Demande d'aperçu d'une séquence. `nonce` permet de rejouer la même phase
   // plusieurs fois de suite : sans lui, deux clics identiques ne changeraient
@@ -97,7 +108,7 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
     const timer = setTimeout(() => {
       // L'écriture est asynchrone (IndexedDB) : une autosauvegarde encore en vol
       // au démontage ne doit plus toucher à l'état.
-      void saveDraft(projectName, filePath, slides, numbering).then(ok => {
+      void saveDraft(projectName, filePath, slides, numbering, dirty).then(ok => {
         if (!cancelled) setDraftFailed(!ok)
       })
     }, AUTOSAVE_DELAY_MS)
@@ -105,7 +116,7 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [slides, numbering, projectName, filePath])
+  }, [slides, numbering, projectName, filePath, dirty])
 
   // ── Slides
   const addSlide = () => {
@@ -363,7 +374,7 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
 
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#1a1a2e', color: '#fff' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--editor-bg)', color: 'var(--editor-text)' }}>
       <TopBar
         slides={slides}
         numbering={numbering}
@@ -384,6 +395,8 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
         canUndo={canUndo}
         canRedo={canRedo}
         draftFailed={draftFailed}
+        initialDirty={initialDraft?.dirty ?? true}
+        onDirtyChange={setDirty}
         ultra={ultra}
         onToggleUltra={toggleUltra}
         presenting={presenting}

@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, ipcMain, globalShortcut, shell } from 'electr
 import { autoUpdater } from 'electron-updater'
 import log from 'electron-log'
 import { join } from 'path'
+import { pathToFileURL } from 'url'
 import './fileHandlers'
 import { secureWebviews } from './webviewSecurity'
 import { openUpdateDialog } from './update-window/updateWindow'
@@ -54,9 +55,24 @@ function createWindow() {
  * externe part donc dans le navigateur de l'utilisateur, jamais ici.
  */
 function hardenNavigation(win: BrowserWindow) {
+  // Seule la page de l'application est « interne » — pas n'importe quel
+  // `file://` : un autre fichier HTML local chargé ici hériterait du preload, et
+  // donc de l'accès au système de fichiers. Le routeur fonctionne par fragment
+  // (`#/editor`), on compare donc l'adresse sans son fragment ni sa requête.
+  // Windows ne distingue pas la casse des chemins (ni celle de la lettre de
+  // lecteur) : la comparaison non plus.
+  const fold = (href: string) => (process.platform === 'win32' ? href.toLowerCase() : href)
+  const appUrl = fold(pathToFileURL(join(__dirname, '../dist/index.html')).href)
   const isInternal = (url: string) => {
-    if (url.startsWith('file://')) return true
-    return process.env.NODE_ENV === 'development' && url.startsWith('http://localhost:5173')
+    if (process.env.NODE_ENV === 'development') return url.startsWith('http://localhost:5173')
+    try {
+      const target = new URL(url)
+      target.hash = ''
+      target.search = ''
+      return fold(target.href) === appUrl
+    } catch {
+      return false
+    }
   }
 
   win.webContents.on('will-navigate', (event, url) => {
