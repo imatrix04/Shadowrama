@@ -2,6 +2,54 @@
   "_comment": "Source unique des notes de version. Alimente (1) l'écran « Nouveautés » embarqué dans l'application, (2) le corps de la release GitHub — donc les notes affichées AVANT la mise à jour — et (3) la section Changelog du README. Régénérer avec : npm run changelog. Les versions sont listées de la plus récente à la plus ancienne.",
   "releases": [
     {
+      "version": "1.0.0",
+      "date": "2026-11-17",
+      "summary": "Shadowrama 1.0 : export PowerPoint, nouvelle interface et nouveaux thèmes, sélecteur de couleurs complet, outils d'alignement.",
+      "highlights": [
+        {
+          "title": "Export PowerPoint",
+          "body": "Exportez votre présentation en fichier .pptx depuis la barre du haut, pour l'ouvrir dans PowerPoint ou Google Slides. Textes, images, formes, fonds et vidéos sont convertis ; ce qui ne peut pas être reproduit fidèlement (effets, pages web…) est capturé en image."
+        },
+        {
+          "title": "Nouvelle interface et nouveaux thèmes",
+          "body": "L'éditeur a été entièrement repensé : barre du haut, panneaux latéraux, menus et fenêtres plus sobres et plus professionnels, avec une interface plus fluide. Choisissez parmi trois palettes dans Paramètres : Nuit encre, Graphite néon et Chaud / crème, en thème clair comme sombre."
+        },
+        {
+          "title": "Sélecteur de couleurs",
+          "body": "Un nouveau sélecteur de couleurs remplace les anciens champs : palette harmonisée avec le thème, couleurs du projet, favoris enregistrés d'un projet à l'autre et saisie précise des valeurs."
+        },
+        {
+          "title": "Outils d'alignement",
+          "body": "Alignez, centrez et répartissez vos blocs depuis un nouveau panneau, sur la sélection ou sur la diapositive. Au glissé, les blocs s'aimantent aux bords et aux centres des autres (Alt pour désactiver). Fonctionnalité bêta, à activer dans Paramètres → Fonctionnalités."
+        }
+      ],
+      "added": [
+        "Export de la présentation au format PowerPoint (.pptx), avec choix de l'emplacement du fichier.",
+        "Les éléments non convertibles en objets PowerPoint (effets, pages web) sont exportés sous forme d'image.",
+        "Trois palettes de couleurs au choix dans Paramètres : Nuit encre, Graphite néon et Chaud / crème.",
+        "Nouveau fond d'écran low-poly, adapté au thème clair et au thème sombre.",
+        "Nouveau sélecteur de couleurs avec couleurs du projet et favoris conservés d'un projet à l'autre.",
+        "Panneau d'alignement : aligner à gauche, à droite, en haut, en bas, centrer, répartir horizontalement ou verticalement, sur la sélection ou sur la diapositive.",
+        "Magnétisme au glissé : les blocs s'aimantent aux bords et aux centres des autres blocs, Alt pour placer sans magnétisme.",
+        "Fonctionnalités bêta activables dans Paramètres → Fonctionnalités (outils d'alignement).",
+        "Nouveau menu déroulant réutilisable dans la barre du haut."
+      ],
+      "changed": [
+        "Interface de l'éditeur entièrement refondue : barre du haut, panneaux, menu contextuel, tiroirs, fenêtres Nouveautés et bilan d'import, listes déroulantes, interrupteurs et pages de Paramètres.",
+        "Les panneaux Arrière-plan, Numérotation et Effets reprennent les mêmes contrôles pour plus de cohérence.",
+        "Les nouvelles formes sont créées avec une couleur de remplissage et de bordure adaptée au fond de la diapositive.",
+        "Meilleure lisibilité automatique du texte selon le fond (calcul du contraste revu).",
+        "Le code d'import PowerPoint a été réorganisé en modules plus petits, sans changement de comportement.",
+        "Les fichiers importés (images, vidéos) sont conservés sous forme de Blob : une vidéo de 300 Mo n'occupe plus deux fois sa taille en mémoire, et les gros projets se chargent plus légèrement.",
+        "Les médias qui ne sont plus utilisés sont nettoyés au démarrage de l'éditeur au lieu de s'accumuler d'une séance à l'autre."
+      ],
+      "fixed": [
+        "deux fichiers importés dans la même milliseconde (sélection multiple d'un carrousel) pouvaient recevoir la même clé : le second écrasait le premier",
+        "remplacer un média sous la même clé gardait l'ancienne version en mémoire",
+        "couleurs par défaut des formes parfois peu visibles selon le fond ou le thème"
+      ]
+    },
+    {
       "version": "0.20.0",
       "date": "2026-10-12",
       "summary": "Import de diaporamas PowerPoint, nouveaux blocs Vidéo et Page web, numérotation automatique des diapositives.",
