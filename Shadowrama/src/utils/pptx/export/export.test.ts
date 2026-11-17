@@ -140,7 +140,7 @@ describe('planExport', () => {
     })
 
     it('hors mode Ultra, dégradé, image et particules sont inertes : fond par défaut', () => {
-      const fallback = { kind: 'solid', color: { hex: '2D2D2D', alpha: 1 } }
+      const fallback = { kind: 'solid', color: { hex: 'FAF6EC', alpha: 1 } }
       expect(bg({ type: 'gradient', gradient: { from: '#000', to: '#fff', angle: 0 } }, false)).toEqual(fallback)
       expect(bg({ type: 'image', image: 'media/img-1.png' }, false)).toEqual(fallback)
     })

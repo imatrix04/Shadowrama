@@ -10,6 +10,8 @@ import type { ImportReport } from '../../utils/pptx/import'
 import ImportReportDialog from '../ui/ImportReportDialog'
 import Dialog from '../ui/Dialog'
 import Icon from '../ui/Icon'
+import DropdownMenu from '../ui/DropdownMenu'
+import type { MenuItem } from '../ui/DropdownMenu'
 import PresentationMode from './PresentationMode'
 import PptxExport from './PptxExport'
 import type { ExportReport } from '../../utils/pptx/export/write'
@@ -265,17 +267,37 @@ export default function TopBar({
   const handleOpen = () => requestReplace('open')
   const handleImportPptx = () => requestReplace('import')
 
+  // Menu « Fichier » : les cinq commandes de fichier, au lieu de cinq boutons.
+  // Les raccourcis affichés sont uniquement ceux qui existent réellement.
+  const fileItems: MenuItem[] = [
+    { label: 'Nouveau', icon: 'new', onSelect: handleNew },
+    { label: 'Ouvrir…', icon: 'open', onSelect: handleOpen },
+    { label: 'Importer un PowerPoint…', icon: 'slides', onSelect: handleImportPptx },
+    { label: 'Enregistrer', icon: 'save', shortcut: 'Ctrl+S', onSelect: handleSave, separatorBefore: true },
+    { label: 'Exporter en PowerPoint…', icon: 'export', onSelect: handleExportPptx },
+  ]
+
   return (
     <>
       <div className={styles.topBar}>
         <div className={styles.left}>
           <span className={styles.logo}>Shadowrama</span>
-          {projectName && (
-            <span className={styles.projectName}>
-              {projectName}
-              {isDirty && <span className={styles.dirtyDot} title="Non sauvegardé"> ●</span>}
-            </span>
-          )}
+          <span className={styles.slash} aria-hidden="true">/</span>
+          <span className={styles.projectName} title={projectName ?? undefined}>
+            {projectName ?? 'Sans titre'}
+          </span>
+          {hasUnsavedWork ? (
+            <button
+              className={styles.status}
+              onClick={handleSave}
+              title="Enregistrer (Ctrl+S)"
+            >
+              <span className={styles.dirtyDot} title="Non sauvegardé" />
+              Non enregistré
+            </button>
+          ) : filePath ? (
+            <span className={styles.statusSaved}>Enregistré</span>
+          ) : null}
           {draftFailed && (
             <span
               className={styles.warning}
@@ -284,52 +306,36 @@ export default function TopBar({
               ⚠ Brouillon non sauvegardé
             </span>
           )}
+
+          <span className={styles.divider} aria-hidden="true" />
+          <div className={styles.history}>
+            <button className={styles.ghost} onClick={onUndo} disabled={!canUndo} title="Annuler (Ctrl+Z)" aria-label="Annuler (Ctrl+Z)">
+              <Icon name="undo" />
+            </button>
+            <button className={styles.ghost} onClick={onRedo} disabled={!canRedo} title="Rétablir (Ctrl+Y)" aria-label="Rétablir (Ctrl+Y)">
+              <Icon name="redo" />
+            </button>
+          </div>
         </div>
+
         <div className={styles.actions}>
-          <button className={styles.btn} onClick={onUndo} disabled={!canUndo} title="Annuler (Ctrl+Z)">
-            <Icon name="undo" />
-          </button>
-          <button className={styles.btn} onClick={onRedo} disabled={!canRedo} title="Rétablir (Ctrl+Y)">
-            <Icon name="redo" />
-          </button>
-          <button className={styles.btn} onClick={handleNew}>
-            <Icon name="new" /> Nouveau
-          </button>
-          <button className={styles.btn} onClick={handleSave} title="Sauvegarder (Ctrl+S)">
-            <Icon name="save" /> Sauvegarder
-          </button>
-          <button className={styles.btn} onClick={handleOpen}>
-            <Icon name="open" /> Ouvrir
-          </button>
-          <button
-            className={styles.btn}
-            onClick={handleImportPptx}
-            title="Importer un diaporama PowerPoint (.pptx)"
-          >
-            <Icon name="open" /> Importer
-          </button>
-          <button
-            className={styles.btn}
-            onClick={handleExportPptx}
-            title="Exporter en PowerPoint (.pptx)"
-          >
-            <Icon name="export" /> Exporter
-          </button>
+          <DropdownMenu label="Fichier" items={fileItems} />
           <button
             className={`${styles.btn} ${ultra ? styles.btnUltraOn : styles.btnUltra}`}
             onClick={onToggleUltra}
+            aria-pressed={ultra}
             title={ultra ? 'Quitter le mode Ultra Design' : 'Activer le mode Ultra Design : effets et séquences avancées'}
           >
             <Icon name="ultra" /> Ultra Design
           </button>
-          <button className={`${styles.btn} ${styles.btnAccent}`}
-            onClick={() => onPresentingChange(true)}>
+          <button className={`${styles.btn} ${styles.btnAccent}`} onClick={() => onPresentingChange(true)}>
             <Icon name="play" /> Présenter
           </button>
           <button
-            className={styles.btn}
+            className={styles.ghost}
             onClick={() => navigate('/settings')}
             title="Paramètres"
+            aria-label="Paramètres"
           >
             <Icon name="settings" />
           </button>

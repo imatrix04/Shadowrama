@@ -18,7 +18,7 @@ export function luminance(color: string | undefined): number | null {
 /**
  * Luminance du fond réellement visible. Hors Ultra, dégradé et image sont
  * inertes (voir getSlideBackgroundStyle) : on retombe alors sur le fond par
- * défaut du canvas, qui suit le thème de l'app.
+ * défaut du canvas, blanc crème (--slide-bg).
  */
 function backgroundLuminance(background: SlideBackground | undefined, ultra: boolean): number | null {
   if (background?.type === 'color' && background.color) return luminance(background.color)
@@ -29,7 +29,7 @@ function backgroundLuminance(background: SlideBackground | undefined, ultra: boo
   }
   // Image : contenu inconnu, on ne devine pas.
   if (ultra && background?.type === 'image' && background.image) return null
-  return luminance(getComputedStyle(document.documentElement).getPropertyValue('--editor-bg-canvas'))
+  return luminance(getComputedStyle(document.documentElement).getPropertyValue('--slide-bg'))
 }
 
 /** Noir sur fond clair, blanc sur fond sombre (ou si le fond est indéterminé). */

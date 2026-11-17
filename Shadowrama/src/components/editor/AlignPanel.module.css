@@ -1,0 +1,42 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-bottom: 0.4rem;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-md);
+  color: var(--editor-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast),
+    transform var(--t-fast) var(--ease-out);
+}
+
+.btn:hover:not(:disabled) {
+  background-color: var(--editor-btn-bg-hover);
+  border-color: var(--accent);
+  color: var(--editor-text);
+}
+
+.btn:active:not(:disabled) { transform: scale(0.94); }
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

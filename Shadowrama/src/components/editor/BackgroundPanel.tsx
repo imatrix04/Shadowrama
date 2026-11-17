@@ -10,6 +10,7 @@ import {
 } from '../../ultra/particles'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
 import styles from './PanelControls.module.css'
+import { Section, Segmented, SwitchRow } from './PanelWidgets'
 
 interface Props {
   slideIndex: number
@@ -20,12 +21,40 @@ interface Props {
 }
 
 const TYPE_OPTIONS: { value: SlideBackground['type']; label: string; ultraOnly: boolean }[] = [
-  { value: 'color', label: 'Couleur unie', ultraOnly: false },
+  { value: 'color', label: 'Unie', ultraOnly: false },
   { value: 'gradient', label: 'Dégradé', ultraOnly: true },
   { value: 'image', label: 'Image', ultraOnly: true },
 ]
 
 const MAX_COLORS = 4
+
+function Slider({ label, value, min, max, step, display, onChange }: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  display: string
+  onChange: (v: number) => void
+}) {
+  return (
+    <div className={styles.fieldStacked}>
+      <span className={styles.fieldLabel}>{label}</span>
+      <div className={styles.rangeGroup}>
+        <input
+          type="range"
+          className={styles.range}
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={e => onChange(parseFloat(e.target.value))}
+        />
+        <span className={styles.rangeValue}>{display}</span>
+      </div>
+    </div>
+  )
+}
 
 export default function BackgroundPanel({ slideIndex, current, ultra, onChange }: Props) {
   const hiddenUltra = !ultra && current && current.type !== 'color'
@@ -36,7 +65,7 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
 
   const setType = (type: SlideBackground['type']) => {
     if (type === 'color') {
-      onChange({ type: 'color', color: current?.color ?? '#1a1a2e', particles: current?.particles })
+      onChange({ type: 'color', color: current?.color ?? '#faf6ec', particles: current?.particles })
     } else if (type === 'gradient') {
       onChange({
         type: 'gradient',
@@ -103,19 +132,13 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
         </p>
       )}
 
-      <div className={styles.group}>
-        <div className={styles.presetList}>
-          {TYPE_OPTIONS.filter(t => !t.ultraOnly || ultra || current?.type === t.value).map(t => (
-            <button
-              key={t.value}
-              className={`${styles.preset} ${current?.type === t.value ? styles.presetActive : ''}`}
-              onClick={() => setType(t.value)}
-            >
-              <span className={styles.presetName}>{t.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <Segmented
+        options={TYPE_OPTIONS
+          .filter(t => !t.ultraOnly || ultra || current?.type === t.value)
+          .map(t => ({ value: t.value, label: t.label }))}
+        value={current?.type}
+        onChange={setType}
+      />
 
       {current?.type === 'color' && (
         <div className={styles.group}>
@@ -124,7 +147,7 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
             <input
               type="color"
               className={styles.color}
-              value={current.color ?? '#1a1a2e'}
+              value={current.color ?? '#faf6ec'}
               onChange={e => onChange({ ...current, color: e.target.value })}
             />
           </div>
@@ -133,7 +156,6 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
 
       {current?.type === 'gradient' && (
         <div className={styles.group}>
-          <p className={styles.groupLabel}>Dégradé</p>
           <div className={styles.presetList}>
             {GRADIENT_PRESETS.map(preset => {
               const active = current.gradient?.from === preset.from && current.gradient?.to === preset.to
@@ -168,65 +190,51 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
               onChange={e => onChange({ ...current, gradient: { ...current.gradient!, to: e.target.value } })}
             />
           </div>
-          <div className={styles.field}>
-            <span className={styles.fieldLabel}>Angle</span>
-            <input
-              type="range"
-              className={styles.range}
-              min={0} max={360} step={15}
-              value={current.gradient?.angle ?? DEFAULT_GRADIENT.angle}
-              onChange={e => onChange({ ...current, gradient: { ...current.gradient!, angle: parseInt(e.target.value, 10) } })}
-            />
-          </div>
-
-          <button
-            className={`${styles.toggle} ${current.animated ? styles.toggleOn : ''}`}
-            onClick={() => onChange({ ...current, animated: !current.animated })}
-          >
-            {current.animated ? '✓ Dégradé animé' : 'Animer le dégradé'}
-          </button>
+          <Slider
+            label="Angle" min={0} max={360} step={15}
+            value={current.gradient?.angle ?? DEFAULT_GRADIENT.angle}
+            display={`${current.gradient?.angle ?? DEFAULT_GRADIENT.angle}°`}
+            onChange={v => onChange({ ...current, gradient: { ...current.gradient!, angle: v } })}
+          />
+          <SwitchRow
+            label="Dégradé animé"
+            checked={!!current.animated}
+            onChange={animated => onChange({ ...current, animated })}
+          />
         </div>
       )}
 
       {current?.type === 'image' && (
         <div className={styles.group}>
-          <p className={styles.groupLabel}>Image</p>
-          {previewSrc && (
-            <img
-              src={previewSrc}
-              style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '6px', marginBottom: '0.5rem' }}
-              alt=""
+          {previewSrc && <img src={previewSrc} className={styles.preview} alt="" />}
+          <label className={styles.dropzone}>
+            {previewSrc ? "Changer l'image" : 'Choisir une image…'}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async e => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const bytes = new Uint8Array(await file.arrayBuffer())
+                const key = generateMediaKey(file.name)
+                registerMedia(key, bytes, file.type)
+                onChange({ ...current, image: key })
+              }}
             />
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            className={styles.input}
-            style={{ width: '100%', maxWidth: 'none' }}
-            onChange={async e => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              const bytes = new Uint8Array(await file.arrayBuffer())
-              const key = generateMediaKey(file.name)
-              registerMedia(key, bytes, file.type)
-              onChange({ ...current, image: key })
-            }}
+          </label>
+          <Segmented
+            options={[
+              { value: 'cover' as const, label: 'Recouvrante' },
+              { value: 'contain' as const, label: 'Ajustée' },
+            ]}
+            value={current.imageFit ?? 'cover'}
+            onChange={imageFit => onChange({ ...current, imageFit })}
           />
-          <div className={styles.field} style={{ marginTop: '0.5rem' }}>
-            <span className={styles.fieldLabel}>Ajustement</span>
-            <button
-              className={styles.toggle}
-              onClick={() => onChange({ ...current, imageFit: current.imageFit === 'contain' ? 'cover' : 'contain' })}
-            >
-              {current.imageFit === 'contain' ? 'Ajustée' : 'Recouvrante'}
-            </button>
-          </div>
         </div>
       )}
 
       {current && current.type !== 'color' && (
-        <div className={styles.group}>
-          <p className={styles.groupLabel}>Superposition</p>
+        <Section title="Superposition">
           <p className={styles.subtle}>
             Assombrit ou éclaircit le fond pour garder le texte lisible.
           </p>
@@ -239,17 +247,13 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
               onChange={e => setOverlay({ color: e.target.value })}
             />
           </div>
-          <div className={styles.field}>
-            <span className={styles.fieldLabel}>Intensité</span>
-            <input
-              type="range"
-              className={styles.range}
-              min={0} max={0.9} step={0.05}
-              value={current.overlay?.opacity ?? 0}
-              onChange={e => setOverlay({ opacity: parseFloat(e.target.value) })}
-            />
-          </div>
-        </div>
+          <Slider
+            label="Intensité" min={0} max={0.9} step={0.05}
+            value={current.overlay?.opacity ?? 0}
+            display={`${Math.round((current.overlay?.opacity ?? 0) * 100)}%`}
+            onChange={v => setOverlay({ opacity: v })}
+          />
+        </Section>
       )}
 
       {/* ── Particules ──────────────────────────────────────────────────── */}
@@ -265,19 +269,17 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
             </p>
           )}
 
-          <button
-            className={`${styles.toggle} ${particlesOn ? styles.toggleOn : ''}`}
-            onClick={() => setParticles({ enabled: !particlesOn })}
-          >
-            {particlesOn ? '✓ Particules actives' : 'Activer les particules'}
-          </button>
+          <SwitchRow
+            label="Activer les particules"
+            checked={particlesOn}
+            onChange={enabled => setParticles({ enabled })}
+          />
         </div>
       )}
 
       {ultra && particlesOn && (
         <>
-          <div className={styles.group}>
-            <p className={styles.groupLabel}>Ambiances</p>
+          <Section title="Ambiances" defaultOpen>
             <div className={styles.presetList}>
               {PARTICLE_PRESETS.map(preset => (
                 <button
@@ -296,144 +298,46 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
             <p className={styles.subtle}>
               Une ambiance remplace tous les réglages ci-dessous — à ajuster ensuite librement.
             </p>
-          </div>
+          </Section>
 
-          <div className={styles.group}>
-            <p className={styles.groupLabel}>Style</p>
-            <div className={styles.presetList}>
-              {PARTICLE_SHAPES.map(shape => (
-                <button
-                  key={shape.value}
-                  className={`${styles.preset} ${p.shape === shape.value ? styles.presetActive : ''}`}
-                  onClick={() => setParticles({ shape: shape.value })}
-                >
-                  <span className={styles.presetName}>{shape.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.group}>
-            <p className={styles.groupLabel}>Animation</p>
-            <div className={styles.presetList}>
-              {PARTICLE_MOTIONS.map(motion => (
-                <button
-                  key={motion.value}
-                  className={`${styles.preset} ${p.motion === motion.value ? styles.presetActive : ''}`}
-                  onClick={() => setParticles({ motion: motion.value })}
-                >
-                  <span className={styles.presetName}>{motion.label}</span>
-                </button>
-              ))}
-            </div>
-
+          <Section title="Style et animation" defaultOpen>
+            <Segmented
+              options={PARTICLE_SHAPES.map(s => ({ value: s.value, label: s.label }))}
+              value={p.shape}
+              onChange={shape => setParticles({ shape })}
+            />
+            <Segmented
+              options={PARTICLE_MOTIONS.map(m => ({ value: m.value, label: m.label }))}
+              value={p.motion}
+              onChange={motion => setParticles({ motion })}
+            />
             {p.motion === 'stream' && (
-              <div className={styles.fieldStacked}>
-                <span className={styles.fieldLabel}>Direction du flux</span>
-                <div className={styles.rangeGroup}>
-                  <input
-                    type="range"
-                    className={styles.range}
-                    min={0} max={360} step={5}
-                    value={p.direction}
-                    onChange={e => setParticles({ direction: parseInt(e.target.value, 10) })}
-                  />
-                  <span className={styles.rangeValue}>{p.direction}°</span>
-                </div>
-              </div>
+              <Slider
+                label="Direction du flux" min={0} max={360} step={5}
+                value={p.direction} display={`${p.direction}°`}
+                onChange={v => setParticles({ direction: v })}
+              />
             )}
-          </div>
+          </Section>
 
-          <div className={styles.group}>
-            <p className={styles.groupLabel}>Réglages</p>
+          <Section title="Réglages">
+            <Slider label="Quantité" min={5} max={400} step={5} value={p.count} display={`${p.count}`}
+              onChange={v => setParticles({ count: v })} />
+            <Slider label="Vitesse" min={0.1} max={3} step={0.1} value={p.speed} display={`${p.speed.toFixed(1)}×`}
+              onChange={v => setParticles({ speed: v })} />
+            <Slider label="Taille" min={1} max={24} step={0.5} value={p.size} display={`${p.size}px`}
+              onChange={v => setParticles({ size: v })} />
+            <Slider label="Variation de taille" min={0} max={1} step={0.05} value={p.sizeVariation}
+              display={`${Math.round(p.sizeVariation * 100)}%`}
+              onChange={v => setParticles({ sizeVariation: v })} />
+            <Slider label="Opacité" min={0.05} max={1} step={0.05} value={p.opacity}
+              display={`${Math.round(p.opacity * 100)}%`}
+              onChange={v => setParticles({ opacity: v })} />
+            <Slider label="Halo" min={0} max={30} step={1} value={p.glow} display={`${p.glow}px`}
+              onChange={v => setParticles({ glow: v })} />
+          </Section>
 
-            <div className={styles.fieldStacked}>
-              <span className={styles.fieldLabel}>Quantité</span>
-              <div className={styles.rangeGroup}>
-                <input
-                  type="range"
-                  className={styles.range}
-                  min={5} max={400} step={5}
-                  value={p.count}
-                  onChange={e => setParticles({ count: parseInt(e.target.value, 10) })}
-                />
-                <span className={styles.rangeValue}>{p.count}</span>
-              </div>
-            </div>
-
-            <div className={styles.fieldStacked}>
-              <span className={styles.fieldLabel}>Vitesse</span>
-              <div className={styles.rangeGroup}>
-                <input
-                  type="range"
-                  className={styles.range}
-                  min={0.1} max={3} step={0.1}
-                  value={p.speed}
-                  onChange={e => setParticles({ speed: parseFloat(e.target.value) })}
-                />
-                <span className={styles.rangeValue}>{p.speed.toFixed(1)}×</span>
-              </div>
-            </div>
-
-            <div className={styles.fieldStacked}>
-              <span className={styles.fieldLabel}>Taille</span>
-              <div className={styles.rangeGroup}>
-                <input
-                  type="range"
-                  className={styles.range}
-                  min={1} max={24} step={0.5}
-                  value={p.size}
-                  onChange={e => setParticles({ size: parseFloat(e.target.value) })}
-                />
-                <span className={styles.rangeValue}>{p.size}px</span>
-              </div>
-            </div>
-
-            <div className={styles.fieldStacked}>
-              <span className={styles.fieldLabel}>Variation de taille</span>
-              <div className={styles.rangeGroup}>
-                <input
-                  type="range"
-                  className={styles.range}
-                  min={0} max={1} step={0.05}
-                  value={p.sizeVariation}
-                  onChange={e => setParticles({ sizeVariation: parseFloat(e.target.value) })}
-                />
-                <span className={styles.rangeValue}>{Math.round(p.sizeVariation * 100)}%</span>
-              </div>
-            </div>
-
-            <div className={styles.fieldStacked}>
-              <span className={styles.fieldLabel}>Opacité</span>
-              <div className={styles.rangeGroup}>
-                <input
-                  type="range"
-                  className={styles.range}
-                  min={0.05} max={1} step={0.05}
-                  value={p.opacity}
-                  onChange={e => setParticles({ opacity: parseFloat(e.target.value) })}
-                />
-                <span className={styles.rangeValue}>{Math.round(p.opacity * 100)}%</span>
-              </div>
-            </div>
-
-            <div className={styles.fieldStacked}>
-              <span className={styles.fieldLabel}>Halo</span>
-              <div className={styles.rangeGroup}>
-                <input
-                  type="range"
-                  className={styles.range}
-                  min={0} max={30} step={1}
-                  value={p.glow}
-                  onChange={e => setParticles({ glow: parseInt(e.target.value, 10) })}
-                />
-                <span className={styles.rangeValue}>{p.glow}px</span>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.group}>
-            <p className={styles.groupLabel}>Couleurs</p>
+          <Section title="Couleurs et rendu">
             {p.colors.map((color, i) => (
               <div className={styles.field} key={i}>
                 <span className={styles.fieldLabel}>Couleur {i + 1}</span>
@@ -461,73 +365,31 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
                 ＋ Ajouter une couleur
               </button>
             )}
-          </div>
+            <div style={{ marginTop: '0.5rem' }}>
+              <SwitchRow label="Fusion additive" checked={p.additive} onChange={additive => setParticles({ additive })} />
+              <SwitchRow label="Scintillement" checked={p.twinkle} onChange={twinkle => setParticles({ twinkle })} />
+              <SwitchRow label="Rotation des formes" checked={p.rotate} onChange={rotate => setParticles({ rotate })} />
+            </div>
+          </Section>
 
-          <div className={styles.group}>
-            <p className={styles.groupLabel}>Rendu</p>
-            <button
-              className={`${styles.toggle} ${p.additive ? styles.toggleOn : ''}`}
-              onClick={() => setParticles({ additive: !p.additive })}
-            >
-              {p.additive ? '✓ Fusion additive' : 'Fusion additive'}
-            </button>
-            <button
-              className={`${styles.toggle} ${p.twinkle ? styles.toggleOn : ''}`}
-              style={{ marginTop: '0.35rem' }}
-              onClick={() => setParticles({ twinkle: !p.twinkle })}
-            >
-              {p.twinkle ? '✓ Scintillement' : 'Scintillement'}
-            </button>
-            <button
-              className={`${styles.toggle} ${p.rotate ? styles.toggleOn : ''}`}
-              style={{ marginTop: '0.35rem' }}
-              onClick={() => setParticles({ rotate: !p.rotate })}
-            >
-              {p.rotate ? '✓ Rotation des formes' : 'Rotation des formes'}
-            </button>
-          </div>
-
-          <div className={styles.group}>
-            <p className={styles.groupLabel}>Liens</p>
+          <Section title="Liens">
             <p className={styles.subtle}>
               Relie les particules proches par un trait — l'effet « constellation ».
               Au-delà de 220 particules, les liens sont ignorés pour préserver la fluidité.
             </p>
-            <button
-              className={`${styles.toggle} ${p.links.enabled ? styles.toggleOn : ''}`}
-              onClick={() => setParticles({ links: { ...p.links, enabled: !p.links.enabled } })}
-            >
-              {p.links.enabled ? '✓ Liens actifs' : 'Activer les liens'}
-            </button>
-
+            <SwitchRow
+              label="Activer les liens"
+              checked={p.links.enabled}
+              onChange={enabled => setParticles({ links: { ...p.links, enabled } })}
+            />
             {p.links.enabled && (
               <>
-                <div className={styles.fieldStacked} style={{ marginTop: '0.5rem' }}>
-                  <span className={styles.fieldLabel}>Portée</span>
-                  <div className={styles.rangeGroup}>
-                    <input
-                      type="range"
-                      className={styles.range}
-                      min={30} max={300} step={10}
-                      value={p.links.distance}
-                      onChange={e => setParticles({ links: { ...p.links, distance: parseInt(e.target.value, 10) } })}
-                    />
-                    <span className={styles.rangeValue}>{p.links.distance}px</span>
-                  </div>
-                </div>
-                <div className={styles.fieldStacked}>
-                  <span className={styles.fieldLabel}>Épaisseur</span>
-                  <div className={styles.rangeGroup}>
-                    <input
-                      type="range"
-                      className={styles.range}
-                      min={0.5} max={4} step={0.5}
-                      value={p.links.width}
-                      onChange={e => setParticles({ links: { ...p.links, width: parseFloat(e.target.value) } })}
-                    />
-                    <span className={styles.rangeValue}>{p.links.width}px</span>
-                  </div>
-                </div>
+                <Slider label="Portée" min={30} max={300} step={10} value={p.links.distance}
+                  display={`${p.links.distance}px`}
+                  onChange={v => setParticles({ links: { ...p.links, distance: v } })} />
+                <Slider label="Épaisseur" min={0.5} max={4} step={0.5} value={p.links.width}
+                  display={`${p.links.width}px`}
+                  onChange={v => setParticles({ links: { ...p.links, width: v } })} />
                 <div className={styles.field}>
                   <span className={styles.fieldLabel}>Couleur des liens</span>
                   <input
@@ -547,53 +409,25 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
                 </div>
               </>
             )}
-          </div>
+          </Section>
 
-          <div className={styles.group}>
-            <p className={styles.groupLabel}>Réaction à la souris</p>
-            <div className={styles.presetList}>
-              {PARTICLE_MOUSE_MODES.map(mode => (
-                <button
-                  key={mode.value}
-                  className={`${styles.preset} ${p.mouse.mode === mode.value ? styles.presetActive : ''}`}
-                  onClick={() => setParticles({ mouse: { ...p.mouse, mode: mode.value } })}
-                >
-                  <span className={styles.presetName}>{mode.label}</span>
-                </button>
-              ))}
-            </div>
-
+          <Section title="Réaction à la souris">
+            <Segmented
+              options={PARTICLE_MOUSE_MODES.map(m => ({ value: m.value, label: m.label }))}
+              value={p.mouse.mode}
+              onChange={mode => setParticles({ mouse: { ...p.mouse, mode } })}
+            />
             {p.mouse.mode !== 'none' && (
               <>
-                <div className={styles.fieldStacked}>
-                  <span className={styles.fieldLabel}>Rayon d'influence</span>
-                  <div className={styles.rangeGroup}>
-                    <input
-                      type="range"
-                      className={styles.range}
-                      min={40} max={400} step={10}
-                      value={p.mouse.radius}
-                      onChange={e => setParticles({ mouse: { ...p.mouse, radius: parseInt(e.target.value, 10) } })}
-                    />
-                    <span className={styles.rangeValue}>{p.mouse.radius}px</span>
-                  </div>
-                </div>
-                <div className={styles.fieldStacked}>
-                  <span className={styles.fieldLabel}>Force</span>
-                  <div className={styles.rangeGroup}>
-                    <input
-                      type="range"
-                      className={styles.range}
-                      min={0.1} max={2} step={0.1}
-                      value={p.mouse.strength}
-                      onChange={e => setParticles({ mouse: { ...p.mouse, strength: parseFloat(e.target.value) } })}
-                    />
-                    <span className={styles.rangeValue}>{p.mouse.strength.toFixed(1)}×</span>
-                  </div>
-                </div>
+                <Slider label="Rayon d'influence" min={40} max={400} step={10} value={p.mouse.radius}
+                  display={`${p.mouse.radius}px`}
+                  onChange={v => setParticles({ mouse: { ...p.mouse, radius: v } })} />
+                <Slider label="Force" min={0.1} max={2} step={0.1} value={p.mouse.strength}
+                  display={`${p.mouse.strength.toFixed(1)}×`}
+                  onChange={v => setParticles({ mouse: { ...p.mouse, strength: v } })} />
               </>
             )}
-          </div>
+          </Section>
         </>
       )}
     </>

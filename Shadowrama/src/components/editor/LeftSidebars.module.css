@@ -79,8 +79,8 @@
 .hint {
   margin: 0 0 0.6rem;
   padding: 0.5rem 0.6rem;
-  background-color: rgba(255, 184, 77, 0.08);
-  border: 1px solid rgba(255, 184, 77, 0.25);
+  background-color: color-mix(in srgb, var(--warning) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);
   border-radius: var(--r-md);
   color: var(--warning);
   font-size: 0.72rem;
@@ -110,7 +110,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.18);
+  background-color: color-mix(in srgb, var(--shadow-ink) 18%, transparent);
   border: 1px solid var(--editor-border-light);
   border-radius: calc(var(--r-md) - 2px);
   overflow: hidden;

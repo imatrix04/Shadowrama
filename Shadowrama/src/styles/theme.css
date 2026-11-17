@@ -1,28 +1,50 @@
 :root {
   /* Éditeur — fond et structure */
-  --editor-bg: #1a1a2e;
-  --editor-bg-panel: #111111;
-  --editor-bg-canvas: #2d2d2d;
-  --editor-border: #333333;
-  --editor-border-light: #444444;
+  --editor-bg: #0f1020;
+  --editor-bg-panel: #15162a;
+  --editor-bg-canvas: #0b0c18;
+  --editor-border: #23254a;
+  --editor-border-light: #30336a;
 
   /* Surface surélevée : dialogues, menus, vignettes. Existait déjà en dur à
      plusieurs endroits (#1e1e2e) sans être un token. */
-  --editor-bg-raised: #1e1e2e;
+  --editor-bg-raised: #1c1e38;
 
   /* Boutons */
-  --editor-btn-bg: #2a2a3e;
-  --editor-btn-bg-hover: #3a3a5e;
-  --editor-text: #ffffff;
-  --editor-text-muted: #888888;
-  --editor-text-dim: #555555;
+  --editor-btn-bg: #1f2142;
+  --editor-btn-bg-hover: #2b2e5a;
+  --editor-text: #f2f1fb;
+  --editor-text-muted: #9a9cc0;
+  --editor-text-dim: #6e7096;
 
   /* Accent (reprend la même teinte que index.css mais dédiée éditeur) */
-  --accent: #6c63ff;
-  --accent-hover: #8b84ff;
-  --accent-border: #8b84ff;
-  --accent-bg-soft: rgba(108, 99, 255, 0.15);
-  --accent-glow: rgba(108, 99, 255, 0.35);
+  --accent: #7c6cff;
+  --accent-hover: #9a8cff;
+  --accent-border: #9a8cff;
+  /* Deuxième teinte des dégradés d'accent et texte posé sur un fond d'accent :
+     deux tokens à part pour qu'une palette (cyan, corail…) puisse changer le
+     contraste sans toucher aux composants. Les variantes translucides sont
+     dérivées de --accent, elles suivent donc la palette toute seules. */
+  --accent-2: #b14dff;
+  --on-accent: #ffffff;
+  --accent-bg-soft: color-mix(in srgb, var(--accent) 15%, transparent);
+  --accent-glow: color-mix(in srgb, var(--accent) 35%, transparent);
+
+  /* Couleur des ombres et voiles : noir en sombre, encre teintée en clair. */
+  --shadow-ink: #000000;
+
+  /* Surface d'une diapositive : du contenu, pas de l'interface. Noir crème en
+     thème sombre, blanc crème en thème clair (voir plus bas) ; indépendante de
+     la palette, pour qu'une présentation reste la même quelle que soit
+     l'identité de l'interface. */
+  --slide-bg: #1f1b17;
+  --slide-ink: #f4ede0;
+
+  /* Remplissage des états actifs (onglet, segment, bouton Ultra). Dégradé doux
+     par défaut ; la palette Chaud / crème le remplace par des facettes nettes. */
+  --accent-fill: linear-gradient(135deg, var(--accent), var(--accent-2));
+  /* Maillage décoratif des grandes surfaces : aucun, sauf palette low-poly. */
+  --poly-bg: none;
 
   /* États */
   --danger: #ff4d4d;
@@ -40,9 +62,9 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* Rayons */
-  --r-sm: 4px;
-  --r-md: 6px;
-  --r-lg: 8px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
 
     /* Teintes de survol génériques sur les surfaces sombres (à inverser en clair) */
   --overlay-1: rgba(255, 255, 255, 0.04);
@@ -53,8 +75,12 @@
   --overlay-text-soft: rgba(255, 255, 255, 0.65);
   --overlay-text-strong: rgba(255, 255, 255, 0.85);
 
-  --menu-bg: linear-gradient(145deg, rgba(30, 30, 46, 0.85), rgba(22, 22, 34, 0.9));
-  --menu-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.03) inset, 0 0 30px var(--accent-glow);
+  --menu-bg: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--editor-bg-raised) 88%, transparent),
+    color-mix(in srgb, var(--editor-bg-panel) 92%, transparent)
+  );
+  --menu-shadow: 0 20px 50px color-mix(in srgb, var(--shadow-ink) 45%, transparent), 0 0 0 1px var(--overlay-1) inset, 0 0 30px var(--accent-glow);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -67,10 +93,9 @@
 
 /*
  * Thème clair — appliqué via `data-theme="light"` sur <html>, posé par
- * utils/theme.ts (voir useTheme). L'accent violet et les couleurs d'état
- * (danger/warning) restent identiques dans les deux thèmes : ce sont des
- * couleurs de marque/sémantiques, pas des neutres, elles n'ont pas besoin de
- * s'inverser pour rester lisibles sur fond clair.
+ * utils/theme.ts (voir useTheme). L'accent est légèrement assombri pour garder
+ * le contraste sur fond blanc ; les couleurs d'état (danger/warning) restent
+ * identiques dans les deux thèmes.
  *
  * Premier jet : les valeurs suivent le même rôle que leur équivalent sombre
  * (bg-panel toujours plus contrasté que bg-canvas, etc.) mais n'ont pas été
@@ -78,24 +103,23 @@
  * d'œil en conditions réelles.
  */
 :root[data-theme='light'] {
-  --editor-bg: #f7f6fb;
+  --editor-bg: #f4f4fb;
   --editor-bg-panel: #ffffff;
-  --editor-bg-canvas: #e9e7f1;
-  --editor-border: #e1dfea;
-  --editor-border-light: #d3d0de;
+  --editor-bg-canvas: #e6e7f4;
+  --editor-border: #dcdcee;
+  --editor-border-light: #c9cae3;
 
   --editor-bg-raised: #ffffff;
 
-  --editor-btn-bg: #efedf6;
-  --editor-btn-bg-hover: #e2ddf5;
-  --editor-text: #1a1730;
-  --editor-text-muted: #6b6578;
-  --editor-text-dim: #a29cb0;
-  --t-fast: 130ms;
-  --t-base: 180ms;
-  --t-slow: 260ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --editor-btn-bg: #eceefa;
+  --editor-btn-bg-hover: #dfe0f7;
+  --editor-text: #15162a;
+  --editor-text-muted: #5f6185;
+  --editor-text-dim: #9a9cbc;
+  --accent: #6a5bff;
+  --accent-hover: #5546e6;
+  --accent-border: #6a5bff;
+  --accent-2: #a23df0;
 
   --overlay-1: rgba(20, 16, 40, 0.035);
   --overlay-2: rgba(20, 16, 40, 0.05);
@@ -105,8 +129,114 @@
   --overlay-text-soft: rgba(20, 16, 40, 0.6);
   --overlay-text-strong: rgba(20, 16, 40, 0.8);
 
-  --menu-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(247, 246, 251, 0.96));
-  --menu-shadow: 0 20px 50px rgba(20, 16, 40, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.6) inset, 0 0 30px var(--accent-glow);
+  --shadow-ink: #140f28;
+  --slide-bg: #faf6ec;
+  --slide-ink: #1c1814;
+  --menu-shadow: 0 20px 50px color-mix(in srgb, var(--shadow-ink) 14%, transparent), 0 0 0 1px var(--overlay-1) inset, 0 0 30px var(--accent-glow);
+}
+
+/*
+ * ── Palettes ───────────────────────────────────────────────────────────────
+ * Posées via `data-palette` sur <html> (voir utils/theme.ts), en plus de
+ * `data-theme`. Sans attribut, c'est Nuit encre (les valeurs de base ci-dessus). Chaque
+ * palette existe en sombre ET en clair : le choix clair/sombre reste
+ * indépendant. Les variantes sombres excluent explicitement le thème clair
+ * (:not) pour ne jamais se battre avec lui à spécificité égale.
+ */
+
+/* B — Graphite néon : noir neutre, liserés nets, accent cyan. Le cyan est
+   clair, donc le texte posé dessus est foncé (--on-accent). */
+:root[data-palette='neon']:not([data-theme='light']) {
+  --editor-bg: #0d0d0f;
+  --editor-bg-panel: #16161a;
+  --editor-bg-canvas: #08080a;
+  --editor-bg-raised: #1d1d22;
+  --editor-border: #26262c;
+  --editor-border-light: #34343c;
+  --editor-btn-bg: #202026;
+  --editor-btn-bg-hover: #2c2c34;
+  --editor-text: #f4f4f6;
+  --editor-text-muted: #9a9aa6;
+  --editor-text-dim: #6c6c78;
+  --accent: #2de2e6;
+  --accent-hover: #6af0f3;
+  --accent-border: #6af0f3;
+  --accent-2: #4d8bff;
+  --on-accent: #04141a;
+}
+
+:root[data-palette='neon'][data-theme='light'] {
+  --editor-bg: #f3f5f6;
+  --editor-bg-panel: #ffffff;
+  --editor-bg-canvas: #e3e7e9;
+  --editor-bg-raised: #ffffff;
+  --editor-border: #dde2e5;
+  --editor-border-light: #c9d0d4;
+  --editor-btn-bg: #eaeff1;
+  --editor-btn-bg-hover: #d9f1f2;
+  --editor-text: #101417;
+  --editor-text-muted: #56626a;
+  --editor-text-dim: #93a0a8;
+  --accent: #008f95;
+  --accent-hover: #00757a;
+  --accent-border: #008f95;
+  --accent-2: #2f6bff;
+}
+
+/* C — Chaud / crème, low-poly : papier et corail, un maillage de triangles
+   en fond uniquement, jamais sur les panneaux (assets/lowpoly-warm-*.svg), des angles plus vifs
+   et des remplissages d'accent en facettes à arêtes nettes plutôt qu'en
+   dégradés lisses. */
+:root[data-palette='warm'] {
+  --r-sm: 2px;
+  --r-md: 3px;
+  --r-lg: 5px;
+  --accent-fill: linear-gradient(
+    115deg,
+    var(--accent) 0 40%,
+    color-mix(in srgb, var(--accent) 60%, var(--accent-2)) 40% 72%,
+    var(--accent-2) 72% 100%
+  );
+}
+
+:root[data-palette='warm']:not([data-theme='light']) {
+  --editor-bg: #1c1815;
+  --editor-bg-panel: #24201c;
+  --editor-bg-canvas: #141110;
+  --editor-bg-raised: #2c2722;
+  --editor-border: #3a342d;
+  --editor-border-light: #4a423a;
+  --editor-btn-bg: #302a25;
+  --editor-btn-bg-hover: #3d342d;
+  --editor-text: #f6efe6;
+  --editor-text-muted: #b0a496;
+  --editor-text-dim: #7d7266;
+  --accent: #ff6b4a;
+  --accent-hover: #ff8a70;
+  --accent-border: #ff8a70;
+  --accent-2: #ff9a3c;
+  --on-accent: #1a0b07;
+  --poly-bg: url('../assets/lowpoly-warm-dark.svg');
+}
+
+:root[data-palette='warm'][data-theme='light'] {
+  --editor-bg: #fbf8f3;
+  --editor-bg-panel: #ffffff;
+  --editor-bg-canvas: #efe8dc;
+  --editor-bg-raised: #ffffff;
+  --editor-border: #e8e0d4;
+  --editor-border-light: #d9cfbf;
+  --editor-btn-bg: #f3eee5;
+  --editor-btn-bg-hover: #fbe6df;
+  --editor-text: #2a2320;
+  --editor-text-muted: #7a6f66;
+  --editor-text-dim: #aea296;
+  --accent: #e8502f;
+  --accent-hover: #d03f20;
+  --accent-border: #e8502f;
+  --accent-2: #f08a2c;
+  --shadow-ink: #2a1a10;
+  --poly-bg: url('../assets/lowpoly-warm-light.svg');
 }
 
 /*

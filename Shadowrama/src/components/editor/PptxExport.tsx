@@ -55,9 +55,9 @@ function readDefaults(): ExportDefaults {
   const css = getComputedStyle(document.documentElement)
   const read = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback
   return {
-    slideBackground: read('--editor-bg-canvas', FALLBACK_DEFAULTS.slideBackground),
+    slideBackground: read('--slide-bg', FALLBACK_DEFAULTS.slideBackground),
     accent: read('--accent', FALLBACK_DEFAULTS.accent),
-    text: read('--editor-text', FALLBACK_DEFAULTS.text),
+    text: read('--slide-ink', FALLBACK_DEFAULTS.text),
   }
 }
 
@@ -305,7 +305,7 @@ function Content({ view, ultra }: { view: View; ultra: boolean }) {
         className={styles.content}
         style={{
           left: 0, top: 0, width: SLIDE_W, height: SLIDE_H, transform,
-          overflow: 'hidden', backgroundColor: 'var(--editor-bg-canvas)', ...bg.style,
+          overflow: 'hidden', backgroundColor: 'var(--slide-bg)', ...bg.style,
         }}
       >
         <ParticleLayer settings={getSlideParticles(job.background, ultra)} interactive={false} />

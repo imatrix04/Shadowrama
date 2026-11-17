@@ -5,7 +5,7 @@ import { shapePoints } from '../../utils/shapePoints'
 import type { Box, Point } from '../../utils/shapePoints'
 
 const DEFAULT_FILL = 'var(--accent)'
-const DEFAULT_STROKE = 'var(--editor-text)'
+const DEFAULT_STROKE = 'var(--slide-ink)'
 
 /**
  * Chemin SVG d'un polygone aux angles arrondis.

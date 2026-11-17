@@ -34,6 +34,6 @@
 }
 
 .switch.on .knob {
-  background-color: #ffffff;
+  background-color: var(--on-accent);
   transform: translateX(1rem);
 }

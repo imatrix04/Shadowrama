@@ -1,64 +1,172 @@
+/* Barre du haut : peu de contrôles, une seule action pleine (Présenter). Les
+   commandes de fichier vivent dans le menu « Fichier » (ui/DropdownMenu). */
 .topBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1rem;
+  gap: 1rem;
+  padding: 0 0.9rem;
   background-color: var(--editor-bg-panel);
-  border-bottom: 1px solid var(--editor-border);
-  height: 48px;
+  /* Un filet + une ombre très douce plutôt qu'une bordure épaisse. */
+  box-shadow:
+    0 1px 0 var(--editor-border),
+    0 8px 20px -14px color-mix(in srgb, var(--shadow-ink) 55%, transparent);
+  height: 44px;
   flex-shrink: 0;
-  z-index: 10;
+  /* Au-dessus des tiroirs : le menu Fichier déborde sur la zone de travail. */
+  z-index: 100;
 }
 
 .left {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  min-width: 0;
 }
 
 .logo {
-  font-size: 1rem;
-  font-weight: bold;
+  font-size: 0.95rem;
+  font-weight: 700;
   color: var(--accent);
-  letter-spacing: 1px;
+  letter-spacing: 0.02em;
+}
+
+.slash {
+  color: var(--editor-text-dim);
+  font-size: 0.9rem;
 }
 
 .projectName {
-  font-size: 0.8rem;
+  min-width: 0;
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--editor-text);
+}
+
+/* ── État d'enregistrement ── */
+
+.status,
+.statusSaved {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
   color: var(--editor-text-muted);
+  font-family: inherit;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.status {
+  cursor: pointer;
+  transition: background-color var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+
+.status:hover {
+  background-color: color-mix(in srgb, var(--warning) 12%, transparent);
+  border-color: color-mix(in srgb, var(--warning) 35%, transparent);
+  color: var(--editor-text);
+}
+
+.status:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .dirtyDot {
-  color: var(--warning);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--warning);
 }
 
 .warning {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--warning);
-  border: 1px solid rgba(255, 184, 77, 0.35);
-  background-color: rgba(255, 184, 77, 0.1);
-  border-radius: 4px;
-  padding: 0.15rem 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+  background-color: color-mix(in srgb, var(--warning) 10%, transparent);
+  border-radius: var(--r-sm);
+  padding: 0.15rem 0.45rem;
   cursor: help;
+  white-space: nowrap;
 }
+
+.divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 0.2rem;
+  background-color: var(--editor-border-light);
+}
+
+.history {
+  display: flex;
+  gap: 2px;
+}
+
+/* ── Actions ── */
 
 .actions {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
 }
 
-.btn {
-  padding: 0.4rem 0.8rem;
-  background-color: var(--editor-btn-bg);
-  border: 1px solid var(--editor-border-light);
-  border-radius: 6px;
-  color: var(--editor-text);
-  font-size: 0.85rem;
-  cursor: pointer;
+/* Bouton « fantôme » : icône seule, ni fond ni bordure au repos. */
+.ghost {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  transition: background-color var(--t-fast), border-color var(--t-fast);
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  color: var(--editor-text-muted);
+  cursor: pointer;
+  transition: background-color var(--t-fast), color var(--t-fast);
+}
+
+.ghost:hover:not(:disabled) {
+  background-color: var(--editor-btn-bg);
+  color: var(--editor-text);
+}
+
+.ghost:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.ghost:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Boutons à libellé (Ultra Design, Présenter). */
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 32px;
+  padding: 0 0.85rem;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-md);
+  color: var(--editor-text);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--t-fast), border-color var(--t-fast), filter var(--t-fast);
 }
 
 .btn:hover:not(:disabled) {
@@ -66,101 +174,22 @@
   border-color: var(--accent);
 }
 
-.btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
+/* L'action principale : la seule pleine de toute la barre. */
 .btnAccent {
   background-color: var(--accent);
   border-color: var(--accent-border);
+  color: var(--on-accent);
 }
 
-.btnAccent:hover {
+.btnAccent:hover:not(:disabled) {
   background-color: var(--accent-hover);
 }
 
-.fileLabel {
-  /* même look que .btn mais pour le <label> qui enveloppe l'input file */
-  padding: 0.4rem 0.8rem;
-  background-color: var(--editor-btn-bg);
-  border: 1px solid var(--editor-border-light);
-  border-radius: 6px;
-  color: var(--editor-text);
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  transition: background-color var(--t-fast), border-color var(--t-fast);
-}
-
-.fileLabel:hover {
-  background-color: var(--editor-btn-bg-hover);
-  border-color: var(--accent);
-}
-
-.hiddenInput {
-  display: none;
-}
-
-/* ── Modale nom de projet ── */
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.dialog {
-  background-color: var(--editor-bg-raised);
-  border: 1px solid var(--editor-border);
-  border-radius: 8px;
-  padding: 1rem;
-  width: 280px;
-}
-
-.dialogTitle {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.85rem;
-  color: var(--editor-text-muted);
-}
-
-.dialogInput {
-  width: 100%;
-  padding: 0.5rem;
-  background-color: var(--editor-btn-bg);
-  border: 1px solid var(--editor-border-light);
-  border-radius: 4px;
-  color: var(--editor-text);
-  font-size: 0.9rem;
-  box-sizing: border-box;
-}
-
-.dialogInput:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.dialogActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-}
 /* Bascule du mode Ultra Design : volontairement distincte des autres actions,
    c'est un changement d'état de l'éditeur et non une commande ponctuelle. */
 .btnUltra {
-  border-color: rgba(108, 99, 255, 0.45);
+  background-color: transparent;
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
   color: var(--accent-hover);
 }
 
@@ -170,9 +199,9 @@
 }
 
 .btnUltraOn {
-  background-image: linear-gradient(135deg, var(--accent), #b14dff);
+  background-image: var(--accent-fill);
   border-color: var(--accent-border);
-  color: #fff;
+  color: var(--on-accent);
   box-shadow: 0 0 16px var(--accent-glow);
 }
 

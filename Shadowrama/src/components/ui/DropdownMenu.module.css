@@ -1,0 +1,120 @@
+.root {
+  position: relative;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 32px;
+  padding: 0 0.7rem 0 0.85rem;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  color: var(--editor-text);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--t-fast), border-color var(--t-fast);
+}
+
+.trigger:hover,
+.triggerOpen {
+  background-color: var(--editor-btn-bg);
+  border-color: var(--editor-border-light);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.caret {
+  width: 5px;
+  height: 5px;
+  margin-top: -3px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  color: var(--editor-text-muted);
+  transform: rotate(45deg);
+  transition: transform var(--t-base) var(--ease-out);
+}
+
+.triggerOpen .caret {
+  margin-top: 2px;
+  transform: rotate(-135deg);
+}
+
+@keyframes menuIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 200;
+  min-width: 250px;
+  padding: 0.35rem;
+  background: var(--menu-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-lg);
+  box-shadow: var(--menu-shadow);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  transform-origin: top right;
+  animation: menuIn var(--t-base) var(--ease-out);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-md);
+  color: var(--editor-text);
+  font-family: inherit;
+  font-size: 0.84rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--t-fast);
+}
+
+.item:hover,
+.item:focus-visible {
+  outline: none;
+  background-color: var(--accent-bg-soft);
+}
+
+.itemIcon {
+  display: flex;
+  width: 16px;
+  flex-shrink: 0;
+  color: var(--editor-text-muted);
+}
+
+.item:hover .itemIcon,
+.item:focus-visible .itemIcon {
+  color: var(--accent-hover);
+}
+
+.itemLabel {
+  flex: 1 1 auto;
+}
+
+.shortcut {
+  color: var(--editor-text-muted);
+  font-family: inherit;
+  font-size: 0.72rem;
+}
+
+.separator {
+  height: 1px;
+  margin: 0.3rem 0.4rem;
+  background-color: var(--editor-border);
+}

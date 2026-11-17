@@ -11,9 +11,10 @@ import '@fontsource/ibm-plex-mono/latin-500.css'
 import './index.css'
 import './styles/theme.css'
 import App from './App.tsx'
-import { loadThemeMode, resolveTheme, applyTheme } from './utils/theme'
+import { loadThemeMode, resolveTheme, applyTheme, loadPalette, applyPalette } from './utils/theme'
 
 applyTheme(resolveTheme(loadThemeMode()))
+applyPalette(loadPalette())
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

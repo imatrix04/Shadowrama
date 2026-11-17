@@ -4,17 +4,20 @@
   align-items: center;
   justify-content: center;
   background-color: var(--editor-bg);
+  background-image: var(--poly-bg);
+  background-size: cover;
+  background-position: center;
   overflow: hidden;
 }
 
 .canvas {
   width: 960px;
   height: 540px;
-  background-color: var(--editor-bg-canvas);
+  background-color: var(--slide-bg);
   position: relative;
   z-index: 1;
   border-radius: 8px;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--shadow-ink) 50%, transparent);
   overflow: hidden;
 }
 
@@ -66,7 +69,7 @@
   border: 1px solid var(--editor-border);
   border-radius: 8px;
   padding: 0.4rem 0.75rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--shadow-ink) 40%, transparent);
 }
 
 .zoomBtn {
@@ -90,4 +93,70 @@
   font-size: 0.8rem;
   min-width: 42px;
   text-align: center;
+}
+
+/* Version rangée en bas du rail de droite : colonne compacte, plus de
+   bandeau par-dessus les diapositives. */
+.zoomRail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--editor-border);
+}
+
+.zoomRail .zoomBtn {
+  width: 36px;
+  height: 30px;
+  padding: 0;
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--editor-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.zoomRail .zoomBtn:hover {
+  background-color: var(--editor-btn-bg-hover);
+  border-color: var(--accent);
+  color: var(--editor-text);
+}
+
+.zoomRail .zoomLabel {
+  min-width: 0;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Champ de saisie du pourcentage : invisible au repos, il ressemble à un
+   simple libellé, et ne se révèle qu'au survol et à la saisie. */
+.zoomLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zoomInput {
+  width: 3ch;
+  padding: 1px 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  color: inherit;
+  font: inherit;
+  text-align: right;
+  cursor: text;
+  transition: border-color var(--t-fast), background-color var(--t-fast);
+}
+
+.zoomInput:hover {
+  border-color: var(--editor-border-light);
+}
+
+.zoomInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  background-color: var(--editor-btn-bg);
+  color: var(--editor-text);
 }

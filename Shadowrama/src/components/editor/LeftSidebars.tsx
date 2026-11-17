@@ -6,6 +6,8 @@ import type { DrawerTab } from '../ui/Drawer'
 import Icon from '../ui/Icon'
 import MotionPanel from './ultra/MotionPanel'
 import EffectsPanel from './ultra/EffectsPanel'
+import AlignPanel from './AlignPanel'
+import type { BlockUpdate } from '../../utils/blockUpdates'
 import styles from './LeftSidebars.module.css'
 
 interface Props {
@@ -17,6 +19,12 @@ interface Props {
   onUpdateSelected: (changes: Partial<BlockData> | ((block: BlockData) => Partial<BlockData>)) => void
   onGestureStart: () => void
   onPreviewMotion: (phase: MotionPhase) => void
+  /** Tous les blocs sélectionnés (Alignement travaille sur plusieurs blocs). */
+  selectedBlocks: BlockData[]
+  /** Fonctionnalité Alignement déverrouillée dans les Paramètres. */
+  alignmentEnabled: boolean
+  /** Lot atomique : une seule entrée d'historique pour tout l'alignement. */
+  onCommitBlocks: (updates: BlockUpdate[]) => void
 }
 
 // Mouvement fusionne l'ancien panneau Animations : les presets basiques
@@ -25,6 +33,10 @@ const BASE_TABS: DrawerTab[] = [
   { key: 'blocs', label: 'Blocs', icon: 'shape' },
   { key: 'mouvement', label: 'Mouvement', icon: 'motion' },
 ]
+
+// Verrouillé par défaut : n'existe dans le rail qu'une fois déverrouillé dans
+// Paramètres → Fonctionnalités (voir useFeatures).
+const ALIGNMENT_TAB: DrawerTab = { key: 'alignement', label: 'Alignement', icon: 'align' }
 
 // Effets reste entièrement Ultra : pas d'équivalent basique.
 const ULTRA_TABS: DrawerTab[] = [
@@ -37,8 +49,19 @@ function stagger(index: number): React.CSSProperties {
 
 export default function LeftSidebars({
   onAddBlock, ultra, selectedBlock, onUpdateSelected, onGestureStart, onPreviewMotion,
+  selectedBlocks, onCommitBlocks, alignmentEnabled,
 }: Props) {
   const [openPanel, setOpenPanel] = useState<string | null>(null)
+
+  // Alignement s'insère après Blocs ; les onglets Ultra restent en dernier.
+  const tabs = [
+    BASE_TABS[0],
+    ...(alignmentEnabled ? [ALIGNMENT_TAB] : []),
+    ...BASE_TABS.slice(1),
+    ...(ultra ? ULTRA_TABS : []),
+  ]
+  // Un panneau ouvert dont l'onglet a disparu ne doit pas rester affiché.
+  const activePanel = openPanel && tabs.some(tab => tab.key === openPanel) ? openPanel : null
 
   const renderBlocks = () => (
     <>
@@ -62,6 +85,14 @@ export default function LeftSidebars({
 
   const renderTab = (key: string) => {
     if (key === 'blocs') return renderBlocks()
+    if (key === 'alignement' && alignmentEnabled) {
+      return (
+        <>
+          <DrawerTitle>Alignement</DrawerTitle>
+          <AlignPanel blocks={selectedBlocks} onCommit={onCommitBlocks} />
+        </>
+      )
+    }
     if (key === 'mouvement') {
       return (
         <>
@@ -93,8 +124,8 @@ export default function LeftSidebars({
   return (
     <Drawer
       side="left"
-      tabs={ultra ? [...BASE_TABS, ...ULTRA_TABS] : BASE_TABS}
-      activeTab={openPanel}
+      tabs={tabs}
+      activeTab={activePanel}
       onTabChange={setOpenPanel}
       renderTab={renderTab}
       width={240}

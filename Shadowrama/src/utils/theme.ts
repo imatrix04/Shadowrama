@@ -22,6 +22,40 @@ export function saveThemeMode(mode: ThemeMode): void {
   }
 }
  
+export type Palette = 'ink' | 'neon' | 'warm'
+
+export const PALETTES: { id: Palette; label: string }[] = [
+  { id: 'ink', label: 'Nuit encre' },
+  { id: 'neon', label: 'Graphite néon' },
+  { id: 'warm', label: 'Chaud / crème' },
+]
+
+const PALETTE_KEY = 'shadowrama-palette'
+
+export function loadPalette(): Palette {
+  try {
+    const stored = localStorage.getItem(PALETTE_KEY)
+    if (PALETTES.some(p => p.id === stored)) return stored as Palette
+  } catch {
+    // Stockage indisponible : Nuit encre.
+  }
+  return 'ink'
+}
+
+export function savePalette(palette: Palette): void {
+  try {
+    localStorage.setItem(PALETTE_KEY, palette)
+  } catch {
+    // Le choix ne survivra juste pas au redémarrage.
+  }
+}
+
+/** Pose `data-palette` sur <html> (absent pour Nuit encre, la palette par défaut). */
+export function applyPalette(palette: Palette): void {
+  if (palette === 'ink') delete document.documentElement.dataset.palette
+  else document.documentElement.dataset.palette = palette
+}
+
 export function systemPrefersDark(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }

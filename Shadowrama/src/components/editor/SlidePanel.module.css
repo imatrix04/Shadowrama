@@ -37,7 +37,7 @@
   position: relative;
   width: 144px;
   height: 81px;
-  background-color: var(--editor-bg);
+  background-color: var(--slide-bg);
   border-radius: var(--r-sm);
   overflow: hidden;
 }

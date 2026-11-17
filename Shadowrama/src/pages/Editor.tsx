@@ -11,6 +11,7 @@ import { DEFAULT_NUMBERING } from '../utils/numbering'
 import { applyBlockUpdates } from '../utils/blockUpdates'
 import type { BlockUpdate } from '../utils/blockUpdates'
 import { useUltraMode } from '../hooks/useUltraMode'
+import { useFeatures } from '../hooks/useFeatures'
 import { useEditorShortcuts } from '../hooks/useEditorShortcuts'
 import { readableTextColor } from '../utils/textContrast'
 import Canvas from '../components/editor/Canvas'
@@ -74,6 +75,7 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
   // l'information survive à un redémarrage.
   const [dirty, setDirty] = useState(initialDraft?.dirty ?? true)
   const { ultra, toggleUltra } = useUltraMode()
+  const { features } = useFeatures()
   // Demande d'aperçu d'une séquence. `nonce` permet de rejouer la même phase
   // plusieurs fois de suite : sans lui, deux clics identiques ne changeraient
   // rien et l'animation ne repartirait pas.
@@ -86,6 +88,9 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
   const [numbering, setNumbering] = useState<SlideNumbering>(initialDraft?.numbering ?? DEFAULT_NUMBERING)
   // Aperçu de l'animation du numéro ; le nonce rejoue la même demande.
   const [numberingPreview, setNumberingPreview] = useState(0)
+  // Emplacement en bas du rail de droite où le canvas affiche ses contrôles de
+  // zoom (portail) : ils ne recouvrent plus les diapositives.
+  const [zoomSlot, setZoomSlot] = useState<HTMLElement | null>(null)
 
   const { slides, begin, commit, patch, undo, redo, reset, canUndo, canRedo } = useEditorHistory(
     initialDraft?.slides ?? [{ id: nextId(), blocks: [] }]
@@ -410,6 +415,9 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
           onUpdateSelected={updateSelectedBlock}
           onGestureStart={begin}
           onPreviewMotion={previewMotion}
+          selectedBlocks={slides[currentSlide].blocks.filter(b => selectedBlockIds.includes(b.id))}
+          onCommitBlocks={commitBlocks}
+          alignmentEnabled={features.alignment}
         />
         <Canvas
             blocks={slides[currentSlide].blocks}
@@ -427,6 +435,7 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
             onGestureStart={begin}
             ultra={ultra}
             motionPreview={motionPreview}
+            zoomSlot={zoomSlot}
         />
         <SlidePanel
           slides={slides}
@@ -442,6 +451,7 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
           numbering={numbering}
           onNumberingChange={setNumbering}
           onPreviewNumbering={() => setNumberingPreview(Date.now())}
+          railFooterRef={setZoomSlot}
         />
       </div>
     </div>

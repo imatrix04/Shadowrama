@@ -31,6 +31,8 @@ interface Props {
   numbering: SlideNumbering
   onNumberingChange: (numbering: SlideNumbering) => void
   onPreviewNumbering: () => void
+  /** Emplacement en bas du rail, pour y loger les contrôles de zoom du canvas. */
+  railFooterRef?: (el: HTMLDivElement | null) => void
 }
 
 export default function SlidePanel({
@@ -47,6 +49,7 @@ export default function SlidePanel({
   numbering,
   onNumberingChange,
   onPreviewNumbering,
+  railFooterRef,
 }: Props) {
   const [openPanel, setOpenPanel] = useState<string | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
@@ -77,6 +80,7 @@ export default function SlidePanel({
   return (
     <Drawer
       side="right"
+      footerRef={railFooterRef}
       tabs={TABS}
       activeTab={openPanel}
       onTabChange={setOpenPanel}

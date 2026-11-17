@@ -3,8 +3,10 @@ import type { CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../components/ui/Icon'
 import SettingRow from '../components/ui/SettingRow'
+import Switch from '../components/ui/Switch'
+import { useFeatures } from '../hooks/useFeatures'
 import { useTheme } from '../hooks/useTheme'
-import type { ThemeMode } from '../utils/theme'
+import { PALETTES, type ThemeMode } from '../utils/theme'
 import styles from './Settings.module.css'
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: 'moon' | 'sun' | 'monitor' }[] = [
@@ -17,7 +19,7 @@ const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: 'moon' | 'sun' | 'm
  * Page de paramètres. Volontairement structurée en sections + `SettingRow`
  * dès maintenant : les prochaines fonctionnalités livrées verrouillées
  * (nouveaux types de blocs, etc.) n'auront qu'à ajouter une ligne avec
- * `locked`, pas à réinventer une mise en page.
+ * `locked` (bientôt disponible) ou un interrupteur, pas à réinventer une mise en page.
  *
  * Utilise les tokens `--editor-*` (theme.css), donc réagit déjà au thème —
  * contrairement à Home.tsx, qui a sa propre palette codée en dur et n'est pas
@@ -25,7 +27,8 @@ const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: 'moon' | 'sun' | 'm
  */
 export default function Settings() {
   const navigate = useNavigate()
-  const { mode, setMode } = useTheme()
+  const { mode, setMode, palette, setPalette } = useTheme()
+  const { features, setFeature } = useFeatures()
   const activeIndex = THEME_OPTIONS.findIndex(opt => opt.mode === mode)
 
   return (
@@ -52,10 +55,7 @@ export default function Settings() {
 
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Apparence</h2>
-            <SettingRow
-              title="Thème"
-              description="S'applique à l'interface de création. « Système » suit le réglage de votre ordinateur et se met à jour automatiquement."
-            >
+            <SettingRow title="Thème">
               <div
                 className={styles.segmented}
                 style={{ '--active-index': activeIndex } as CSSProperties}
@@ -82,19 +82,47 @@ export default function Settings() {
                 ))}
               </div>
             </SettingRow>
+            <SettingRow title="Palette" stacked>
+              <div className={styles.palettes}>
+                {PALETTES.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`${styles.palette} ${palette === p.id ? styles.paletteActive : ''}`}
+                    onClick={() => setPalette(p.id)}
+                    aria-pressed={palette === p.id}
+                    data-palette-preview={p.id}
+                  >
+                    <span className={styles.paletteSwatch} />
+                    <span className={styles.paletteName}>{p.label}</span>
+                  </button>
+                ))}
+              </div>
+            </SettingRow>
           </section>
 
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Fonctionnalités</h2>
             <p className={styles.sectionHint}>
-              Les prochains types de blocs (vidéo, graphique, carrousel animé) arriveront ici,
-              verrouillés par défaut jusqu'à leur sortie officielle.
+              En cours de finition : désactivées par défaut, absentes de l'éditeur tant
+              que vous ne les activez pas.
             </p>
             <SettingRow
-              title="Blocs vidéo, graphique et carrousel"
-              description="Nouveaux types de blocs, en cours de développement."
-              locked
-            />
+              title="Outils d'alignement"
+              badge="Bêta"
+              description="Aligner, centrer et répartir les blocs, depuis un nouveau panneau dans l'éditeur."
+            >
+              <div className={styles.featureControl}>
+                <span className={`${styles.featureState} ${features.alignment ? styles.featureStateOn : ''}`}>
+                  {features.alignment ? 'Activé' : 'Désactivé'}
+                </span>
+                <Switch
+                  checked={features.alignment}
+                  onChange={checked => setFeature('alignment', checked)}
+                  label="Outils d'alignement"
+                />
+              </div>
+            </SettingRow>
           </section>
         </div>
       </div>

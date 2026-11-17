@@ -1,14 +1,19 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import type { BlockData, MotionPhase, SlideNumbering, SlideBackground } from '../../types'
 import Block from './Block'
 import ParticleLayer from './ParticleLayer'
 import SlideNumber from './SlideNumber'
 import { getSlideBackgroundStyle, getSlideParticles } from '../../ultra/slideBackground'
+import { snapAxis, nearestTarget } from '../../utils/snapping'
+import { boundsOf } from '../../utils/alignment'
 import styles from './Canvas.module.css'
 
 const CANVAS_W = 960
 const CANVAS_H = 540
-const SNAP_THRESHOLD = 5
+// Distance d'attraction en pixels ÉCRAN : divisée par le zoom au moment du calcul.
+// En pixels de canvas, elle ne valait que 2,5 px à l'écran à 50 % et 15 px à 300 %.
+const SNAP_SCREEN_PX = 6
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 3
 const FIT_PADDING = 48
@@ -43,11 +48,57 @@ interface Props {
   ultra: boolean
   /** Aperçu de séquence demandé depuis le panneau Mouvement. */
   motionPreview: { id: number; phase: MotionPhase; nonce: number } | null
+  /** Où loger les contrôles de zoom (bas du rail de droite). Sans emplacement,
+   *  ils retombent en bandeau flottant au bas du canvas. */
+  zoomSlot?: HTMLElement | null
+}
+
+/**
+ * Pourcentage de zoom éditable : on clique, on tape un nombre, Entrée valide
+ * (Échap annule, quitter le champ valide aussi). La valeur est bornée au
+ * minimum/maximum du zoom ; un texte illisible rend simplement la main.
+ */
+function ZoomInput({ zoom, onCommit, className }: {
+  zoom: number
+  onCommit: (value: number) => void
+  className: string
+}) {
+  const shown = String(Math.round(zoom * 100))
+  // null = pas d'édition en cours : le champ affiche le zoom réel (qui bouge
+  // avec la molette, les boutons…). Pendant la saisie, on garde le brouillon.
+  const [draft, setDraft] = useState<string | null>(null)
+
+  const commit = () => {
+    if (draft === null) return
+    const n = parseInt(draft, 10)
+    if (!Number.isNaN(n)) onCommit(n / 100)
+    setDraft(null)
+  }
+
+  return (
+    <span className={className}>
+      <input
+        className={styles.zoomInput}
+        type="text"
+        inputMode="numeric"
+        aria-label="Zoom en pourcentage"
+        value={draft ?? shown}
+        onFocus={e => { setDraft(shown); e.currentTarget.select() }}
+        onChange={e => setDraft(e.target.value.replace(/\D/g, '').slice(0, 3))}
+        onBlur={commit}
+        onKeyDown={e => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+          else if (e.key === 'Escape') { setDraft(null); e.currentTarget.blur() }
+        }}
+      />
+      %
+    </span>
+  )
 }
 
 export default function Canvas({
   blocks, background, numbering, slideIndex, slideCount, numberingPreview, selectedBlockIds, onSelectBlocks, onUpdateBlock, onUpdateBlocks, onCommitBlocks,
-  onDeleteBlocks, onGestureStart, ultra, motionPreview,
+  onDeleteBlocks, onGestureStart, ultra, motionPreview, zoomSlot,
 }: Props) {
   const resolvedBackground = getSlideBackgroundStyle(background, ultra)
   const particles = getSlideParticles(background, ultra)
@@ -255,7 +306,7 @@ export default function Canvas({
   // Le pas est appliqué au zoom courant lu dans le setter : calculer
   // `zoom + 0.1` à l'extérieur repartait de la valeur du dernier rendu, et
   // plusieurs clics rapprochés s'écrasaient les uns les autres.
-  const zoomByStep = (step: number) => {
+  const zoomBy = (compute: (current: number) => number) => {
     const el = wrapperRef.current
     if (!el) return
     userAdjustedView.current = true
@@ -264,7 +315,7 @@ export default function Canvas({
     const cy = rect.height / 2
 
     setView(prev => {
-      const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev.zoom + step))
+      const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, compute(prev.zoom)))
       if (newZoom === prev.zoom) return prev
       return {
         zoom: newZoom,
@@ -275,6 +326,10 @@ export default function Canvas({
       }
     })
   }
+
+  const zoomByStep = (step: number) => zoomBy(current => current + step)
+  /** Zoom saisi au clavier : valeur absolue (1 = 100 %), bornée comme le reste. */
+  const zoomTo = (value: number) => zoomBy(() => value)
 
   /**
    * Ajuste la diapositive à la zone visible et la centre.
@@ -333,64 +388,55 @@ export default function Canvas({
     return () => observer.disconnect()
   }, [fitToScreen])
 
+  // Alt maintenu = pas de magnétisme. Suivi par une ref : lu à chaque mouvement
+  // de souris, sans provoquer de rendu.
+  const altHeld = useRef(false)
+  useEffect(() => {
+    const sync = (e: KeyboardEvent) => { altHeld.current = e.altKey }
+    const release = () => { altHeld.current = false }
+    window.addEventListener('keydown', sync)
+    window.addEventListener('keyup', sync)
+    window.addEventListener('blur', release)
+    return () => {
+      window.removeEventListener('keydown', sync)
+      window.removeEventListener('keyup', sync)
+      window.removeEventListener('blur', release)
+    }
+  }, [])
+
   const handleBlockMove = (id: number, rawX: number, rawY: number) => {
     const block = blocks.find(b => b.id === id)
     if (!block) return
 
-    const others = blocks.filter(b => b.id !== id)
     const isMultiDrag = selectedBlockIds.includes(id)
-    const nonSelectedOthers = isMultiDrag 
-      ? others.filter(b => !selectedBlockIds.includes(b.id))
-      : others
+    const moving = isMultiDrag ? blocks.filter(b => selectedBlockIds.includes(b.id)) : [block]
+    const fixed = blocks.filter(b => !moving.some(m => m.id === b.id))
 
     let x = rawX
     let y = rawY
-    const lines: SnapLine[] = []
+    let lines: SnapLine[] = []
 
-    const bCenterX = x + block.width / 2
-    const bCenterY = y + block.height / 2
-    const bRight = x + block.width
-    const bBottom = y + block.height
+    // Maintenir Alt coupe le magnétisme, pour placer au pixel près.
+    if (!altHeld.current) {
+      // Ce sont les bords de TOUT ce qui bouge (l'enveloppe de la sélection) qui
+      // s'aimantent, pas seulement ceux du bloc saisi.
+      const shiftX = rawX - block.x
+      const shiftY = rawY - block.y
+      const bounds = boundsOf(moving.map(m => ({ ...m, x: m.x + shiftX, y: m.y + shiftY })))
+      const threshold = SNAP_SCREEN_PX / zoom
 
-    const vSources = [
-      { val: x, label: 'left' },
-      { val: bCenterX, label: 'centerX' },
-      { val: bRight, label: 'right' },
-    ]
+      const vTargets = [0, CANVAS_W / 2, CANVAS_W, ...fixed.flatMap(b => [b.x, b.x + b.width / 2, b.x + b.width])]
+      const hTargets = [0, CANVAS_H / 2, CANVAS_H, ...fixed.flatMap(b => [b.y, b.y + b.height / 2, b.y + b.height])]
 
-    const hSources = [
-      { val: y, label: 'top' },
-      { val: bCenterY, label: 'centerY' },
-      { val: bBottom, label: 'bottom' },
-    ]
+      const snapX = snapAxis([bounds.x, bounds.x + bounds.width / 2, bounds.x + bounds.width], vTargets, threshold)
+      const snapY = snapAxis([bounds.y, bounds.y + bounds.height / 2, bounds.y + bounds.height], hTargets, threshold)
 
-    const vTargets: number[] = [
-      0, CANVAS_W / 2, CANVAS_W,
-      ...nonSelectedOthers.flatMap(b => [b.x, b.x + b.width / 2, b.x + b.width])
-    ]
-    const hTargets: number[] = [
-      0, CANVAS_H / 2, CANVAS_H,
-      ...nonSelectedOthers.flatMap(b => [b.y, b.y + b.height / 2, b.y + b.height])
-    ]
-
-    for (const src of vSources) {
-      for (const target of vTargets) {
-        if (Math.abs(src.val - target) < SNAP_THRESHOLD) {
-          x += target - src.val
-          lines.push({ type: 'v', pos: target })
-          break
-        }
-      }
-    }
-
-    for (const src of hSources) {
-      for (const target of hTargets) {
-        if (Math.abs(src.val - target) < SNAP_THRESHOLD) {
-          y += target - src.val
-          lines.push({ type: 'h', pos: target })
-          break
-        }
-      }
+      x += snapX.delta
+      y += snapY.delta
+      lines = [
+        ...snapX.guides.map(pos => ({ type: 'v' as const, pos })),
+        ...snapY.guides.map(pos => ({ type: 'h' as const, pos })),
+      ]
     }
 
     setSnapLines(lines)
@@ -403,8 +449,8 @@ export default function Canvas({
     const updates = [{ id, changes: { x, y } as Partial<BlockData> }]
 
     if (isMultiDrag) {
-      for (const selBlock of blocks) {
-        if (selBlock.id === id || !selectedBlockIds.includes(selBlock.id)) continue
+      for (const selBlock of moving) {
+        if (selBlock.id === id) continue
         updates.push({ id: selBlock.id, changes: { x: selBlock.x + dx, y: selBlock.y + dy } })
       }
     }
@@ -431,12 +477,9 @@ export default function Canvas({
       ...others.flatMap(b => [b.y, b.y + b.height / 2, b.y + b.height]),
     ]
 
-    const snapTo = (value: number, targets: number[]): number | null => {
-      for (const target of targets) {
-        if (Math.abs(value - target) < SNAP_THRESHOLD) return target
-      }
-      return null
-    }
+    const threshold = SNAP_SCREEN_PX / zoom
+    const snapTo = (value: number, targets: number[]): number | null =>
+      altHeld.current ? null : nearestTarget(value, targets, threshold)
 
     const next = { ...block, ...changes } as BlockData
     const lines: SnapLine[] = []
@@ -481,6 +524,37 @@ export default function Canvas({
   const handleBlockDragEnd = () => {
     setSnapLines([])
   }
+
+  // Dans le rail : colonne compacte, « + » en haut. Sans emplacement : l'ancien
+  // bandeau horizontal flottant.
+  const inRail = !!zoomSlot
+  const zoomControls = (
+    <div className={inRail ? styles.zoomRail : styles.zoomControls}>
+      <button
+        onClick={() => zoomByStep(inRail ? 0.1 : -0.1)}
+        className={styles.zoomBtn}
+        title={inRail ? 'Zoom avant' : 'Zoom arrière'}
+        aria-label={inRail ? 'Zoom avant' : 'Zoom arrière'}
+      >{inRail ? '+' : '−'}</button>
+      <ZoomInput zoom={zoom} onCommit={zoomTo} className={styles.zoomLabel} />
+      <button
+        onClick={() => zoomByStep(inRail ? -0.1 : 0.1)}
+        className={styles.zoomBtn}
+        title={inRail ? 'Zoom arrière' : 'Zoom avant'}
+        aria-label={inRail ? 'Zoom arrière' : 'Zoom avant'}
+      >{inRail ? '−' : '+'}</button>
+      <button
+        onClick={() => {
+          // Réinitialisation explicite : on rend la main au recentrage auto.
+          userAdjustedView.current = false
+          fitToScreen()
+        }}
+        className={styles.zoomBtn}
+        title="Ajuster à l'écran"
+        aria-label="Ajuster à l'écran"
+      >↺</button>
+    </div>
+  )
 
   return (
     <div
@@ -560,20 +634,7 @@ export default function Canvas({
         </div>
       </div>
 
-      <div className={styles.zoomControls}>
-        <button onClick={() => zoomByStep(-0.1)} className={styles.zoomBtn}>−</button>
-        <span className={styles.zoomLabel}>{Math.round(zoom * 100)}%</span>
-        <button onClick={() => zoomByStep(0.1)} className={styles.zoomBtn}>+</button>
-        <button
-          onClick={() => {
-            // Réinitialisation explicite : on rend la main au recentrage auto.
-            userAdjustedView.current = false
-            fitToScreen()
-          }}
-          className={styles.zoomBtn}
-          title="Ajuster à l'écran"
-        >↺</button>
-      </div>
+      {zoomSlot ? createPortal(zoomControls, zoomSlot) : zoomControls}
     </div>
   )
 }

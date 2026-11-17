@@ -18,16 +18,17 @@ interface Props {
   onTabChange: (key: string | null) => void
   renderTab: (key: string) => ReactNode
   width?: number
+  /** Emplacement réservé en bas du rail (ex. contrôles de zoom, via portail). */
+  footerRef?: (el: HTMLDivElement | null) => void
 }
 
 export default function Drawer({
-  side, tabs, activeTab, onTabChange, renderTab, width = 220,
+  side, tabs, activeTab, onTabChange, renderTab, width = 220, footerRef,
 }: Props) {
   const [paintedTab, setPaintedTab] = useState(tabs[0]?.key ?? '')
   if (activeTab && activeTab !== paintedTab) setPaintedTab(activeTab)
 
   const isOpen = activeTab !== null
-  const pointsAway = side === 'left' ? !isOpen : isOpen
   const activeIndex = tabs.findIndex(t => t.key === activeTab)
 
   // Glisser pour défiler : un `overflow: auto` ne répond nativement qu'à la
@@ -64,53 +65,66 @@ export default function Drawer({
     }
   }, [])
 
+  // Rail d'onglets : dans le flux, collé au bord de l'écran, au lieu de
+  // pastilles flottantes par-dessus le canvas. Le libellé n'apparaît qu'au
+  // survol (data-label), l'état ouvert se lit sur la pastille d'accent.
+  const rail = (
+    <div
+      className={`${styles.tabs} ${side === 'left' ? styles.tabsLeft : styles.tabsRight}`}
+      style={{ ['--active-index' as string]: activeIndex } as React.CSSProperties}
+      role="tablist"
+      aria-orientation="vertical"
+    >
+      <span className={`${styles.activeTrack} ${activeIndex >= 0 ? styles.activeTrackVisible : ''}`} aria-hidden="true" />
+      {tabs.map(tab => {
+        const active = activeTab === tab.key
+        return (
+          <button
+            key={tab.key}
+            role="tab"
+            className={[
+              styles.tab,
+              tab.ultra ? styles.tabUltra : '',
+              active ? styles.tabActive : '',
+            ].join(' ')}
+            onClick={() => onTabChange(active ? null : tab.key)}
+            aria-selected={active}
+            aria-expanded={active}
+            aria-label={tab.label}
+            data-label={tab.label}
+          >
+            <span className={styles.tabIcon}>
+              {tab.icon ? <Icon name={tab.icon} size={16} /> : tab.label.charAt(0)}
+            </span>
+          </button>
+        )
+      })}
+      {footerRef && <div ref={footerRef} className={styles.railFooter} />}
+    </div>
+  )
+
+  const panel = (
+    <div
+      className={[
+        styles.panel,
+        isOpen ? styles.panelOpen : '',
+        side === 'left' ? styles.panelLeft : styles.panelRight,
+      ].join(' ')}
+    >
+      <div
+        ref={innerRef}
+        className={`${styles.inner} ${isOpen ? styles.innerVisible : ''}`}
+        onMouseDown={handleDragStart}
+      >
+        {renderTab(paintedTab)}
+      </div>
+    </div>
+  )
+
   return (
     <div className={styles.wrapper} style={{ ['--drawer-width' as string]: `${width}px` }}>
-      <div className={`${styles.tabs} ${side === 'left' ? styles.tabsLeft : styles.tabsRight}`} style={{ ['--active-index' as string]: activeIndex } as React.CSSProperties}>
-        <span className={`${styles.activeTrack} ${activeIndex >= 0 ? styles.activeTrackVisible : ''}`} aria-hidden="true"/>
-        {tabs.map(tab => {
-          const active = activeTab === tab.key
-          return (
-            <button
-              key={tab.key}
-              className={[
-                styles.tab,
-                tab.ultra ? styles.tabUltra : '',
-                active ? styles.tabActive : '',
-              ].join(' ')}
-              onClick={() => onTabChange(active ? null : tab.key)}
-              aria-expanded={active}
-              title={active ? `Fermer ${tab.label}` : `Ouvrir ${tab.label}`}
-            >
-              <span className={`${styles.chevron} ${pointsAway ? styles.chevronFlipped : ''}`}>
-                <Icon name={side === 'left' ? 'chevronRight' : 'chevronLeft'} size={12} />
-              </span>
-              {tab.icon && (
-                <span className={styles.tabIcon}>
-                  <Icon name={tab.icon} size={14} />
-                </span>
-              )}
-              {tab.label}
-            </button>
-          )
-        })}
-      </div>
-
-      <div
-        className={[
-          styles.panel,
-          isOpen ? styles.panelOpen : '',
-          side === 'left' ? styles.panelLeft : styles.panelRight,
-        ].join(' ')}
-      >
-        <div
-          ref={innerRef}
-          className={`${styles.inner} ${isOpen ? styles.innerVisible : ''}`}
-          onMouseDown={handleDragStart}
-        >
-          {renderTab(paintedTab)}
-        </div>
-      </div>
+      {/* Le rail reste au bord de l'écran, le panneau s'ouvre vers le canvas. */}
+      {side === 'left' ? <>{rail}{panel}</> : <>{panel}{rail}</>}
     </div>
   )
 }

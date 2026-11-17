@@ -18,15 +18,22 @@ interface Props {
    */
   locked?: boolean
   lockedLabel?: string
+  /** Titre au-dessus, contrôle pleine largeur en dessous (grilles de choix). */
+  stacked?: boolean
+  /** Petite pastille après le titre (« Bêta »…). */
+  badge?: string
 }
 
 export default function SettingRow({
-  title, description, children, locked = false, lockedLabel = 'Bientôt disponible',
+  title, description, children, locked = false, lockedLabel = 'Bientôt disponible', stacked = false, badge,
 }: Props) {
   return (
-    <div className={styles.row}>
+    <div className={`${styles.row} ${stacked ? styles.stacked : ''}`}>
       <div className={styles.text}>
-        <span className={styles.title}>{title}</span>
+        <span className={styles.title}>
+          {title}
+          {badge && <span className={styles.badge}>{badge}</span>}
+        </span>
         {description && <span className={styles.description}>{description}</span>}
       </div>
       <div className={styles.control}>

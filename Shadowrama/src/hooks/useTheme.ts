@@ -1,7 +1,8 @@
 // hooks/useTheme.ts
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  type ThemeMode, type ResolvedTheme,
+  type ThemeMode, type ResolvedTheme, type Palette,
+  loadPalette, savePalette, applyPalette,
   loadThemeMode, saveThemeMode, systemPrefersDark, applyTheme, applyThemeWithTransition,
 } from '../utils/theme'
 
@@ -59,7 +60,17 @@ export function useTheme() {
     applyThemeWithTransition(resolvedTheme, origin)
   }, [resolvedTheme])
 
+  const [palette, setPaletteState] = useState<Palette>(loadPalette)
+
+  // Synchronisation avec le DOM et localStorage, comme pour le thème.
+  useEffect(() => {
+    applyPalette(palette)
+    savePalette(palette)
+  }, [palette])
+
   return {
+    palette,
+    setPalette: setPaletteState,
     mode,
     resolvedTheme,
     /**

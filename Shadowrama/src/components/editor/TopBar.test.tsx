@@ -61,6 +61,18 @@ function setup(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
 }
 
 const click = (label: RegExp) => fireEvent.click(screen.getByRole('button', { name: label }))
+// Nouveau / Ouvrir / Importer / Enregistrer / Exporter vivent dans le menu « Fichier ».
+const openFileMenu = () => fireEvent.click(screen.getByRole('button', { name: /^Fichier/ }))
+const clickMenuItem = (label: RegExp) => {
+  openFileMenu()
+  fireEvent.click(screen.getByRole('menuitem', { name: label }))
+}
+// Le menu doit être rendu AVANT d'entrer dans `act` asynchrone : à l'intérieur,
+// l'ouverture n'est appliquée qu'à la sortie et l'élément serait introuvable.
+const clickMenuItemAsync = async (label: RegExp) => {
+  openFileMenu()
+  await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: label })) })
+}
 const dirtyDot = () => screen.queryByTitle('Non sauvegardé')
 const confirmation = () => screen.queryByRole('dialog', { name: 'Modifications non sauvegardées' })
 
@@ -104,7 +116,7 @@ describe('TopBar — remplacement du projet en cours', () => {
   ])('%s demande confirmation quand le travail n\'est pas enregistré', async (_name, label, action) => {
     setup({ initialDirty: true })
 
-    click(label)
+    clickMenuItem(label)
     expect(confirmation()).not.toBeNull()
     expect(action()).not.toHaveBeenCalled()
 
@@ -116,7 +128,7 @@ describe('TopBar — remplacement du projet en cours', () => {
   it('Annuler garde le projet en cours', () => {
     setup({ initialDirty: true })
 
-    click(/Ouvrir/)
+    clickMenuItem(/Ouvrir/)
     click(/^Annuler$/)
 
     expect(confirmation()).toBeNull()
@@ -126,7 +138,7 @@ describe('TopBar — remplacement du projet en cours', () => {
   it('ouvre directement quand tout est enregistré', async () => {
     setup({ initialDirty: false })
 
-    await act(async () => { click(/Ouvrir/) })
+    await clickMenuItemAsync(/Ouvrir/)
 
     expect(confirmation()).toBeNull()
     expect(files.openProject).toHaveBeenCalledTimes(1)
@@ -135,7 +147,7 @@ describe('TopBar — remplacement du projet en cours', () => {
   it("ne demande rien pour un projet vierge jamais enregistré : il n'y a rien à perdre", async () => {
     setup({ slides: BLANK, filePath: null, projectName: null })
 
-    await act(async () => { click(/Ouvrir/) })
+    await clickMenuItemAsync(/Ouvrir/)
 
     expect(confirmation()).toBeNull()
     expect(files.openProject).toHaveBeenCalledTimes(1)

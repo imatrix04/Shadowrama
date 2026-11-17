@@ -1,64 +1,81 @@
 .wrapper {
   display: flex;
   flex-shrink: 0;
+  height: 100%;
   position: relative;
   z-index: 10;
 }
 
-/* ── Onglets ──────────────────────────────────────────────────────────────
-   Colonne flex : les positions étaient auparavant des `top` en dur (1rem,
-   3.75rem), à réinventer pour chaque panneau ajouté. */
+/* ── Rail d'onglets ───────────────────────────────────────────────────────
+   Colonne étroite dans le flux, collée au bord : plus aucune pastille ne
+   flotte sur le canvas. Icônes seules, libellé en infobulle au survol. */
 .tabs {
-  position: absolute;
-  top: 1rem;
+  --tab-size: 36px;
+  --tab-gap: 0.4rem;
+  position: relative;
+  z-index: 51;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  z-index: 51;
+  gap: var(--tab-gap);
+  box-sizing: border-box;
+  width: 48px;
+  height: 100%;
+  padding: 0.6rem 0;
+  align-items: center;
+  background-color: var(--editor-bg-panel);
 }
 
-.tabsLeft { left: 100%; align-items: flex-start; }
-.tabsRight { right: 100%; align-items: flex-end; }
+/* Bas du rail : emplacement libre, poussé en bas de la colonne. */
+.railFooter {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
+.tabsLeft { border-right: 1px solid var(--editor-border); }
+.tabsRight { border-left: 1px solid var(--editor-border); }
+
+/* Pastille d'accent qui glisse d'un onglet à l'autre. */
 .activeTrack {
   position: absolute;
-  top: 0;
-  height: 34px;
-  width: 100%;
+  top: 0.6rem;
+  left: 50%;
+  width: var(--tab-size);
+  height: var(--tab-size);
+  margin-left: calc(var(--tab-size) / -2);
+  border-radius: var(--r-md);
   pointer-events: none;
-  background-image: linear-gradient(135deg, var(--accent), #b14dff);
-  box-shadow: 0 0 18px var(--accent-glow);
-  transform: translateY(calc(var(--active-index, 0) * (34px + 0.5rem))) scale(0.85);
+  background-image: var(--accent-fill);
+  box-shadow: 0 0 16px var(--accent-glow);
+  transform: translateY(calc(var(--active-index, 0) * (var(--tab-size) + var(--tab-gap)))) scale(0.8);
   opacity: 0;
   transition: transform 420ms var(--ease-spring), opacity var(--t-base) var(--ease-out);
 }
 
 .activeTrackVisible {
   opacity: 1;
-  transform: translateY(calc(var(--active-index, 0) * (34px + 0.5rem))) scale(1);
+  transform: translateY(calc(var(--active-index, 0) * (var(--tab-size) + var(--tab-gap)))) scale(1);
 }
-
-.tabsLeft .activeTrack { border-radius: 0 999px 999px 0; }
-.tabsRight .activeTrack { border-radius: 999px 0 0 999px; }
 
 .tab {
   position: relative;
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  height: 34px;
-  padding: 0 0.65rem;
-  background-color: var(--editor-btn-bg);
-  backdrop-filter: blur(10px) saturate(160%);
-  -webkit-backdrop-filter: blur(10px) saturate(160%);
-  border: 1px solid var(--editor-border-light);
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--tab-size);
+  height: var(--tab-size);
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
   color: var(--editor-text-muted);
   font-family: inherit;
-  font-size: 0.7rem;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 700;
   cursor: pointer;
   transition:
     background-color var(--t-fast),
@@ -67,39 +84,64 @@
     transform var(--t-base) var(--ease-spring);
 }
 
-.tabsLeft .tab { border-radius: 0 999px 999px 0; border-left: none; }
-.tabsRight .tab { border-radius: 999px 0 0 999px; border-right: none; }
-
 .tab:hover {
   background-color: var(--editor-btn-bg-hover);
   color: var(--editor-text);
 }
 
-.tabsLeft .tab:hover { transform: translateX(3px) scale(1.04); }
-.tabsRight .tab:hover { transform: translateX(-3px) scale(1.04); }
-
-.tab:active { transform: scale(0.96); }
+.tab:active { transform: scale(0.94); }
 
 .tab:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
-/* Le fond actif est maintenant porté par .activeTrack en dessous : le bouton
-   devient transparent pour le laisser transparaître. */
-.tabActive {
-  background-color: transparent;
-  border-color: transparent;
-  color: #fff;
+/* Infobulle : apparaît côté canvas, jamais en permanence. */
+.tab::after {
+  content: attr(data-label);
+  position: absolute;
+  top: 50%;
+  padding: 0.3rem 0.6rem;
+  background-color: var(--editor-bg-raised);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-md);
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--shadow-ink) 50%, transparent);
+  color: var(--editor-text);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease-out), transform var(--t-base) var(--ease-out);
 }
 
+.tabsLeft .tab::after { left: calc(100% + 12px); transform: translate(-4px, -50%); }
+.tabsRight .tab::after { right: calc(100% + 12px); transform: translate(4px, -50%); }
+
+.tab:hover::after,
+.tab:focus-visible::after {
+  opacity: 1;
+  transition-delay: 250ms;
+}
+
+.tabsLeft .tab:hover::after,
+.tabsLeft .tab:focus-visible::after,
+.tabsRight .tab:hover::after,
+.tabsRight .tab:focus-visible::after { transform: translate(0, -50%); }
+
+/* Le fond actif est porté par .activeTrack en dessous. */
+.tabActive,
 .tabActive:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: transparent;
+  color: var(--on-accent);
 }
 
+/* Onglet Ultra : teinté d'accent même au repos. */
 .tabUltra {
-  border-color: rgba(108, 99, 255, 0.45);
   color: var(--accent-hover);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .tabUltra:hover {
@@ -107,13 +149,10 @@
   border-color: var(--accent);
 }
 
-.tabUltra.tabActive {
-  border-color: transparent;
-  color: #fff;
-}
-
+.tabUltra.tabActive,
 .tabUltra.tabActive:hover {
-  filter: brightness(1.08);
+  border-color: transparent;
+  color: var(--on-accent);
 }
 
 .tabIcon {
@@ -131,15 +170,6 @@
   animation: tabIconPop 420ms var(--ease-spring);
 }
 
-/* Le chevron pivote au lieu de changer de glyphe (◀ / ▶). */
-.chevron {
-  flex-shrink: 0;
-  display: flex;
-  transition: transform var(--t-slow) var(--ease-spring);
-}
-
-.chevronFlipped { transform: rotate(180deg); }
-
 /* ── Panneau ──────────────────────────────────────────────────────────── */
 
 .panel {
@@ -148,7 +178,7 @@
   overflow: hidden;
   box-sizing: border-box;
   background-color: var(--editor-bg-panel);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 220px);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--editor-text) 3.5%, transparent), transparent 220px);
   transition: width 380ms var(--ease-spring);
 }
 
@@ -181,7 +211,7 @@
 
 .inner::-webkit-scrollbar { width: 8px; }
 .inner::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--editor-text) 12%, transparent);
   border-radius: var(--r-sm);
 }
 
@@ -198,5 +228,5 @@
 .titleUltra {
   padding-left: 0.5rem;
   border-left: 2px solid transparent;
-  border-image: linear-gradient(180deg, var(--accent), #b14dff) 1;
+  border-image: linear-gradient(180deg, var(--accent), var(--accent-2)) 1;
 }

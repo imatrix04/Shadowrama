@@ -21,18 +21,18 @@ import type { Rgba } from './colors'
 
 /** Couleurs que le rendu tire du thème de l'application quand un champ est vide. */
 export interface ExportDefaults {
-  /** Fond d'une diapositive sans réglage (`--editor-bg-canvas`). */
+  /** Fond d'une diapositive sans réglage (`--slide-bg`). */
   slideBackground: string
   /** Remplissage d'une forme sans couleur (`--accent`). */
   accent: string
-  /** Texte et bordures sans couleur (`--editor-text`). */
+  /** Texte et bordures sans couleur (`--slide-ink`). */
   text: string
 }
 
 export const FALLBACK_DEFAULTS: ExportDefaults = {
-  slideBackground: '#2d2d2d',
+  slideBackground: '#faf6ec',
   accent: '#6c63ff',
-  text: '#ffffff',
+  text: '#1c1814',
 }
 
 /** Une image à produire en photographiant le rendu réel. */

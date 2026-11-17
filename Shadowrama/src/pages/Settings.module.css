@@ -3,6 +3,9 @@
   min-height: 100vh;
   overflow: hidden;
   background-color: var(--editor-bg);
+  background-image: var(--poly-bg);
+  background-size: cover;
+  background-position: center;
   color: var(--editor-text);
   font-family: 'Inter', system-ui, sans-serif;
 
@@ -10,7 +13,7 @@
      variables locales de Home.module.css, pas de pollution des tokens globaux
      pour une paire de couleurs purement décoratives. */
   --blob-a: var(--accent);
-  --blob-b: #47bfff;
+  --blob-b: var(--accent-2);
 }
 
 /* ── Fond animé ── */
@@ -109,7 +112,7 @@
   border: 1px solid var(--editor-border-light);
   border-radius: 18px;
   padding: 2.2rem 2.4rem 2.6rem;
-  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 24px 60px -24px color-mix(in srgb, var(--shadow-ink) 50%, transparent);
   /* Un seul moment d'entrée orchestré pour toute la page, pas un fade-up par
      section : le panneau se pose comme un bloc, section par section aucune
      animation individuelle au chargement. */
@@ -215,7 +218,7 @@
 }
 
 .segmentActive {
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .segmentIcon {
@@ -231,4 +234,119 @@
     opacity: 1;
     transform: none;
   }
+}
+/* ── Choix de palette ── */
+
+.palettes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.palette {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.5rem 0.5rem 0.65rem;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-lg);
+  color: var(--editor-text);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast) var(--ease-out);
+}
+
+.palette:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.palette:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.paletteActive,
+.paletteActive:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 8px 20px -10px var(--accent-glow);
+}
+
+.paletteName {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* Pastille devant le nom de la palette active. */
+.paletteActive .paletteName::before {
+  content: '';
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background-color: var(--accent);
+}
+
+/* Miniature d'éditeur : fond, colonne de panneau, deux lignes de texte et une
+   pastille d'accent. Ces couleurs SONT l'aperçu de chaque palette : elles ne
+   doivent donc pas suivre la palette active. */
+.paletteSwatch {
+  position: relative;
+  display: block;
+  height: 3.6rem;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  border: 1px solid color-mix(in srgb, var(--editor-text) 12%, transparent);
+  background-color: var(--pv-bg);
+  background-image:
+    linear-gradient(var(--pv-line), var(--pv-line)),
+    linear-gradient(var(--pv-line), var(--pv-line));
+  background-size: 34% 4px, 22% 4px;
+  background-position: calc(28% + 10px) 28%, calc(28% + 10px) 46%;
+  background-repeat: no-repeat;
+}
+
+.paletteSwatch::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 28%;
+  background-color: var(--pv-panel);
+}
+
+.paletteSwatch::after {
+  content: '';
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 30%;
+  height: 10px;
+  border-radius: 999px;
+  background-color: var(--pv-accent);
+}
+
+[data-palette-preview='ink'] { --pv-bg: #0f1020; --pv-panel: #15162a; --pv-accent: #7c6cff; --pv-line: #f2f1fb40; }
+[data-palette-preview='neon'] { --pv-bg: #0d0d0f; --pv-panel: #16161a; --pv-accent: #2de2e6; --pv-line: #f4f4f640; }
+[data-palette-preview='warm'] { --pv-bg: #fbf8f3; --pv-panel: #efe8dc; --pv-accent: #ff6b4a; --pv-line: #2a232055; }
+
+/* ── Fonctionnalités ── */
+
+.featureControl {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.featureState {
+  font-size: 0.74rem;
+  color: var(--editor-text-muted);
+  transition: color var(--t-fast);
+}
+
+.featureStateOn {
+  color: var(--accent-hover);
 }

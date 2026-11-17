@@ -20,7 +20,7 @@
 
 .triggerActive {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .triggerLabel {
@@ -54,7 +54,7 @@
   position: fixed;
   z-index: 1000;
   background: var(--menu-bg);
-  border: 1px solid rgba(124, 92, 255, 0.25);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
   border-radius: 10px;
   padding: 5px;
   display: flex;
@@ -78,7 +78,7 @@
   width: 5px;
 }
 .list::-webkit-scrollbar-thumb {
-  background: rgba(124, 92, 255, 0.3);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
   border-radius: 10px;
 }
 
@@ -100,7 +100,7 @@
 }
 
 .option:hover {
-  background: rgba(124, 92, 255, 0.18);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--editor-text);}
 
 .optionActive {

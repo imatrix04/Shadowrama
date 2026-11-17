@@ -1,7 +1,7 @@
 .row {
   position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1.2rem;
   padding: 0.9rem 0 0.9rem 0.9rem;
@@ -48,9 +48,36 @@
 }
 
 .title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--editor-text);
+}
+
+.badge {
+  padding: 0.05rem 0.45rem;
+  background-color: var(--accent-bg-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 999px;
+  color: var(--accent-hover);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Titre au-dessus, contrôle sur toute la largeur en dessous. */
+.stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.8rem;
+}
+
+.stacked .control {
+  display: block;
+  padding-top: 0;
 }
 
 .description {
