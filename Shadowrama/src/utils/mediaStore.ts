@@ -86,6 +86,11 @@ export function resolveMedia(key: string): string | undefined {
   return store.get(key)?.blobUrl
 }
 
+/** Contenu d'un média, pour qui a besoin des octets (export PowerPoint). */
+export function getMediaBlob(key: string): Blob | undefined {
+  return store.get(key)?.blob
+}
+
 export function clearMediaStore() {
   for (const entry of store.values()) URL.revokeObjectURL(entry.blobUrl)
   store.clear()

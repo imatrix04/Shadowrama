@@ -1,7 +1,7 @@
 export type IconName =
   | 'text' | 'title' | 'image' | 'shape' | 'carousel' | 'globe' | 'reload' | 'pin' | 'video' | 'pause'
   | 'slides' | 'chevronLeft' | 'chevronRight'
-  | 'new' | 'save' | 'open' | 'play' | 'undo' | 'redo'
+  | 'new' | 'save' | 'open' | 'export' | 'play' | 'undo' | 'redo'
   | 'ultra' | 'motion' | 'effects' | 'transition' | 'background'
   | 'animNone' | 'animFade' | 'animSlideLeft' | 'animSlideRight' | 'animSlideUp' | 'animZoom'
   | 'settings' | 'sun' | 'moon' | 'monitor' | 'lock' | 'hash'
@@ -135,6 +135,13 @@ const PATHS: Record<IconName, React.ReactNode> = {
   open: (
     <>
       <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+    </>
+  ),
+  export: (
+    <>
+      <path d="M12 15V3" />
+      <path d="M7 8l5-5 5 5" />
+      <path d="M5 15v4a2 2 0 002 2h10a2 2 0 002-2v-4" />
     </>
   ),
   hash: (

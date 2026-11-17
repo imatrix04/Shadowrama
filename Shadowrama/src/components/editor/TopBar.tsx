@@ -11,6 +11,8 @@ import ImportReportDialog from '../ui/ImportReportDialog'
 import Dialog from '../ui/Dialog'
 import Icon from '../ui/Icon'
 import PresentationMode from './PresentationMode'
+import PptxExport from './PptxExport'
+import type { ExportReport } from '../../utils/pptx/export/write'
 import styles from './TopBar.module.css'
 
 interface Props {
@@ -50,6 +52,15 @@ const REPLACE_MESSAGES: Record<ReplaceAction, string> = {
   import: 'Les modifications en cours seront perdues. Importer un PowerPoint malgré tout ?',
 }
 
+const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`
+
+/** « 3 diapositives : 12 éléments modifiables, 2 en image. » */
+function exportSummary(report: ExportReport): string {
+  const parts = [plural(report.editableCount, 'élément modifiable', 'éléments modifiables')]
+  if (report.imageCount > 0) parts.push(`${report.imageCount} en image`)
+  return `${plural(report.slideCount, 'diapositive', 'diapositives')} : ${parts.join(', ')}.`
+}
+
 /** Une seule diapositive, sans bloc ni réglage : rien qui vaille d'être gardé. */
 function isBlankProject(slides: Slide[]): boolean {
   if (slides.length !== 1) return false
@@ -69,6 +80,8 @@ export default function TopBar({
   // Action en attente de confirmation : toutes remplacent le projet en cours.
   const [pendingReplace, setPendingReplace] = useState<ReplaceAction | null>(null)
   const [importReport, setImportReport] = useState<ImportReport | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const [exportReport, setExportReport] = useState<ExportReport | null>(null)
   const startsSaved = filePath !== null && !initialDirty
   const [savedSlides, setSavedSlides] = useState<Slide[] | null>(startsSaved ? slides : null)
   const [savedNumbering, setSavedNumbering] = useState<SlideNumbering | null>(startsSaved ? numbering : null)
@@ -205,6 +218,24 @@ export default function TopBar({
     }
   }
 
+  // Export PowerPoint : l'emplacement est demandé AVANT de fabriquer le fichier,
+  // pour ne pas faire attendre quelqu'un qui annule. Le travail lui-même vit
+  // dans PptxExport, qui occupe l'écran le temps des captures.
+  const handleExportPptx = async () => {
+    if (exporting) return
+    // Même précaution que la sauvegarde : un texte en cours de saisie doit
+    // d'abord rejoindre les données.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    try {
+      const picked = await window.fileAPI.pickPptxPath(projectNameRef.current ?? 'presentation')
+      if (picked) setExporting(true)
+    } catch (err) {
+      console.error('[export] ERREUR:', err)
+      setErrorMessage(`L'export a échoué.\n\n${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
   const startNewProject = () => {
     clearDraft()
     clearMediaStore()
@@ -278,6 +309,13 @@ export default function TopBar({
             <Icon name="open" /> Importer
           </button>
           <button
+            className={styles.btn}
+            onClick={handleExportPptx}
+            title="Exporter en PowerPoint (.pptx)"
+          >
+            <Icon name="export" /> Exporter
+          </button>
+          <button
             className={`${styles.btn} ${ultra ? styles.btnUltraOn : styles.btnUltra}`}
             onClick={onToggleUltra}
             title={ultra ? 'Quitter le mode Ultra Design' : 'Activer le mode Ultra Design : effets et séquences avancées'}
@@ -329,6 +367,35 @@ export default function TopBar({
           report={importReport}
           actionLabel="Fermer"
           onClose={() => setImportReport(null)}
+        />
+      )}
+
+      {exporting && (
+        <PptxExport
+          slides={slides}
+          numbering={numbering}
+          ultra={ultra}
+          title={projectName ?? 'Présentation'}
+          onDone={report => {
+            setExporting(false)
+            setExportReport(report)
+          }}
+          onError={err => {
+            console.error('[export] ERREUR:', err)
+            setExporting(false)
+            setErrorMessage(`L'export a échoué.\n\n${err instanceof Error ? err.message : String(err)}`)
+          }}
+        />
+      )}
+
+      {exportReport && (
+        <ImportReportDialog
+          report={exportReport}
+          eyebrow="Export PowerPoint"
+          title="Export terminé"
+          summary={exportSummary(exportReport)}
+          actionLabel="Fermer"
+          onClose={() => setExportReport(null)}
         />
       )}
 

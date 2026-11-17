@@ -1,0 +1,53 @@
+/* Plein écran, au-dessus de tout : ce qui est photographié doit être seul à
+   l'écran, et l'éditeur ne doit plus recevoir ni clic ni frappe pendant ce temps. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  background-color: #0d0d14;
+  cursor: progress;
+  user-select: none;
+}
+
+/* Zone photographiée. Son fond alterne noir / blanc entre deux prises de vue
+   (voir recoverAlpha) : seule cette zone change, pas tout l'écran. */
+.box {
+  position: absolute;
+  overflow: hidden;
+}
+
+/* Le contenu ne réagit à rien : pas de survol, pas de lecture au clic. */
+.content {
+  position: absolute;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.status {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+  background-color: #0d0d14;
+}
+
+.bar {
+  width: 180px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background-color: var(--accent);
+  transition: width var(--t-base);
+}

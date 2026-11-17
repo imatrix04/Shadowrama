@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import type { ImportReport } from '../../utils/pptx/import'
+import type { ImportIssue } from '../../utils/pptx/import'
 import { formatSlideRanges, groupImportIssues } from '../../utils/pptx/groupIssues'
 import styles from './ImportReportDialog.module.css'
 
 interface Props {
-  report: ImportReport
+  /** Remarques à afficher ; `slideCount` et `blockCount` servent au résumé par défaut. */
+  report: { issues: ImportIssue[]; slideCount?: number; blockCount?: number }
+  /** Textes d'en-tête. Absents : ceux d'un import PowerPoint. */
+  eyebrow?: string
+  title?: string
+  summary?: string
   /** Libellé du bouton principal (« Fermer », « Ouvrir dans l'éditeur »…). */
   actionLabel: string
   /** Bouton principal, Échap et clic sur le fond. */
@@ -21,7 +26,10 @@ const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : 
  * la liste défile, au lieu d'un message qui s'allonge jusqu'à remplir la fenêtre.
  * Les remarques identiques sont regroupées (voir groupImportIssues).
  */
-export default function ImportReportDialog({ report, actionLabel, onClose }: Props) {
+export default function ImportReportDialog({
+  report, actionLabel, onClose,
+  eyebrow = 'Import PowerPoint', title = 'Import terminé', summary,
+}: Props) {
   const panelRef = useRef<HTMLDivElement>(null)
   const groups = useMemo(() => groupImportIssues(report.issues), [report.issues])
 
@@ -50,16 +58,18 @@ export default function ImportReportDialog({ report, actionLabel, onClose }: Pro
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        aria-label="Import PowerPoint terminé"
+        aria-label={`${eyebrow} : ${title}`}
         className={styles.panel}
         onMouseDown={e => e.stopPropagation()}
       >
         <div className={styles.header}>
-          <p className={styles.eyebrow}>Import PowerPoint</p>
-          <p className={styles.title}>Import terminé</p>
+          <p className={styles.eyebrow}>{eyebrow}</p>
+          <p className={styles.title}>{title}</p>
           <p className={styles.subtitle}>
-            {plural(report.slideCount, 'diapositive', 'diapositives')} et{' '}
-            {plural(report.blockCount, 'élément', 'éléments')} importés.
+            {summary ?? (
+              `${plural(report.slideCount ?? 0, 'diapositive', 'diapositives')} et `
+              + `${plural(report.blockCount ?? 0, 'élément', 'éléments')} importés.`
+            )}
           </p>
         </div>
 

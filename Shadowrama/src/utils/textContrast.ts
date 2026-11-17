@@ -4,7 +4,7 @@ const LIGHT_TEXT = '#ffffff'
 const DARK_TEXT = '#111111'
 
 /** Luminance relative (WCAG) d'une couleur `#rgb` / `#rrggbb`, ou null si illisible. */
-function luminance(color: string | undefined): number | null {
+export function luminance(color: string | undefined): number | null {
   let hex = (color ?? '').trim().replace('#', '')
   if (hex.length === 3) hex = hex.split('').map(c => c + c).join('')
   if (!/^[0-9a-f]{6}$/i.test(hex)) return null

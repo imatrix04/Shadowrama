@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, ipcMain, globalShortcut, shell } from 'electron'
+import { app, BrowserWindow, Menu, ipcMain, globalShortcut, shell, webContents } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import log from 'electron-log'
 import { join } from 'path'
@@ -102,6 +102,46 @@ ipcMain.on('set-fullscreen', (_event, value: boolean) => {
   // La fenêtre peut avoir été fermée entre-temps ; appeler une méthode sur un
   // BrowserWindow détruit lève.
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setFullScreen(value)
+})
+
+// ── Captures pour l'export PowerPoint ───────────────────────────────────────
+// Ce que PowerPoint ne sait pas représenter (page web, carrousel, effets…) est
+// photographié tel qu'il s'affiche. Les deux canaux ne lisent que la fenêtre de
+// l'application et ses propres pages web : rien d'autre à l'écran.
+
+const isMainSender = (sender: Electron.WebContents) =>
+  !!mainWindow && !mainWindow.isDestroyed() && sender === mainWindow.webContents
+
+/** Photographie une zone de la fenêtre, en pixels CSS. Rend un PNG. */
+ipcMain.handle('capture-rect', async (event, rect: { x: number; y: number; width: number; height: number }) => {
+  if (!isMainSender(event.sender)) throw new Error('Capture refusée.')
+  const values = [rect?.x, rect?.y, rect?.width, rect?.height]
+  if (!values.every(v => Number.isFinite(v)) || rect.width < 1 || rect.height < 1) {
+    throw new Error('Zone de capture invalide.')
+  }
+  const image = await event.sender.capturePage({
+    x: Math.round(rect.x), y: Math.round(rect.y),
+    width: Math.round(rect.width), height: Math.round(rect.height),
+  })
+  return new Uint8Array(image.toPNG())
+})
+
+/**
+ * Photographie le contenu d'un bloc « Page web ».
+ *
+ * La page vit dans un autre processus : on la capture directement plutôt qu'à
+ * travers la fenêtre. Seule une page web hébergée par la fenêtre appelante est
+ * acceptée — pas n'importe quel `webContents` de l'application.
+ */
+ipcMain.handle('capture-webview', async (event, id: number) => {
+  if (!isMainSender(event.sender)) throw new Error('Capture refusée.')
+  const guest = typeof id === 'number' ? webContents.fromId(id) : undefined
+  if (!guest || guest.isDestroyed() || guest.hostWebContents !== event.sender) {
+    throw new Error('Page web introuvable.')
+  }
+  const image = await guest.capturePage()
+  if (image.isEmpty()) throw new Error('Capture vide.')
+  return new Uint8Array(image.toPNG())
 })
 
 // Une vérification au seul démarrage laissait passer les versions publiées

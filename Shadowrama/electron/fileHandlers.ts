@@ -1,6 +1,7 @@
 import { dialog, ipcMain } from 'electron'
 import { createWriteStream } from 'fs'
-import { readFile, rename, rm, stat } from 'fs/promises'
+import { readFile, rename, rm, stat, writeFile } from 'fs/promises'
+import { basename } from 'path'
 import { pipeline } from 'stream/promises'
 import JSZip from 'jszip'
 
@@ -57,6 +58,36 @@ ipcMain.handle('open-pptx', async () => {
   return { filePath: filePaths[0], data: new Uint8Array(buffer) }
 })
 
+// ── Export PowerPoint ───────────────────────────────────────────────────────
+// En deux temps : l'utilisateur choisit d'abord l'emplacement (inutile de
+// fabriquer le fichier s'il annule), puis le renderer envoie les octets. Le
+// chemin choisi reste ICI : le renderer n'en reçoit que le nom, et ne peut donc
+// pas faire écrire ailleurs qu'à l'endroit désigné dans la boîte de dialogue.
+
+let pendingPptxPath: string | null = null
+
+ipcMain.handle('pick-pptx-path', async (_e, defaultName: string) => {
+  const safeName = String(defaultName ?? '').replace(/[\\/:*?"<>|]/g, '').trim() || 'presentation'
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    defaultPath: `${safeName}.pptx`,
+    filters: [{ name: 'PowerPoint', extensions: ['pptx'] }],
+  })
+  if (canceled || !filePath) return null
+  pendingPptxPath = /\.pptx$/i.test(filePath) ? filePath : `${filePath}.pptx`
+  return basename(pendingPptxPath)
+})
+
+ipcMain.handle('write-pptx', async (_e, data: Uint8Array) => {
+  const filePath = pendingPptxPath
+  if (!filePath) throw new Error("Aucun emplacement n'a été choisi pour l'export.")
+  pendingPptxPath = null
+  await writeAtomic(filePath, async tempPath => {
+    await writeFile(tempPath, data)
+    return data.byteLength
+  })
+  return basename(filePath)
+})
+
 /**
  * Refuse tout chemin qui n'est pas un projet Shadowrama.
  *
@@ -98,35 +129,22 @@ async function readProject(filePath: string) {
 }
 
 /**
- * Écrit le projet de façon atomique : d'abord dans un fichier temporaire voisin,
- * renommé par-dessus la cible une fois l'écriture terminée ET vérifiée.
+ * Écrit un fichier de façon atomique : d'abord dans un fichier temporaire
+ * voisin, renommé par-dessus la cible une fois l'écriture terminée ET vérifiée.
  *
- * Écrire directement dans le `.shma` laissait un projet tronqué — donc perdu —
+ * Écrire directement dans la cible laissait un fichier tronqué — donc perdu —
  * dès qu'un plantage, une coupure ou un disque plein survenait en cours de
  * route. Avec le renommage, le fichier d'origine reste intact jusqu'au dernier
  * instant : on a soit l'ancienne version, soit la nouvelle, jamais un mélange.
  *
- * Le zip est produit en flux vers le disque : l'archive complète n'est plus
- * montée en mémoire (un projet avec des vidéos pèse vite plusieurs centaines de
- * mégaoctets).
+ * `write` remplit le fichier temporaire et rend le nombre d'octets attendus.
  */
-async function writeZip(filePath: string, manifestJson: string, media: MediaEntry[]) {
-  const zip = new JSZip()
-  zip.file('manifest.json', manifestJson)
-  for (const m of media) {
-    // Garde-fou : un média ne doit jamais pouvoir écraser le manifest.
-    if (m.key === 'manifest.json' || !m.key.startsWith('media/')) continue
-    zip.file(m.key, m.data, { compression: /^media\/vid-/.test(m.key) ? 'STORE' : 'DEFLATE' })
-  }
-
+async function writeAtomic(filePath: string, write: (tempPath: string) => Promise<number>) {
   // Même dossier que la cible : un renommage n'est atomique qu'au sein d'un
   // même volume.
   const tempPath = `${filePath}.${process.pid}-${Date.now()}.tmp`
   try {
-    let written = 0
-    const source = zip.generateNodeStream({ type: 'nodebuffer', compression: 'DEFLATE', streamFiles: true })
-    source.on('data', (chunk: Buffer) => { written += chunk.length })
-    await pipeline(source, createWriteStream(tempPath))
+    const written = await write(tempPath)
 
     // Vérifie que l'écriture a bien eu lieu (Windows Controlled Folder Access peut
     // bloquer silencieusement en retournant succès sans écrire). La taille
@@ -144,4 +162,27 @@ async function writeZip(filePath: string, manifestJson: string, media: MediaEntr
     await rm(tempPath, { force: true }).catch(() => {})
     throw err
   }
+}
+
+/**
+ * Le zip du projet est produit en flux vers le disque : l'archive complète n'est
+ * plus montée en mémoire (un projet avec des vidéos pèse vite plusieurs
+ * centaines de mégaoctets).
+ */
+async function writeZip(filePath: string, manifestJson: string, media: MediaEntry[]) {
+  const zip = new JSZip()
+  zip.file('manifest.json', manifestJson)
+  for (const m of media) {
+    // Garde-fou : un média ne doit jamais pouvoir écraser le manifest.
+    if (m.key === 'manifest.json' || !m.key.startsWith('media/')) continue
+    zip.file(m.key, m.data, { compression: /^media\/vid-/.test(m.key) ? 'STORE' : 'DEFLATE' })
+  }
+
+  await writeAtomic(filePath, async tempPath => {
+    let written = 0
+    const source = zip.generateNodeStream({ type: 'nodebuffer', compression: 'DEFLATE', streamFiles: true })
+    source.on('data', (chunk: Buffer) => { written += chunk.length })
+    await pipeline(source, createWriteStream(tempPath))
+    return written
+  })
 }

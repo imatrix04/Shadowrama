@@ -19,6 +19,10 @@ interface Window {
     getAppVersion: () => Promise<string>
     checkForUpdates: () => Promise<UpdateCheckResult>
     onWebviewEvent: (callback: (event: { type: 'escape' | 'pointer'; id: number }) => void) => () => void
+    /** Photographie une zone de la fenêtre (pixels CSS). Rend un PNG. */
+    captureRect: (rect: { x: number; y: number; width: number; height: number }) => Promise<Uint8Array>
+    /** Photographie le contenu d'un bloc « Page web », par identifiant de `<webview>`. Rend un PNG. */
+    captureWebview: (id: number) => Promise<Uint8Array>
   }
   fileAPI: {
     saveProjectAs: (manifestJson: string, media: MediaPayload[], defaultName: string) => Promise<string | null>
@@ -27,5 +31,9 @@ interface Window {
     openProjectAt: (filePath: string) => Promise<{ filePath: string; manifestJson: string; media: MediaPayload[] }>
     /** Boîte de dialogue « Importer PowerPoint » : renvoie le contenu du .pptx choisi. */
     openPptx: () => Promise<{ filePath: string; data: Uint8Array } | null>
+    /** Boîte « Exporter en PowerPoint ». Rend le nom du fichier choisi, ou null si annulé. */
+    pickPptxPath: (defaultName: string) => Promise<string | null>
+    /** Écrit le .pptx à l'emplacement choisi par `pickPptxPath`. Rend le nom du fichier. */
+    writePptx: (data: Uint8Array) => Promise<string>
   }
 }
