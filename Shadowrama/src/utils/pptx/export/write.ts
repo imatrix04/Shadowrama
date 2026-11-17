@@ -303,7 +303,7 @@ function writeShape(w: SlideWriter, block: ShapeBlockData, defaults: ExportDefau
   const svg = shape !== 'rectangle' && shape !== 'circle'
   const fill = gradient
     ? blockGradFill(gradient, opacity, svg)
-    : solidFill(withOpacity(colorOr(block.backgroundColor, defaults.accent), opacity))
+    : solidFill(withOpacity(colorOr(block.backgroundColor, defaults.shapeFill), opacity))
   const strokeFill = solidFill(withOpacity(colorOr(block.borderColor, defaults.text), opacity))
   const outline = border > 0 ? `<a:ln w="${emu(border)}">${strokeFill}<a:round/></a:ln>` : '<a:ln><a:noFill/></a:ln>'
   const head = (name: string) => `<p:nvSpPr><p:cNvPr id="${w.id()}" name="${name}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>`

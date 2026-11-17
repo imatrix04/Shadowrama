@@ -32,6 +32,21 @@ function backgroundLuminance(background: SlideBackground | undefined, ultra: boo
   return luminance(getComputedStyle(document.documentElement).getPropertyValue('--slide-bg'))
 }
 
+const CREAM_DARK = '#1c1814'   // noir crème
+const CREAM_LIGHT = '#f4ede0'  // blanc crème
+
+/**
+ * Encre crème d'un élément posé sur la diapositive : noir crème sur un fond
+ * clair, blanc crème sur un fond sombre (ou indéterminé, comme une image).
+ * `opposite` donne la teinte inverse, pour une bordure qui doit se détacher du
+ * remplissage de même famille.
+ */
+export function creamInkFor(background: SlideBackground | undefined, ultra: boolean, opposite = false): string {
+  const l = backgroundLuminance(background, ultra)
+  const darkInk = l !== null && l > 0.179
+  return darkInk !== opposite ? CREAM_DARK : CREAM_LIGHT
+}
+
 /** Noir sur fond clair, blanc sur fond sombre (ou si le fond est indéterminé). */
 export function readableTextColor(background: SlideBackground | undefined, ultra: boolean): string {
   const l = backgroundLuminance(background, ultra)

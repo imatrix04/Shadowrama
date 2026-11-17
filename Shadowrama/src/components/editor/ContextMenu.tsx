@@ -4,6 +4,7 @@ import type { BlockData, BlockProperty, AnimationType } from '../../types'
 import { getBlockField, setBlockField } from '../../types'
 import { getBlockProperties, getBlockConfig } from '../../blocks'
 import Icon from '../ui/Icon'
+import ColorPicker from '../ui/ColorPicker'
 import styles from './ContextMenu.module.css'
 import CustomSelect from '../../styles/CustomSelect'
 import PolygonShapeEditor from './PolygonShapeEditor'
@@ -109,43 +110,17 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
           onChange={e => onUpdate(block.id, setBlockField(block, prop.key, Number(e.target.value)))}
         />
       )
-    case 'color': {
-      const colorVal = String(getBlockField(block, prop.key) ?? '')
-      const isTransparent = !colorVal || colorVal === 'transparent'
-
+    case 'color':
+      // Pleine largeur, valeur écrite ; sans couleur (ou « transparent »), le
+      // champ l'indique et la fenêtre démarre sur du blanc.
       return (
-        <div style={{ position: 'relative', width: '100%' }}>
-          <input
-            type="color"
-            className={styles.input}
-            style={{ 
-              height: '32px', 
-              padding: '2px', 
-              cursor: 'pointer',
-              opacity: isTransparent ? 0.6 : 1 
-            }}
-            value={isTransparent ? '#ffffff' : colorVal}
-            onChange={e => onUpdate(block.id, setBlockField(block, prop.key, e.target.value))}
-          />
-          {isTransparent && (
-            <div style={{
-              position: 'absolute',
-              inset: '1px',
-              pointerEvents: 'none', 
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--editor-text)',
-              fontSize: '0.85rem',
-              backgroundColor: 'var(--editor-btn-bg)',
-              borderRadius: 'var(--r-sm)'
-            }}>
-              transparent
-            </div>
-          )}
-        </div>
+        <ColorPicker
+          wide
+          value={String(getBlockField(block, prop.key) ?? '')}
+          onChange={hex => onUpdate(block.id, setBlockField(block, prop.key, hex))}
+          label={prop.label}
+        />
       )
-    }
     case 'url':
       return (
         <UrlField

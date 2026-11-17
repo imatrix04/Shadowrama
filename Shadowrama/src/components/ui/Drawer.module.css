@@ -209,12 +209,6 @@
 
 .innerVisible { opacity: 1; }
 
-.inner::-webkit-scrollbar { width: 8px; }
-.inner::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--editor-text) 12%, transparent);
-  border-radius: var(--r-sm);
-}
-
 .title {
   margin: 0 0 0.5rem;
   padding: 0 0.15rem;

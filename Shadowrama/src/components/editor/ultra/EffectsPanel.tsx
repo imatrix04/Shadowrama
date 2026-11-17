@@ -1,4 +1,5 @@
 import type { BlockData, BlockEffects } from '../../../types'
+import ColorPicker from '../../ui/ColorPicker'
 import styles from '../PanelControls.module.css'
 
 interface Props {
@@ -67,7 +68,7 @@ export default function EffectsPanel({ block, onUpdate, onGestureStart }: Props)
   const colorField = (label: string, value: string, onChange: (v: string) => void) => (
     <div className={styles.field}>
       <span className={styles.fieldLabel}>{label}</span>
-      <input type="color" className={styles.color} value={value} onChange={e => onChange(e.target.value)} />
+      <ColorPicker value={value} onChange={v => onChange(v)} />
     </div>
   )
 

@@ -74,14 +74,6 @@
   animation: listOut 0.14s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
-.list::-webkit-scrollbar {
-  width: 5px;
-}
-.list::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--accent) 30%, transparent);
-  border-radius: 10px;
-}
-
 .option {
   display: flex;
   align-items: center;

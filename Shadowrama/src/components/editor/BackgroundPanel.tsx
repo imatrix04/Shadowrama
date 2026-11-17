@@ -9,6 +9,7 @@ import {
   mergeParticles,
 } from '../../ultra/particles'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
+import ColorPicker from '../ui/ColorPicker'
 import styles from './PanelControls.module.css'
 import { Section, Segmented, SwitchRow } from './PanelWidgets'
 
@@ -144,12 +145,7 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
         <div className={styles.group}>
           <div className={styles.field}>
             <span className={styles.fieldLabel}>Couleur</span>
-            <input
-              type="color"
-              className={styles.color}
-              value={current.color ?? '#faf6ec'}
-              onChange={e => onChange({ ...current, color: e.target.value })}
-            />
+            <ColorPicker value={current.color ?? '#faf6ec'} onChange={v => onChange({ ...current, color: v })} />
           </div>
         </div>
       )}
@@ -174,21 +170,11 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
 
           <div className={styles.field}>
             <span className={styles.fieldLabel}>Départ</span>
-            <input
-              type="color"
-              className={styles.color}
-              value={current.gradient?.from ?? DEFAULT_GRADIENT.from}
-              onChange={e => onChange({ ...current, gradient: { ...current.gradient!, from: e.target.value } })}
-            />
+            <ColorPicker value={current.gradient?.from ?? DEFAULT_GRADIENT.from} onChange={v => onChange({ ...current, gradient: { ...current.gradient!, from: v } })} />
           </div>
           <div className={styles.field}>
             <span className={styles.fieldLabel}>Arrivée</span>
-            <input
-              type="color"
-              className={styles.color}
-              value={current.gradient?.to ?? DEFAULT_GRADIENT.to}
-              onChange={e => onChange({ ...current, gradient: { ...current.gradient!, to: e.target.value } })}
-            />
+            <ColorPicker value={current.gradient?.to ?? DEFAULT_GRADIENT.to} onChange={v => onChange({ ...current, gradient: { ...current.gradient!, to: v } })} />
           </div>
           <Slider
             label="Angle" min={0} max={360} step={15}
@@ -240,12 +226,7 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
           </p>
           <div className={styles.field}>
             <span className={styles.fieldLabel}>Couleur</span>
-            <input
-              type="color"
-              className={styles.color}
-              value={current.overlay?.color ?? '#000000'}
-              onChange={e => setOverlay({ color: e.target.value })}
-            />
+            <ColorPicker value={current.overlay?.color ?? '#000000'} onChange={v => setOverlay({ color: v })} />
           </div>
           <Slider
             label="Intensité" min={0} max={0.9} step={0.05}
@@ -341,12 +322,7 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
             {p.colors.map((color, i) => (
               <div className={styles.field} key={i}>
                 <span className={styles.fieldLabel}>Couleur {i + 1}</span>
-                <input
-                  type="color"
-                  className={styles.color}
-                  value={color}
-                  onChange={e => setColorAt(i, e.target.value)}
-                />
+                <ColorPicker value={color} onChange={v => setColorAt(i, v)} />
                 {p.colors.length > 1 && (
                   <button
                     className={styles.remove}
@@ -392,12 +368,7 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
                   onChange={v => setParticles({ links: { ...p.links, width: v } })} />
                 <div className={styles.field}>
                   <span className={styles.fieldLabel}>Couleur des liens</span>
-                  <input
-                    type="color"
-                    className={styles.color}
-                    value={p.links.color ?? p.colors[0]}
-                    onChange={e => setParticles({ links: { ...p.links, color: e.target.value } })}
-                  />
+                  <ColorPicker value={p.links.color ?? p.colors[0]} onChange={v => setParticles({ links: { ...p.links, color: v } })} />
                   {p.links.color && (
                     <button
                       className={styles.remove}

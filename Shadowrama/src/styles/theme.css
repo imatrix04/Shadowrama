@@ -46,6 +46,12 @@
   /* Maillage décoratif des grandes surfaces : aucun, sauf palette low-poly. */
   --poly-bg: none;
 
+  /* Barre de défilement (règles plus bas) : réglée par thème, car une même
+     opacité ne donne pas le même contraste sur fond sombre et sur fond clair. */
+  --scroll-track: color-mix(in srgb, var(--editor-text) 4%, transparent);
+  --scroll-thumb: color-mix(in srgb, var(--editor-text) 30%, transparent);
+  --scroll-thumb-hover: color-mix(in srgb, var(--accent) 80%, transparent);
+
   /* États */
   --danger: #ff4d4d;
   --danger-soft: #ff6b6b;
@@ -81,6 +87,46 @@
     color-mix(in srgb, var(--editor-bg-panel) 92%, transparent)
   );
   --menu-shadow: 0 20px 50px color-mix(in srgb, var(--shadow-ink) 45%, transparent), 0 0 0 1px var(--overlay-1) inset, 0 0 30px var(--accent-glow);
+}
+
+/*
+ * ── Barre de défilement ────────────────────────────────────────────────────
+ * Une seule pour toute l'appli (page, tiroirs, menus, boîtes de dialogue) :
+ * l'ancienne était la barre native du système, claire et épaisse, en contraste
+ * dur avec l'interface. Fine, en pastille arrondie sur un rail à peine teinté ;
+ * elle prend la couleur d'accent au survol et au glissé. Couleurs réglées par
+ * thème (--scroll-*) : sombre et clair n'ont pas le même contraste à
+ * opacité égale, c'est ce qui la rendait invisible en clair.
+ *
+ * Le trait transparent autour de la pastille (background-clip) fait l'espace
+ * visuel : 12 px de zone cliquable, 6 px visibles.
+ */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--scroll-thumb);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scroll-thumb-hover);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--accent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -132,6 +178,11 @@
   --shadow-ink: #140f28;
   --slide-bg: #faf6ec;
   --slide-ink: #1c1814;
+
+  /* Encre sombre sur fond clair : il faut une pastille nettement plus dense
+     qu'en sombre (≈ 3:1 de contraste) pour qu'elle reste visible. */
+  --scroll-track: color-mix(in srgb, var(--editor-text) 6%, transparent);
+  --scroll-thumb: color-mix(in srgb, var(--editor-text) 42%, transparent);
   --menu-shadow: 0 20px 50px color-mix(in srgb, var(--shadow-ink) 14%, transparent), 0 0 0 1px var(--overlay-1) inset, 0 0 30px var(--accent-glow);
 }
 

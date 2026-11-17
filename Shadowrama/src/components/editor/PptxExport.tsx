@@ -56,7 +56,7 @@ function readDefaults(): ExportDefaults {
   const read = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback
   return {
     slideBackground: read('--slide-bg', FALLBACK_DEFAULTS.slideBackground),
-    accent: read('--accent', FALLBACK_DEFAULTS.accent),
+    shapeFill: read('--slide-ink', FALLBACK_DEFAULTS.shapeFill),
     text: read('--slide-ink', FALLBACK_DEFAULTS.text),
   }
 }

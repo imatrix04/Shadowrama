@@ -6,9 +6,9 @@ const shapeConfig: BlockConfig = {
   icon: 'shape',
   defaultProps: {
     shape: 'rectangle',
-    backgroundColor: '#3b82f6',
+    // Pas de couleur ici : le remplissage et la bordure sont posés à la création
+    // d'après le fond de la diapositive (voir addBlock dans Editor.tsx).
     borderWidth: 0,
-    borderColor: '#ffffff',
     borderRadius: 4,
     width: 150,
     height: 150,

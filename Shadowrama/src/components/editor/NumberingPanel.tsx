@@ -8,6 +8,7 @@ import {
   COUNT_PRESET, CUSTOM_PRESET, DEFAULT_CUSTOM_MOTION, NUMBERING_EASES,
   NUMBERING_FORMATS, NUMBERING_POSITIONS, POSITION_LABELS,
 } from '../../utils/numbering'
+import ColorPicker from '../ui/ColorPicker'
 import styles from './PanelControls.module.css'
 import local from './NumberingPanel.module.css'
 
@@ -193,12 +194,7 @@ export default function NumberingPanel({ numbering, ultra, onChange, onPreview }
             {numbering.color !== undefined && (
               <div className={styles.field}>
                 <span className={styles.fieldLabel}>Couleur</span>
-                <input
-                  type="color"
-                  className={styles.color}
-                  value={numbering.color}
-                  onChange={e => patch({ color: e.target.value })}
-                />
+                <ColorPicker value={numbering.color} onChange={v => patch({ color: v })} />
               </div>
             )}
           </div>

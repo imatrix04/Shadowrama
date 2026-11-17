@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { BLOCKS_CONFIG } from '../blocks'
 import type { BlockData, MotionPhase, Slide, SlideNumbering, SlideBackground, SlideTransitionSettings } from '../types'
 import { useEditorHistory } from '../hooks/useEditorHistory'
@@ -13,7 +13,9 @@ import type { BlockUpdate } from '../utils/blockUpdates'
 import { useUltraMode } from '../hooks/useUltraMode'
 import { useFeatures } from '../hooks/useFeatures'
 import { useEditorShortcuts } from '../hooks/useEditorShortcuts'
-import { readableTextColor } from '../utils/textContrast'
+import { creamInkFor, readableTextColor } from '../utils/textContrast'
+import { collectProjectColors } from '../utils/projectColors'
+import { ProjectColorsContext } from '../components/ui/ProjectColorsContext'
 import Canvas from '../components/editor/Canvas'
 import LeftSidebars from '../components/editor/LeftSidebars'
 import TopBar from '../components/editor/TopBar'
@@ -95,6 +97,8 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
   const { slides, begin, commit, patch, undo, redo, reset, canUndo, canRedo } = useEditorHistory(
     initialDraft?.slides ?? [{ id: nextId(), blocks: [] }]
   )
+  // Couleurs déjà utilisées dans le projet : proposées par le sélecteur de couleur.
+  const projectColors = useMemo(() => collectProjectColors(slides, numbering), [slides, numbering])
 
   // `slides` peut rétrécir sous l'index demandé : annuler l'ajout d'une diapo,
   // refaire une suppression, ou ouvrir un projet plus court. Le recadrage est
@@ -182,6 +186,13 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
     } as BlockData
     if ((newBlock.type === 'text' || newBlock.type === 'title') && newBlock.color === '#ffffff') {
       newBlock.color = readableTextColor(slides[currentSlide]?.background, ultra)
+    }
+    // Forme : noir crème sur fond clair, blanc crème sur fond sombre ; la bordure
+    // prend la teinte inverse pour se détacher du remplissage.
+    if (newBlock.type === 'shape') {
+      const background = slides[currentSlide]?.background
+      newBlock.backgroundColor ??= creamInkFor(background, ultra)
+      newBlock.borderColor ??= creamInkFor(background, ultra, true)
     }
     commit(prev => prev.map((s, i) =>
       i === currentSlide ? { ...s, blocks: [...s.blocks, newBlock] } : s
@@ -379,81 +390,83 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
 
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--editor-bg)', color: 'var(--editor-text)' }}>
-      <TopBar
-        slides={slides}
-        numbering={numbering}
-        projectName={projectName}
-        setProjectName={setProjectName}
-        filePath={filePath}
-        setFilePath={setFilePath}
-        onLoad={(loaded, name, loadedNumbering) => {
-          reset(loaded)
-          setNumbering(loadedNumbering)
-          setRequestedSlide(0)
-          setSelectedBlockIds([])
-          setProjectName(name)
-        }}
-        onNew={handleNewProject}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        draftFailed={draftFailed}
-        initialDirty={initialDraft?.dirty ?? true}
-        onDirtyChange={setDirty}
-        ultra={ultra}
-        onToggleUltra={toggleUltra}
-        presenting={presenting}
-        onPresentingChange={handlePresentingChange}
-      />
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <LeftSidebars
-          onAddBlock={addBlock}
-          ultra={ultra}
-          selectedBlock={selectedBlock}
-          onUpdateSelected={updateSelectedBlock}
-          onGestureStart={begin}
-          onPreviewMotion={previewMotion}
-          selectedBlocks={slides[currentSlide].blocks.filter(b => selectedBlockIds.includes(b.id))}
-          onCommitBlocks={commitBlocks}
-          alignmentEnabled={features.alignment}
-        />
-        <Canvas
-            blocks={slides[currentSlide].blocks}
-            background={slides[currentSlide].background}
-            numbering={numbering}
-            slideIndex={currentSlide}
-            slideCount={slides.length}
-            numberingPreview={numberingPreview}
-            selectedBlockIds={selectedBlockIds}
-            onSelectBlocks={setSelectedBlockIds}
-            onUpdateBlock={updateBlock}
-            onUpdateBlocks={updateBlocks}
-            onCommitBlocks={commitBlocks}
-            onDeleteBlocks={handleDeleteBlocks}
-            onGestureStart={begin}
-            ultra={ultra}
-            motionPreview={motionPreview}
-            zoomSlot={zoomSlot}
-        />
-        <SlidePanel
+    <ProjectColorsContext.Provider value={projectColors}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--editor-bg)', color: 'var(--editor-text)' }}>
+        <TopBar
           slides={slides}
-          currentSlide={currentSlide}
-          onSelectSlide={setRequestedSlide}
-          onAddSlide={addSlide}
-          onDuplicateSlide={duplicateSlide}
-          onDeleteSlide={deleteSlide}
-          onReorderSlides={onReorderSlides}
-          ultra={ultra}
-          onSetTransition={setSlideTransition}
-          onSetBackground={setSlideBackground}
           numbering={numbering}
-          onNumberingChange={setNumbering}
-          onPreviewNumbering={() => setNumberingPreview(Date.now())}
-          railFooterRef={setZoomSlot}
+          projectName={projectName}
+          setProjectName={setProjectName}
+          filePath={filePath}
+          setFilePath={setFilePath}
+          onLoad={(loaded, name, loadedNumbering) => {
+            reset(loaded)
+            setNumbering(loadedNumbering)
+            setRequestedSlide(0)
+            setSelectedBlockIds([])
+            setProjectName(name)
+          }}
+          onNew={handleNewProject}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          draftFailed={draftFailed}
+          initialDirty={initialDraft?.dirty ?? true}
+          onDirtyChange={setDirty}
+          ultra={ultra}
+          onToggleUltra={toggleUltra}
+          presenting={presenting}
+          onPresentingChange={handlePresentingChange}
         />
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <LeftSidebars
+            onAddBlock={addBlock}
+            ultra={ultra}
+            selectedBlock={selectedBlock}
+            onUpdateSelected={updateSelectedBlock}
+            onGestureStart={begin}
+            onPreviewMotion={previewMotion}
+            selectedBlocks={slides[currentSlide].blocks.filter(b => selectedBlockIds.includes(b.id))}
+            onCommitBlocks={commitBlocks}
+            alignmentEnabled={features.alignment}
+          />
+          <Canvas
+              blocks={slides[currentSlide].blocks}
+              background={slides[currentSlide].background}
+              numbering={numbering}
+              slideIndex={currentSlide}
+              slideCount={slides.length}
+              numberingPreview={numberingPreview}
+              selectedBlockIds={selectedBlockIds}
+              onSelectBlocks={setSelectedBlockIds}
+              onUpdateBlock={updateBlock}
+              onUpdateBlocks={updateBlocks}
+              onCommitBlocks={commitBlocks}
+              onDeleteBlocks={handleDeleteBlocks}
+              onGestureStart={begin}
+              ultra={ultra}
+              motionPreview={motionPreview}
+              zoomSlot={zoomSlot}
+          />
+          <SlidePanel
+            slides={slides}
+            currentSlide={currentSlide}
+            onSelectSlide={setRequestedSlide}
+            onAddSlide={addSlide}
+            onDuplicateSlide={duplicateSlide}
+            onDeleteSlide={deleteSlide}
+            onReorderSlides={onReorderSlides}
+            ultra={ultra}
+            onSetTransition={setSlideTransition}
+            onSetBackground={setSlideBackground}
+            numbering={numbering}
+            onNumberingChange={setNumbering}
+            onPreviewNumbering={() => setNumberingPreview(Date.now())}
+            railFooterRef={setZoomSlot}
+          />
+        </div>
       </div>
-    </div>
+    </ProjectColorsContext.Provider>
   )
 }

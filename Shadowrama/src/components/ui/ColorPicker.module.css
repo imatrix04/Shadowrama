@@ -1,0 +1,378 @@
+/* ── Champ (bouton) ───────────────────────────────────────────────────────── */
+
+.trigger {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 2.2rem;
+  height: 1.6rem;
+  padding: 2px;
+  box-sizing: border-box;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-sm);
+  color: var(--editor-text);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.trigger:hover,
+.trigger[aria-expanded='true'] {
+  border-color: var(--accent);
+}
+
+.trigger[aria-expanded='true'] {
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.wide {
+  width: 100%;
+  height: 32px;
+  padding: 3px 10px 3px 3px;
+}
+
+.chip {
+  flex: 1 1 auto;
+  align-self: stretch;
+  border-radius: calc(var(--r-sm) - 1px);
+  /* Petit liseré : une couleur proche du fond du panneau reste visible. */
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--editor-text) 14%, transparent);
+}
+
+.wide .chip {
+  flex: 0 0 28px;
+}
+
+/* Sans couleur : une barre diagonale, comme le symbole « aucune ». */
+.chipNone {
+  background-image: linear-gradient(135deg, transparent 44%, var(--danger-soft) 44% 56%, transparent 56%);
+}
+
+.triggerText {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--editor-text-muted);
+}
+
+/* ── Fenêtre ──────────────────────────────────────────────────────────────── */
+
+@keyframes popoverIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.popover {
+  position: fixed;
+  /* Au-dessus des menus (100), des tiroirs (51) et des boîtes de dialogue (2000). */
+  z-index: 3000;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: 0.75rem;
+  background-color: var(--editor-bg-raised);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-lg);
+  box-shadow: var(--menu-shadow);
+  color: var(--editor-text);
+  font-size: 0.78rem;
+  animation: popoverIn var(--t-base) var(--ease-out);
+}
+
+/* Carré saturation (→) et valeur (↑) : les deux dégradés blanc et noir sont
+   la définition même du sélecteur, ils ne suivent pas le thème. */
+.sv {
+  position: relative;
+  flex: 0 0 auto;
+  height: 150px;
+  border-radius: var(--r-md);
+  background-color: hsl(var(--hue) 100% 50%);
+  background-image:
+    linear-gradient(to top, #000, transparent),
+    linear-gradient(to right, #fff, transparent);
+  cursor: crosshair;
+  touch-action: none;
+  outline: none;
+}
+
+.hue {
+  position: relative;
+  flex: 0 0 auto;
+  height: 12px;
+  border-radius: 999px;
+  background-image: linear-gradient(
+    to right,
+    hsl(0 100% 50%), hsl(60 100% 50%), hsl(120 100% 50%), hsl(180 100% 50%),
+    hsl(240 100% 50%), hsl(300 100% 50%), hsl(360 100% 50%)
+  );
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+}
+
+.sv:focus-visible,
+.hue:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.svThumb,
+.hueThumb {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.hueThumb {
+  top: 50%;
+}
+
+/* ── Format et valeurs ────────────────────────────────────────────────────── */
+
+.modeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.modes {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background-color: var(--editor-btn-bg);
+  border-radius: var(--r-md);
+}
+
+.mode {
+  padding: 0.2rem 0.55rem;
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--r-md) - 2px);
+  color: var(--editor-text-muted);
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background-color var(--t-fast), color var(--t-fast);
+}
+
+.mode:hover { color: var(--editor-text); }
+
+.modeActive,
+.modeActive:hover {
+  background-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.mode:focus-visible,
+.pipette:focus-visible,
+.swatch:focus-visible,
+.swatchAction:focus-visible,
+.addFavorite:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.pipette {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-md);
+  color: var(--editor-text-muted);
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+
+.pipette:hover {
+  color: var(--editor-text);
+  border-color: var(--accent);
+}
+
+.values {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.field {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 0.35rem 0.4rem;
+  background-color: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-sm);
+  color: var(--editor-text);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.hexField {
+  flex: 1 1 auto;
+  letter-spacing: 0.06em;
+}
+
+.numWrap {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  align-items: stretch;
+}
+
+.numField {
+  width: 100%;
+}
+
+.numLabel {
+  color: var(--editor-text-muted);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+/* ── Palette ──────────────────────────────────────────────────────────────── */
+
+.palette {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--editor-border);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.2rem;
+  color: var(--editor-text-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.addFavorite {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-sm);
+  color: var(--editor-text-muted);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+
+.addFavorite:hover:not(:disabled) {
+  color: var(--accent-hover);
+  border-color: var(--accent);
+}
+
+.addFavorite:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.empty {
+  margin: 0;
+  color: var(--editor-text-dim);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+}
+
+.swatchWrap {
+  position: relative;
+  display: block;
+}
+
+.swatch {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--editor-text) 16%, transparent);
+  cursor: pointer;
+  transition: transform var(--t-fast) var(--ease-out);
+}
+
+.swatch:hover {
+  transform: scale(1.12);
+}
+
+.swatchCurrent {
+  box-shadow: 0 0 0 2px var(--editor-bg-raised), 0 0 0 4px var(--accent);
+}
+
+/* Petit bouton d'action (★ épingler, × retirer) : au survol seulement. */
+.swatchAction {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  background-color: var(--editor-bg-raised);
+  border: 1px solid var(--editor-border-light);
+  border-radius: 50%;
+  color: var(--editor-text-muted);
+  font-size: 0.6rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity var(--t-fast), transform var(--t-fast) var(--ease-out), color var(--t-fast);
+}
+
+.swatchWrap:hover .swatchAction,
+.swatchAction:focus-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.swatchAction:hover {
+  color: var(--accent-hover);
+  border-color: var(--accent);
+}

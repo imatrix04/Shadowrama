@@ -55,12 +55,6 @@
   padding: 1.1rem 1.25rem;
 }
 
-.body::-webkit-scrollbar { width: 8px; }
-.body::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--editor-text) 14%, transparent);
-  border-radius: 4px;
-}
-
 .release + .release {
   margin-top: 1.6rem;
   padding-top: 1.4rem;

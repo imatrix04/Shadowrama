@@ -4,7 +4,7 @@ import { polygonToPath } from '../../utils/shapePolygon'
 import { shapePoints } from '../../utils/shapePoints'
 import type { Box, Point } from '../../utils/shapePoints'
 
-const DEFAULT_FILL = 'var(--accent)'
+const DEFAULT_FILL = 'var(--slide-ink)'
 const DEFAULT_STROKE = 'var(--slide-ink)'
 
 /**

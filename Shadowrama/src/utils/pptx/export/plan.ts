@@ -23,15 +23,15 @@ import type { Rgba } from './colors'
 export interface ExportDefaults {
   /** Fond d'une diapositive sans réglage (`--slide-bg`). */
   slideBackground: string
-  /** Remplissage d'une forme sans couleur (`--accent`). */
-  accent: string
+  /** Remplissage d'une forme sans couleur (`--slide-ink`). */
+  shapeFill: string
   /** Texte et bordures sans couleur (`--slide-ink`). */
   text: string
 }
 
 export const FALLBACK_DEFAULTS: ExportDefaults = {
   slideBackground: '#faf6ec',
-  accent: '#6c63ff',
+  shapeFill: '#1c1814',
   text: '#1c1814',
 }
 
