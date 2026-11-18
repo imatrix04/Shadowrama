@@ -281,7 +281,14 @@ export default function TopBar({
     <>
       <div className={styles.topBar}>
         <div className={styles.left}>
-          <span className={styles.logo}>Shadowrama</span>
+          <button
+            className={styles.logo}
+            onClick={() => navigate('/')}
+            title="Retour au menu"
+            aria-label="Retour au menu"
+          >
+            Shadowrama
+          </button>
           <span className={styles.slash} aria-hidden="true">/</span>
           <span className={styles.projectName} title={projectName ?? undefined}>
             {projectName ?? 'Sans titre'}

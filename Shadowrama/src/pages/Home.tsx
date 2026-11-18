@@ -111,93 +111,117 @@ export default function Home() {
 
   return (
     <div className={styles.page}>
-      <nav className={styles.nav}>
+      <aside className={styles.sidebar}>
         <span className={styles.logo}>
           Shadowrama<span className={styles.logoDot}>.</span>
         </span>
-        <div className={styles.navActions}>
+
+        <nav className={styles.sideGroup} aria-label="Actions">
+          <button className={`${styles.sideItem} ${styles.sideItemActive}`} onClick={goToEditor}>
+            <Icon name="new" size={16} /> Nouveau diaporama
+          </button>
+          <button className={styles.sideItem} onClick={handleOpen}>
+            <Icon name="open" size={16} /> Ouvrir un projet
+          </button>
+          <button className={styles.sideItem} onClick={handleImportPptx}>
+            <Icon name="slides" size={16} /> Importer PowerPoint
+          </button>
+        </nav>
+
+        <nav className={`${styles.sideGroup} ${styles.sideGroupBottom}`} aria-label="Application">
           {whatsNew.hasChangelog && (
-            <button className={styles.navLink} onClick={whatsNew.open}>
-              Nouveautés
+            <button className={styles.sideItem} onClick={whatsNew.open}>
+              <Icon name="effects" size={16} /> Nouveautés
               {whatsNew.currentVersion && (
-                <span className={styles.navVersion}>v{whatsNew.currentVersion}</span>
+                <span className={styles.sideBadge}>v{whatsNew.currentVersion}</span>
               )}
             </button>
           )}
-          <button
-            className={styles.navIconBtn}
-            onClick={() => navigate('/settings')}
-            aria-label="Paramètres"
-            title="Paramètres"
-          >
-            <Icon name="settings" size={18} />
+          <button className={styles.sideItem} onClick={() => navigate('/settings')}>
+            <Icon name="settings" size={16} /> Paramètres
           </button>
-        </div>
-      </nav>
+        </nav>
+      </aside>
 
-      <section className={styles.hero}>
-        <div>
-          <h1 className={styles.title}>
-            Des présentations qui <span className={styles.titleAccent}>bougent</span> comme le web.
-          </h1>
-          <p className={styles.lead}>
-            Shadowrama est un éditeur de diaporamas pensé pour le mouvement : blocs animés,
-            transitions sur mesure, mise en page libre. Construit comme une page web, pas
-            comme un fichier figé.
-          </p>
-          <div className={styles.ctaRow}>
-            <button className={styles.ctaPrimary} onClick={goToEditor}>
-              Créer un diaporama
+      <main className={styles.main}>
+        <h1 className={styles.heading}>Accueil</h1>
+
+        <section className={`${styles.section} ${styles.fade}`}>
+          <h2 className={styles.sectionTitle}>Démarrer</h2>
+          <div className={styles.startGrid}>
+            <button className={styles.startCard} onClick={goToEditor}>
+              <div className={styles.startThumb}>
+                <div className={styles.thumbSlide} />
+                <Icon name="new" size={22} className={styles.thumbIcon} />
+              </div>
+              <div className={styles.startText}>
+                <strong>Diaporama vide</strong>
+                <span>Une page blanche pour composer librement.</span>
+              </div>
             </button>
-            <button className={styles.ctaSecondary} onClick={handleOpen}>
-              Ouvrir un projet
+
+            {/* Le mode Ultra est une surcouche de l'éditeur : on l'active puis
+                on ouvre l'éditeur. */}
+            <button
+              className={styles.startCard}
+              onClick={() => { enableUltra(); goToEditor() }}
+            >
+              <div className={`${styles.startThumb} ${styles.thumbUltra}`}>
+                <Icon name="ultra" size={26} className={styles.thumbIcon} />
+              </div>
+              <div className={styles.startText}>
+                <strong>Mode Ultra Design</strong>
+                <span>Effets avancés et séquences d'animation.</span>
+              </div>
             </button>
-            <button className={styles.ctaSecondary} onClick={handleImportPptx}>
-              Importer PowerPoint
+
+            <button className={styles.startCard} onClick={handleImportPptx}>
+              <div className={styles.startThumb}>
+                <div className={styles.thumbSlide} />
+                <Icon name="slides" size={22} className={styles.thumbIcon} />
+              </div>
+              <div className={styles.startText}>
+                <strong>Importer PowerPoint</strong>
+                <span>Reprendre une présentation .pptx existante.</span>
+              </div>
             </button>
           </div>
+        </section>
 
-          {/* Entrée directe dans le mode Ultra Design : le mode est une
-              surcouche de l'éditeur, ce bouton l'active puis ouvre l'éditeur. */}
-          <button
-            className={styles.ctaUltra}
-            onClick={() => { enableUltra(); goToEditor() }}
-          >
-            <Icon name="ultra" size={18} />
-            <span>
-              <strong>Mode Ultra Design</strong>
-              <em>Effets avancés et séquences d'animation composées</em>
-            </span>
-          </button>
-
-          {recents.length > 0 && (
-            <div className={styles.recents}>
-              <p className={styles.recentsTitle}>Projets récents</p>
-              <ul className={styles.recentsList}>
-                {recents.map(recent => (
-                  <li key={recent.filePath}>
-                    <button
-                      className={styles.recentItem}
-                      onClick={() => handleOpenRecent(recent)}
-                      title={recent.filePath}
-                    >
+        <section className={`${styles.section} ${styles.fade2}`}>
+          <h2 className={styles.sectionTitle}>Projets récents</h2>
+          {recents.length > 0 ? (
+            <ul className={styles.recentsList}>
+              {recents.map(recent => (
+                <li key={recent.filePath}>
+                  <button
+                    className={styles.recentRow}
+                    onClick={() => handleOpenRecent(recent)}
+                    title={recent.filePath}
+                  >
+                    <Icon name="slides" size={18} className={styles.recentIcon} />
+                    <span className={styles.recentInfo}>
                       <span className={styles.recentName}>{recent.name}</span>
-                      <span className={styles.recentDate}>{formatDate(recent.openedAt)}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                      <span className={styles.recentPath}>{recent.filePath}</span>
+                    </span>
+                    <span className={styles.recentDate}>{formatDate(recent.openedAt)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className={styles.empty}>
+              <strong>Aucun projet récent</strong>
+              <span>
+                Créez un diaporama ou{' '}
+                <button className={styles.emptyLink} onClick={handleOpen}>
+                  ouvrez un fichier .shma
+                </button>.
+              </span>
             </div>
           )}
-        </div>
-
-        <div className={styles.mockStage}>
-          <div className={`${styles.mockBlock} ${styles.mockShape}`} />
-          <div className={`${styles.mockBlock} ${styles.mockImage}`} />
-          <div className={`${styles.mockBlock} ${styles.mockText}`} />
-          <div className={`${styles.mockBlock} ${styles.mockTextSmall}`} />
-        </div>
-      </section>
+        </section>
+      </main>
 
       {whatsNew.isOpen && (
         <WhatsNew
