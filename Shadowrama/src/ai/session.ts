@@ -1,4 +1,4 @@
-import type { Slide } from '../types'
+import type { Slide, SlideNumbering } from '../types'
 import { SYSTEM_PROMPT, editorContext } from './prompt'
 import { TOOL_DEFS, executeTool } from './tools'
 import type { Attachment, ContentBlock, Provider, Usage, WireMessage } from './types'
@@ -27,6 +27,10 @@ export interface SessionOptions {
   attachments?: Attachment[]
   /** Appelé à chaque modification, avec l'état complet des diapositives. */
   onSlides: (slides: Slide[]) => void
+  /** Numérotation actuelle du projet (réglage hors diapositives). */
+  numbering?: SlideNumbering
+  /** Appelé quand l'assistant modifie la numérotation. */
+  onNumbering?: (numbering: SlideNumbering) => void
   onFocusSlide: (index: number) => void
   onEvent: (event: SessionEvent) => void
   signal: AbortSignal
@@ -82,6 +86,7 @@ export async function runAssistant(opts: SessionOptions): Promise<SessionResult>
   // Messages « validés » : toujours cohérents (chaque appel d'outil a son résultat).
   const messages: WireMessage[] = [...opts.history, userMessage]
   let working = opts.slides
+  let workingNumbering = opts.numbering
   let toolCalls = 0
   let finalText = ''
   let end: SessionEnd = 'limit'
@@ -149,10 +154,16 @@ export async function runAssistant(opts: SessionOptions): Promise<SessionResult>
           })
           continue
         }
-        const outcome = executeTool(working, call.name, call.input, { ultra: opts.editor.ultra, attachments: opts.attachments })
+        const outcome = executeTool(working, call.name, call.input, {
+          ultra: opts.editor.ultra, attachments: opts.attachments, numbering: workingNumbering,
+        })
         if (outcome.slides !== working) {
           working = outcome.slides
           opts.onSlides(working)
+        }
+        if (outcome.numbering) {
+          workingNumbering = outcome.numbering
+          opts.onNumbering?.(workingNumbering)
         }
         if (outcome.focusSlide !== undefined) opts.onFocusSlide(outcome.focusSlide)
         if (outcome.label || outcome.isError) {

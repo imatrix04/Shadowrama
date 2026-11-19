@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { BlockData, BlockProperty, AnimationType } from '../../types'
 import { getBlockField, setBlockField } from '../../types'
@@ -6,6 +7,8 @@ import { getBlockProperties, getBlockConfig } from '../../blocks'
 import Icon from '../ui/Icon'
 import ColorPicker from '../ui/ColorPicker'
 import styles from './ContextMenu.module.css'
+import panel from './PanelControls.module.css'
+import { Segmented } from './PanelWidgets'
 import CustomSelect from '../../styles/CustomSelect'
 import PolygonShapeEditor from './PolygonShapeEditor'
 import Switch from '../ui/Switch'
@@ -89,7 +92,54 @@ function UrlField({ value, onCommit }: { value: string; onCommit: (url: string) 
   )
 }
 
+/** Curseur avec sa valeur dans une pastille, comme dans les panneaux latéraux. */
+function SliderField({ value, min, max, step, format, label, onChange }: {
+  value: number
+  min: number
+  max: number
+  step: number
+  format: (v: number) => string
+  label: string
+  onChange: (v: number) => void
+}) {
+  return (
+    <div className={panel.rangeGroup} style={{ width: '100%' }}>
+      <input
+        type="range"
+        className={`${panel.range} ${panel.rangeFull}`}
+        min={min} max={max} step={step}
+        value={Math.min(max, Math.max(min, value))}
+        aria-label={label}
+        onChange={e => onChange(parseFloat(e.target.value))}
+      />
+      <output className={panel.sliderValue}>{format(value)}</output>
+    </div>
+  )
+}
+
+// Plages des champs « float » : tous ne vont pas de 0 à 1 (l'interlignage,
+// par exemple, dépasse 1 — l'ancien champ le plafonnait à 1).
+const FLOAT_RANGES: Record<string, { min: number; max: number; step: number }> = {
+  opacity: { min: 0, max: 1, step: 0.05 },
+  volume: { min: 0, max: 1, step: 0.05 },
+  lineHeight: { min: 0.8, max: 3, step: 0.05 },
+}
+
+/** Libellés courts : seuls ces choix passent en boutons segmentés. */
+const SEGMENT_MAX_LABEL = 10
+
 function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: number, changes: Partial<BlockData>) => void) {
+  if (prop.key === 'rotation') {
+    return (
+      <SliderField
+        label={prop.label}
+        min={-180} max={180} step={1}
+        value={Number(getBlockField(block, 'rotation') ?? 0)}
+        format={v => `${v}°`}
+        onChange={v => onUpdate(block.id, setBlockField(block, 'rotation', v))}
+      />
+    )
+  }
   switch (prop.type) {
     case 'textarea':
       return (
@@ -137,7 +187,18 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
           onChange={e => onUpdate(block.id, setBlockField(block, prop.key, e.target.value))}
         />
       )
-    case 'select':
+    case 'select': {
+      const options = prop.options ?? []
+      const current = String(getBlockField(block, prop.key) ?? '')
+      if (options.length >= 2 && options.length <= 3 && options.every(o => o.label.length <= SEGMENT_MAX_LABEL)) {
+        return (
+          <Segmented
+            options={options}
+            value={current}
+            onChange={v => onUpdate(block.id, setBlockField(block, prop.key, v))}
+          />
+        )
+      }
       return (
         <CustomSelect
           value={String(getBlockField(block, prop.key) ?? '')}
@@ -145,18 +206,19 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
           onChange={v => onUpdate(block.id, setBlockField(block, prop.key, v))}
         />
       )
-    case 'float':
+    }
+    case 'float': {
+      const range = FLOAT_RANGES[prop.key] ?? { min: 0, max: 1, step: 0.05 }
       return (
-        <input
-          type="number"
-          className={styles.input}
+        <SliderField
+          label={prop.label}
+          {...range}
           value={Number(getBlockField(block, prop.key) ?? 1)}
-          min={0}
-          max={1}
-          step={0.05}
-          onChange={e => onUpdate(block.id, setBlockField(block, prop.key, parseFloat(e.target.value)))}
+          format={v => v.toFixed(2)}
+          onChange={v => onUpdate(block.id, setBlockField(block, prop.key, v))}
         />
       )
+    }
       case 'file':
         return <MediaFileField fieldKey={prop.key} accept={prop.accept} block={block} onUpdate={onUpdate} />
     case 'shapePolygon': {
@@ -198,23 +260,71 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
   }
 }
 
+type TabKey = 'content' | 'style' | 'animation'
+
+const TABS: { key: TabKey; label: string; icon: 'text' | 'effects' | 'motion' }[] = [
+  { key: 'content', label: 'Contenu', icon: 'text' },
+  { key: 'style', label: 'Style', icon: 'effects' },
+  { key: 'animation', label: 'Animation', icon: 'motion' },
+]
+
+/** Champs qui portent ce que le bloc MONTRE (texte, fichier, adresse…) ; tout le reste est du réglage. */
+const CONTENT_TYPES = new Set<BlockProperty['type']>(['text', 'textarea', 'file', 'url', 'carouselItems'])
+
+// Onglet rouvert à l'identique d'un clic droit à l'autre : on retouche rarement
+// un seul champ. Mémoire de session ; sans stockage, on repart du premier onglet.
+const TAB_STORAGE_KEY = 'shadowrama.contextMenuTab'
+
+function loadLastTab(): TabKey | null {
+  try {
+    const value = sessionStorage.getItem(TAB_STORAGE_KEY)
+    return TABS.some(t => t.key === value) ? (value as TabKey) : null
+  } catch {
+    return null
+  }
+}
+
+const ORDER_ACTIONS = [
+  { dir: 'front', label: 'Premier plan', icon: 'layerFront' },
+  { dir: 'forward', label: 'Avancer', icon: 'layerForward' },
+  { dir: 'backward', label: 'Reculer', icon: 'layerBackward' },
+  { dir: 'back', label: 'Arrière-plan', icon: 'layerBack' },
+] as const
+
 export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder, onGestureStart, onClose, layerIndex, layerCount }: Props) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ x, y })
 
-  useEffect(() => {
-    if (!menuRef.current) return
-    const { offsetWidth, offsetHeight } = menuRef.current
-    const newX = x + offsetWidth > window.innerWidth ? x - offsetWidth : x
-    const newY = y + offsetHeight > window.innerHeight ? y - offsetHeight : y
-    setPos({ x: newX, y: newY })
-  }, [x, y])
-
   // Résolues depuis la config du type, pas depuis le bloc : voir BaseBlockData.
   const properties = getBlockProperties(block.type)
+    .filter(prop => !prop.showIf || String(getBlockField(block, prop.showIf.key) ?? '') === prop.showIf.value)
   const config = getBlockConfig(block.type)
   const animation = block.animation
   const hasAnimation = !!animation && animation.type !== 'none'
+
+  const contentProps = properties.filter(p => CONTENT_TYPES.has(p.type))
+  const styleProps = properties.filter(p => !CONTENT_TYPES.has(p.type))
+  // Un bloc sans contenu à saisir (une forme) n'a pas d'onglet vide.
+  const tabs = TABS.filter(t => t.key !== 'content' || contentProps.length > 0)
+
+  const [tab, setTab] = useState<TabKey>(() => {
+    const last = loadLastTab()
+    return last && tabs.some(t => t.key === last) ? last : tabs[0].key
+  })
+  const chooseTab = (key: TabKey) => {
+    try { sessionStorage.setItem(TAB_STORAGE_KEY, key) } catch { /* mémoire facultative */ }
+    setTab(key)
+  }
+
+  // Replacé APRÈS chaque changement d'onglet : la hauteur change et le menu
+  // pourrait sortir de l'écran.
+  useEffect(() => {
+    if (!menuRef.current) return
+    const { offsetWidth, offsetHeight } = menuRef.current
+    const newX = Math.max(8, x + offsetWidth > window.innerWidth ? window.innerWidth - offsetWidth - 8 : x)
+    const newY = Math.max(8, y + offsetHeight > window.innerHeight ? window.innerHeight - offsetHeight - 8 : y)
+    setPos({ x: newX, y: newY })
+  }, [x, y, tab])
 
   const updateAnimation = (changes: Partial<NonNullable<BlockData['animation']>>) => {
     onUpdate(block.id, setBlockField(block, 'animation', {
@@ -223,6 +333,23 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
       ...changes,
     }))
   }
+
+  /** `onPointerDown`/`onFocus` ouvrent l'entrée d'historique avant la première
+   *  modification : glisser un curseur ne produit qu'un seul « annuler ». */
+  const field = (label: string, control: ReactNode, key: string, inline = false) => (
+    <div
+      key={key}
+      className={`${styles.field} ${inline ? styles.fieldInline : ''}`}
+      onPointerDown={onGestureStart}
+      onFocus={onGestureStart}
+    >
+      <label className={styles.fieldLabel}>{label}</label>
+      {control}
+    </div>
+  )
+
+  const renderProps = (list: BlockProperty[]) =>
+    list.map(prop => field(prop.label, renderField(prop, block, onUpdate), prop.key, prop.type === 'boolean'))
 
   return createPortal(
     <>
@@ -233,118 +360,124 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
         onMouseDown={e => e.stopPropagation()}
         className={styles.menu}
         style={{ left: pos.x, top: pos.y }}
+        role="dialog"
+        aria-label={`Réglages du bloc ${config?.label ?? block.type}`}
       >
-        {/* Affichait le type brut (« image »). On reprend le libellé et l'icône
-            de la config, comme la sidebar. */}
+        {/* Type du bloc, avec l'icône de la config comme dans la barre latérale. */}
         <p className={styles.typeLabel}>
           {config && <Icon name={config.icon} size={13} />}
           {config?.label ?? block.type}
         </p>
 
-        <div className={styles.section}>
-          <span className={styles.sectionLabel}>
-            Ordre <span className={styles.layerBadge}>Niveau {layerIndex} / {layerCount}</span>
-          </span>
-          <div className={styles.orderButtons}>
-            {([
-              { label: '⬆️ Premier plan', dir: 'front', disabled: layerIndex === layerCount },
-              { label: '⬇️ Arrière plan', dir: 'back', disabled: layerIndex === 1 },
-              { label: '↑ Avancer', dir: 'forward', disabled: layerIndex === layerCount },
-              { label: '↓ Reculer', dir: 'backward', disabled: layerIndex === 1 },
-            ] as const).map(({ label, dir, disabled }) => (
-              <button
-                key={dir}
-                className={styles.smallBtn}
-                disabled={disabled}
-                onClick={() => onReorder(block.id, dir)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+        <div className={styles.tabs} role="tablist">
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.key}
+              className={`${styles.tab} ${tab === t.key ? styles.tabActive : ''}`}
+              onClick={() => chooseTab(t.key)}
+            >
+              <Icon name={t.icon} size={13} />
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* `onPointerDown`/`onFocus` ouvrent l'entrée d'historique avant la
-            première modification : glisser un sélecteur de couleur ne produit
-            ainsi qu'un seul « annuler ». `showIf` cache un champ tant que la
-            valeur dont il dépend n'est pas la bonne (ex : la grille 10×10 ne
-            s'affiche que si « Forme » vaut « Grille personnalisée »). */}
-        {properties
-          .filter(prop => !prop.showIf || String(getBlockField(block, prop.showIf.key) ?? '') === prop.showIf.value)
-          .map(prop => (
-          <div
-            key={prop.key}
-            className={styles.field}
-            onPointerDown={onGestureStart}
-            onFocus={onGestureStart}
-          >
-            <label className={styles.fieldLabel}>{prop.label}</label>
-            {renderField(prop, block, onUpdate)}
-          </div>
-        ))}
+        <div className={styles.body}>
+          {tab === 'content' && renderProps(contentProps)}
 
-        <div className={styles.field} onPointerDown={onGestureStart}>
-          <label className={styles.fieldLabel}>Animation d'entrée</label>
-          <CustomSelect
-            value={animation?.type ?? 'none'}
-            options={[
-              { label: 'Aucune', value: 'none' },
-              { label: 'Fondu', value: 'fadeIn' },
-              { label: 'Glisse depuis la gauche', value: 'slideInLeft' },
-              { label: 'Glisse depuis la droite', value: 'slideInRight' },
-              { label: 'Glisse depuis le bas', value: 'slideInUp' },
-              { label: 'Zoom', value: 'zoomIn' },
-            ]}
-            onChange={v => updateAnimation({ type: v as AnimationType })}
-          />
+          {tab === 'style' && renderProps(styleProps)}
+
+          {tab === 'animation' && (
+            <>
+              {field("Entrée", (
+                <CustomSelect
+                  value={animation?.type ?? 'none'}
+                  options={[
+                    { label: 'Aucune', value: 'none' },
+                    { label: 'Fondu', value: 'fadeIn' },
+                    { label: 'Glisse depuis la gauche', value: 'slideInLeft' },
+                    { label: 'Glisse depuis la droite', value: 'slideInRight' },
+                    { label: 'Glisse depuis le bas', value: 'slideInUp' },
+                    { label: 'Zoom', value: 'zoomIn' },
+                  ]}
+                  onChange={v => updateAnimation({ type: v as AnimationType })}
+                />
+              ), 'anim-type')}
+
+              {/* Réglages fins : seulement quand une animation est choisie, sinon
+                  ils n'ont aucun effet visible. Le délai permet de faire
+                  apparaître les blocs d'une diapo en cascade. */}
+              {hasAnimation ? (
+                <>
+                  {field('Durée', (
+                    <SliderField
+                      label="Durée" min={0.1} max={5} step={0.1}
+                      value={animation.duration ?? DEFAULT_DURATION}
+                      format={v => `${v.toFixed(1)} s`}
+                      onChange={v => updateAnimation({ duration: clamp(v, 0.1, 5, DEFAULT_DURATION) })}
+                    />
+                  ), 'anim-duration')}
+                  {field('Délai avant le début', (
+                    <SliderField
+                      label="Délai" min={0} max={10} step={0.1}
+                      value={animation.delay ?? 0}
+                      format={v => `${v.toFixed(1)} s`}
+                      onChange={v => updateAnimation({ delay: clamp(v, 0, 10, 0) })}
+                    />
+                  ), 'anim-delay')}
+                  {field('Courbe', (
+                    <CustomSelect
+                      value={animation.ease ?? DEFAULT_EASE}
+                      options={EASE_OPTIONS}
+                      onChange={v => updateAnimation({ ease: v })}
+                    />
+                  ), 'anim-ease')}
+                </>
+              ) : (
+                <p className={styles.hint}>
+                  Choisissez une entrée pour régler sa durée et son délai. Le panneau Mouvement, à gauche, propose des séquences plus riches.
+                </p>
+              )}
+            </>
+          )}
         </div>
 
-        {/* Réglages fins : seulement quand une animation est choisie, sinon ils
-            n'ont aucun effet visible. Le délai est ce qui permet de faire
-            apparaître les blocs d'une diapo en cascade. */}
-        {hasAnimation && (
-          <>
-            <div className={styles.field} onPointerDown={onGestureStart} onFocus={onGestureStart}>
-              <label className={styles.fieldLabel}>Durée (s)</label>
-              <input
-                type="number"
-                className={styles.input}
-                min={0.1}
-                max={5}
-                step={0.1}
-                value={animation.duration ?? DEFAULT_DURATION}
-                onChange={e => updateAnimation({ duration: clamp(parseFloat(e.target.value), 0.1, 5, DEFAULT_DURATION) })}
-              />
-            </div>
-            <div className={styles.field} onPointerDown={onGestureStart} onFocus={onGestureStart}>
-              <label className={styles.fieldLabel}>Délai (s)</label>
-              <input
-                type="number"
-                className={styles.input}
-                min={0}
-                max={10}
-                step={0.1}
-                value={animation.delay ?? 0}
-                onChange={e => updateAnimation({ delay: clamp(parseFloat(e.target.value), 0, 10, 0) })}
-              />
-            </div>
-            <div className={styles.field} onPointerDown={onGestureStart}>
-              <label className={styles.fieldLabel}>Courbe</label>
-              <CustomSelect
-                value={animation.ease ?? DEFAULT_EASE}
-                options={EASE_OPTIONS}
-                onChange={v => updateAnimation({ ease: v })}
-              />
-            </div>
-          </>
-        )}
-
-        <div className={styles.deleteSection}>
+        {/* Barre d'actions fixe : l'ordre et la suppression restent à portée
+            quel que soit l'onglet. */}
+        <div className={styles.footer}>
+          <div className={styles.order} role="group" aria-label="Ordre d'empilement">
+            {ORDER_ACTIONS.map(({ dir, label, icon }) => {
+              const atTop = dir === 'front' || dir === 'forward'
+              const disabled = atTop ? layerIndex === layerCount : layerIndex === 1
+              return (
+                <button
+                  key={dir}
+                  type="button"
+                  className={styles.iconBtn}
+                  title={label}
+                  aria-label={label}
+                  disabled={disabled}
+                  onClick={() => onReorder(block.id, dir)}
+                >
+                  <Icon name={icon} size={15} />
+                </button>
+              )
+            })}
+            <span className={styles.layerBadge} title="Position dans l'empilement (1 = tout en arrière)">
+              {layerIndex}/{layerCount}
+            </span>
+          </div>
           <button
-            className={`${styles.smallBtn} ${styles.deleteBtn}`}
+            type="button"
+            className={`${styles.iconBtn} ${styles.deleteBtn}`}
+            title="Supprimer le bloc"
+            aria-label="Supprimer le bloc"
             onClick={() => { onDelete(block.id); onClose() }}
           >
-            🗑 Supprimer
+            <Icon name="trash" size={15} />
           </button>
         </div>
       </div>

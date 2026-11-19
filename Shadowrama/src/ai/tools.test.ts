@@ -255,3 +255,24 @@ describe('executeTool — diapositives', () => {
     expect(executeTool(blank(), 'add_block', null, basic).isError).toBe(true)
   })
 })
+
+describe('executeTool — numérotation', () => {
+  it('active la numérotation sans toucher aux diapositives', () => {
+    const slides = blank()
+    const out = apply(slides, 'set_numbering', { enabled: true, format: 'n-total', position: 'bottom-center', skipFirst: true })
+    expect(out.slides).toBe(slides)
+    expect(out.numbering).toMatchObject({ enabled: true, format: 'n-total', position: 'bottom-center', skipFirst: true })
+  })
+
+  it('ne change que les champs fournis et borne les valeurs', () => {
+    const base = apply(blank(), 'set_numbering', { enabled: true, bold: true }).numbering!
+    const out = apply(blank(), 'set_numbering', { size: 500, color: '#ff0000' }, { ...basic, numbering: base } as typeof basic)
+    expect(out.numbering).toMatchObject({ enabled: true, bold: true, size: 72, color: '#ff0000' })
+  })
+
+  it('refuse les entrées invalides', () => {
+    for (const bad of [{}, { format: 'abc' }, { position: 'milieu' }, { color: 'rouge' }, { enabled: 'oui' }, { foo: 1 }]) {
+      expect(executeTool(blank(), 'set_numbering', bad, basic).isError).toBe(true)
+    }
+  })
+})

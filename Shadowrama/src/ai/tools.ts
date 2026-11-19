@@ -1,7 +1,10 @@
 import { BLOCKS_CONFIG, getBlockConfig, getBlockProperties } from '../blocks'
 import type {
-  BlockData, BlockEffects, BlockProperty, ParticleSettings, Slide, SlideBackground,
+  BlockData, BlockEffects, BlockProperty, ParticleSettings, Slide, SlideBackground, SlideNumbering,
 } from '../types'
+import {
+  DEFAULT_NUMBERING, NUMBERING_FORMATS, NUMBERING_POSITIONS, slideNumberText,
+} from '../utils/numbering'
 import { MOTION_PRESETS, getPreset } from '../ultra/presets'
 import {
   PARTICLE_MOTIONS, PARTICLE_MOUSE_MODES, PARTICLE_PRESETS, PARTICLE_SHAPES, mergeParticles,
@@ -73,10 +76,14 @@ export interface ToolContext {
   ultra: boolean
   /** Fichiers joints par l'utilisateur dans la conversation (numérotés). */
   attachments?: Attachment[]
+  /** Numérotation actuelle du projet (réglage de projet, hors diapositives). */
+  numbering?: SlideNumbering
 }
 
 export interface ToolOutcome {
   slides: Slide[]
+  /** Nouvelle numérotation du projet, si l'outil l'a modifiée. */
+  numbering?: SlideNumbering
   /** Texte renvoyé au modèle. */
   result: string
   isError: boolean
@@ -240,6 +247,32 @@ export const TOOL_DEFS: ToolDef[] = [
         mouse: { type: 'string', enum: PARTICLE_MOUSE_MODES.map(m => m.value), description: 'Réaction au curseur en présentation.' },
       },
       required: ['slide'],
+    },
+  },
+  {
+    name: 'set_numbering',
+    description:
+      'Règle la numérotation des diapositives (réglage du projet entier, pas d\'une seule diapositive) : '
+      + 'le numéro est affiché automatiquement sur chaque diapositive et se met à jour quand on les ajoute, '
+      + 'supprime ou déplace. Utilise cet outil plutôt que d\'écrire des numéros dans des blocs texte. '
+      + 'Seuls les champs fournis changent ; `enabled: true` suffit pour numéroter avec les réglages actuels.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        enabled: { type: 'boolean', description: 'true pour afficher les numéros, false pour les retirer.' },
+        format: {
+          type: 'string',
+          enum: NUMBERING_FORMATS.map(f => f.value),
+          description: 'n = « 3 », nn = « 03 », n-total = « 3 / 12 », roman = « III ».',
+        },
+        position: { type: 'string', enum: [...NUMBERING_POSITIONS] },
+        size: { type: 'number', description: 'Taille en px, 10 à 72.' },
+        color: { type: ['string', 'null'], description: 'Couleur ; null = automatique, lisible sur le fond de chaque diapositive.' },
+        opacity: { type: 'number', description: '0.1 à 1.' },
+        bold: { type: 'boolean' },
+        startAt: { type: 'integer', description: 'Numéro de la première diapositive, 0 à 9999. Défaut 1.' },
+        skipFirst: { type: 'boolean', description: 'true = pas de numéro sur la première diapositive (page de titre).' },
+      },
     },
   },
   {
@@ -536,6 +569,12 @@ function reference(ctx: ToolContext) {
       .filter(p => ctx.ultra || p.tier === 'basic')
       .map(p => ({ id: p.id, label: p.label, phase: p.phase, family: p.family })),
     slideTransitions: availableTransitions(ctx.ultra).map(t => ({ id: t.id, label: t.label })),
+    numbering: {
+      tool: 'set_numbering',
+      formats: NUMBERING_FORMATS.map(f => ({ id: f.value, example: f.label })),
+      positions: NUMBERING_POSITIONS,
+      size: [10, 72],
+    },
     customShape: {
       usage: 'props.customShape sur un bloc forme, image ou vidéo',
       points: `[x, y] entre 0 et 1, origine en haut à gauche, ${MIN_POLYGON_POINTS} à ${MAX_POLYGON_POINTS} points dans l'ordre du contour (sens horaire conseillé)`,
@@ -585,6 +624,7 @@ function run(slides: Slide[], name: string, input: Input, ctx: ToolContext): Too
     case 'get_project':
       return ok(slides, {
         slideCount: slides.length,
+        numbering: ctx.numbering ?? DEFAULT_NUMBERING,
         slides: slides.map((s, i) => ({
           slide: i + 1, blocks: s.blocks.length, title: firstText(s),
           background: describeBackground(s.background), transition: s.transition?.preset,
@@ -799,6 +839,53 @@ function run(slides: Slide[], name: string, input: Input, ctx: ToolContext): Too
 
       const next = replaceSlide(slides, i, { ...slides[i], background: { ...bg, particles: p } })
       return ok(next, { slide: i + 1, particles: p }, label, i)
+    }
+
+    case 'set_numbering': {
+      const allowed = ['enabled', 'format', 'position', 'size', 'color', 'opacity', 'bold', 'startAt', 'skipFirst']
+      const unknown = Object.keys(input).find(k => !allowed.includes(k))
+      if (unknown) fail(`Champ « ${unknown} » inconnu. Champs : ${allowed.join(', ')}.`)
+      if (Object.keys(input).length === 0) fail('Aucun réglage à modifier.')
+
+      const flag = (value: unknown, what: string): boolean => {
+        if (typeof value !== 'boolean') fail(`${what} doit être true ou false.`)
+        return value as boolean
+      }
+      const current = ctx.numbering ?? DEFAULT_NUMBERING
+      const n: SlideNumbering = { ...current }
+
+      if (input.enabled !== undefined) n.enabled = flag(input.enabled, '`enabled`')
+      if (input.format !== undefined) {
+        const found = NUMBERING_FORMATS.find(f => f.value === input.format)
+        if (!found) fail(`\`format\` doit valoir : ${NUMBERING_FORMATS.map(f => f.value).join(', ')}.`)
+        n.format = found!.value
+      }
+      if (input.position !== undefined) {
+        const found = NUMBERING_POSITIONS.find(p => p === input.position)
+        if (!found) fail(`\`position\` doit valoir : ${NUMBERING_POSITIONS.join(', ')}.`)
+        n.position = found!
+      }
+      if (input.size !== undefined) n.size = Math.round(asNumber(input.size, '`size`', 10, 72))
+      if (input.opacity !== undefined) n.opacity = asNumber(input.opacity, '`opacity`', 0.1, 1)
+      if (input.bold !== undefined) n.bold = flag(input.bold, '`bold`')
+      if (input.skipFirst !== undefined) n.skipFirst = flag(input.skipFirst, '`skipFirst`')
+      if (input.startAt !== undefined) n.startAt = Math.round(asNumber(input.startAt, '`startAt`', 0, 9999))
+      if (input.color !== undefined) {
+        if (input.color === null) delete n.color
+        else n.color = asColor(input.color, '`color`')
+      }
+
+      const label = !n.enabled ? 'Numérotation désactivée' : current.enabled ? 'Numérotation modifiée' : 'Numérotation des diapositives'
+      return {
+        slides,
+        numbering: n,
+        isError: false,
+        label,
+        result: JSON.stringify({
+          numbering: n,
+          example: slideNumberText(Math.min(1, slides.length - 1), slides.length, { ...n, enabled: true, skipFirst: false }),
+        }),
+      }
     }
 
     case 'set_slide_transition': {

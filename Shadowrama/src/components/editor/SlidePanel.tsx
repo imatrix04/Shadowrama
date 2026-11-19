@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { SlideNumbering, Slide, SlideBackground, SlideTransitionSettings } from '../../types'
 import { BLOCKS_REGISTRY } from '../../blocks'
 import TransitionPanel from './TransitionPanel'
@@ -6,6 +6,7 @@ import BackgroundPanel from './BackgroundPanel'
 import NumberingPanel from './NumberingPanel'
 import { getSlideBackgroundStyle } from '../../ultra/slideBackground'
 import Drawer, { DrawerTitle } from '../ui/Drawer'
+import Icon from '../ui/Icon'
 import type { DrawerTab } from '../ui/Drawer'
 import styles from './SlidePanel.module.css'
 
@@ -54,6 +55,13 @@ export default function SlidePanel({
   const [openPanel, setOpenPanel] = useState<string | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  // Garde la diapositive active visible : en naviguant au clavier, en ajoutant
+  // ou en dupliquant, elle peut se trouver hors de la zone défilée.
+  useEffect(() => {
+    listRef.current?.children[currentSlide]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [currentSlide, openPanel, slides.length])
 
   function handleDragStart(i: number) {
     setDragIndex(i)
@@ -116,64 +124,105 @@ export default function SlidePanel({
         </>
       ) : (
         <>
-          <DrawerTitle>Diapositives</DrawerTitle>
-          <div className={styles.list}>
-            {slides.map((slide, i) => (
-              <div
-                key={slide.id}
-                draggable
-                onDragStart={() => handleDragStart(i)}
-                onDragOver={e => handleDragOver(e, i)}
-                onDrop={() => handleDrop(i)}
-                onDragEnd={handleDragEnd}
-                className={`${styles.thumb} ${i === currentSlide ? styles.thumbSelected : ''} ${dragIndex === i ? styles.thumbDragging : ''} ${dragOverIndex === i && dragIndex !== i ? styles.thumbDragOver : ''}`}
-                onClick={() => onSelectSlide(i)}
-              >
+          <DrawerTitle>
+            Diapositives <span className={styles.count}>{slides.length}</span>
+          </DrawerTitle>
+          <div className={styles.list} ref={listRef}>
+            {slides.map((slide, i) => {
+              const dropping = dragOverIndex === i && dragIndex !== null && dragIndex !== i
+              // Repère d'insertion : avant la cible si on remonte, après si on descend.
+              const dropClass = dropping ? (dragIndex! > i ? styles.dropBefore : styles.dropAfter) : ''
+              return (
                 <div
-                  className={styles.thumbPreviewBox}
-                  style={getSlideBackgroundStyle(slide.background, ultra).style}
+                  key={slide.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Diapositive ${i + 1}`}
+                  aria-current={i === currentSlide ? 'true' : undefined}
+                  draggable
+                  onDragStart={() => handleDragStart(i)}
+                  onDragOver={e => handleDragOver(e, i)}
+                  onDrop={() => handleDrop(i)}
+                  onDragEnd={handleDragEnd}
+                  onClick={() => onSelectSlide(i)}
+                  onKeyDown={e => {
+                    if (e.target !== e.currentTarget) return
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onSelectSlide(i)
+                    }
+                  }}
+                  className={[
+                    styles.thumb,
+                    i === currentSlide ? styles.thumbSelected : '',
+                    dragIndex === i ? styles.thumbDragging : '',
+                    dropClass,
+                  ].join(' ')}
                 >
-                  <div className={styles.thumbPreviewScaler}>
-                    {slide.blocks.map(block => {
-                      const Renderer = BLOCKS_REGISTRY[block.type]
-                      if (!Renderer) return null
-                      return (
-                        <div
-                          key={block.id}
-                          className={styles.thumbBlockWrapper}
-                          style={{
-                            left: block.x, top: block.y,
-                            width: block.width, height: block.height,
-                            opacity: block.opacity ?? 1,
-                            transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
-                          }}
-                        >
-                          <Renderer block={block} />
-                        </div>
-                      )
-                    })}
+                  <div
+                    className={styles.thumbPreviewBox}
+                    style={getSlideBackgroundStyle(slide.background, ultra).style}
+                  >
+                    <div className={styles.thumbPreviewScaler}>
+                      {slide.blocks.map(block => {
+                        const Renderer = BLOCKS_REGISTRY[block.type]
+                        if (!Renderer) return null
+                        return (
+                          <div
+                            key={block.id}
+                            className={styles.thumbBlockWrapper}
+                            style={{
+                              left: block.x, top: block.y,
+                              width: block.width, height: block.height,
+                              opacity: block.opacity ?? 1,
+                              transform: block.rotation ? `rotate(${block.rotation}deg)` : undefined,
+                            }}
+                          >
+                            <Renderer block={block} />
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    <span className={styles.number}>{i + 1}</span>
+
+                    {/* Ce que la diapositive porte au-delà de ses blocs. */}
+                    {(slide.transition || slide.background) && (
+                      <span className={styles.badges}>
+                        {slide.transition && <span title="Transition d'entrée"><Icon name="transition" size={11} /></span>}
+                        {slide.background && <span title="Arrière-plan personnalisé"><Icon name="background" size={11} /></span>}
+                      </span>
+                    )}
+
+                    <span className={styles.actions}>
+                      <button
+                        type="button"
+                        className={styles.actionBtn}
+                        title="Dupliquer"
+                        aria-label={`Dupliquer la diapositive ${i + 1}`}
+                        onClick={e => { e.stopPropagation(); onDuplicateSlide(i) }}
+                      >
+                        <Icon name="copy" size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+                        title={slides.length === 1 ? 'Impossible de supprimer la seule diapositive' : 'Supprimer'}
+                        aria-label={`Supprimer la diapositive ${i + 1}`}
+                        disabled={slides.length === 1}
+                        onClick={e => { e.stopPropagation(); onDeleteSlide(i) }}
+                      >
+                        <Icon name="trash" size={13} />
+                      </button>
+                    </span>
                   </div>
                 </div>
-
-                <span className={styles.previewText}>{i + 1}</span>
-
-                <div className={styles.actions}>
-                  <button
-                    className={styles.actionBtn}
-                    title="Dupliquer"
-                    onClick={e => { e.stopPropagation(); onDuplicateSlide(i) }}
-                  >⧉</button>
-                  <button
-                    className={`${styles.actionBtn} ${slides.length === 1 ? styles.actionBtnDisabled : styles.actionBtnDanger}`}
-                    title="Supprimer"
-                    disabled={slides.length === 1}
-                    onClick={e => { e.stopPropagation(); onDeleteSlide(i) }}
-                  >✕</button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
-          <button className={styles.addBtn} onClick={onAddSlide}>＋ Nouvelle diapo</button>
+          <button type="button" className={styles.addBtn} onClick={onAddSlide}>
+            <Icon name="plus" size={14} /> Nouvelle diapositive
+          </button>
         </>
       )}
     />

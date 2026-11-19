@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { BlockData } from '../../types'
 import { getBlockField, setBlockField } from '../../types'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
 import { MAX_VIDEO_BYTES, heightForRatio, readVideoSize } from '../../utils/video'
+import Icon from '../ui/Icon'
 import styles from './ContextMenu.module.css'
 
 interface Props {
@@ -21,6 +22,8 @@ interface Props {
 export default function MediaFileField({ fieldKey, accept = 'image/*', block, onUpdate }: Props) {
   const isVideo = accept.startsWith('video')
   const [error, setError] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const currentKey = String(getBlockField(block, fieldKey) ?? '')
   const previewSrc = currentKey.startsWith('media/') ? resolveMedia(currentKey) : currentKey
@@ -28,6 +31,12 @@ export default function MediaFileField({ fieldKey, accept = 'image/*', block, on
   const onPick = async (file: File | undefined) => {
     if (!file) return
     setError(null)
+
+    // Le sélecteur filtre déjà par type, pas un fichier déposé.
+    if (!isVideo && !file.type.startsWith('image/')) {
+      setError('Ce fichier n’est pas une image.')
+      return
+    }
 
     if (isVideo) {
       if (!file.type.startsWith('video/') && !/\.(mp4|m4v|webm|ogv|mov|mkv)$/i.test(file.name)) {
@@ -56,33 +65,63 @@ export default function MediaFileField({ fieldKey, accept = 'image/*', block, on
     onUpdate(block.id, changes)
   }
 
+  const kind = isVideo ? 'vidéo' : 'image'
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      {previewSrc && (isVideo ? (
-        <video
-          src={previewSrc}
-          muted
-          preload="metadata"
-          style={{ width: '100%', height: '60px', objectFit: 'cover', borderRadius: '4px', background: '#000' }}
-        />
-      ) : (
-        <img
-          src={previewSrc}
-          style={{ width: '100%', height: '60px', objectFit: 'cover', borderRadius: '4px' }}
-          alt=""
-        />
-      ))}
+    <div className={styles.media}>
       <input
+        ref={inputRef}
         type="file"
         accept={accept}
-        className={styles.input}
+        hidden
         onChange={e => {
           void onPick(e.target.files?.[0])
           // Permet de rechoisir le même fichier après une erreur.
           e.target.value = ''
         }}
       />
-      {error && <span style={{ color: '#ff6b6b', fontSize: '0.75rem' }}>{error}</span>}
+
+      <button
+        type="button"
+        className={`${styles.mediaDrop} ${previewSrc ? styles.mediaFilled : ''} ${dragging ? styles.mediaDragging : ''}`}
+        onClick={() => inputRef.current?.click()}
+        onDragOver={e => {
+          if (!e.dataTransfer.types.includes('Files')) return
+          e.preventDefault()
+          setDragging(true)
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={e => {
+          setDragging(false)
+          if (e.dataTransfer.files.length === 0) return
+          // Le dépôt ne doit pas atteindre l'éditeur (ouverture de projet, etc.).
+          e.preventDefault()
+          e.stopPropagation()
+          void onPick(e.dataTransfer.files[0])
+        }}
+        aria-label={previewSrc ? `Remplacer la ${kind}` : `Choisir une ${kind}`}
+      >
+        {previewSrc ? (
+          <>
+            {isVideo ? (
+              <video src={previewSrc} muted preload="metadata" className={styles.mediaPreview} />
+            ) : (
+              <img src={previewSrc} className={styles.mediaPreview} alt="" />
+            )}
+            <span className={styles.mediaOverlay}>
+              <Icon name="reload" size={14} /> Remplacer
+            </span>
+          </>
+        ) : (
+          <>
+            <span className={styles.mediaIcon}><Icon name={isVideo ? 'video' : 'image'} size={20} /></span>
+            <span className={styles.mediaTitle}>{dragging ? 'Déposez le fichier' : `Choisir une ${kind}`}</span>
+            <span className={styles.mediaHint}>ou glissez-la ici</span>
+          </>
+        )}
+      </button>
+
+      {error && <span className={styles.mediaError} role="alert">{error}</span>}
     </div>
   )
 }

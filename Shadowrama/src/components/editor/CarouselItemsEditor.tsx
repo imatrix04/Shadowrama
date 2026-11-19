@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { CarouselItem, ImageFit } from '../../types'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
 import { normalizePolygon } from '../../utils/shapePolygon'
 import { nextId } from '../../utils/ids'
 import CustomSelect from '../../styles/CustomSelect'
+import Icon from '../ui/Icon'
 import PolygonShapeEditor from './PolygonShapeEditor'
 import menu from './ContextMenu.module.css'
 import styles from './CarouselItemsEditor.module.css'
@@ -26,6 +27,99 @@ const SHAPE_OPTIONS = [
   { label: 'Rectangle (par défaut)', value: 'none' },
   { label: 'Forme personnalisée', value: 'grid' },
 ]
+
+/** Octets du fichier enregistrés dans le magasin média, clé renvoyée. */
+async function storeImage(file: File): Promise<string> {
+  // Mêmes octets bruts que le bloc image : pas de détour par une data URL.
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  const key = generateMediaKey(file.name)
+  registerMedia(key, bytes, file.type)
+  return key
+}
+
+/** Zone d'ajout : clic pour parcourir, ou dépôt de plusieurs images d'un coup. */
+function AddZone({ onFiles, compact }: { onFiles: (files: File[]) => void; compact: boolean }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [dragging, setDragging] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handle = (list: FileList | null) => {
+    if (!list) return
+    const all = Array.from(list)
+    const images = all.filter(f => f.type.startsWith('image/'))
+    setError(images.length < all.length ? 'Seules les images sont acceptées.' : null)
+    if (images.length > 0) onFiles(images)
+  }
+
+  return (
+    <div className={styles.add}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={e => {
+          handle(e.target.files)
+          e.target.value = ''
+        }}
+      />
+      <button
+        type="button"
+        className={`${menu.mediaDrop} ${compact ? styles.addCompact : ''} ${dragging ? menu.mediaDragging : ''}`}
+        onClick={() => inputRef.current?.click()}
+        onDragOver={e => {
+          if (!e.dataTransfer.types.includes('Files')) return
+          e.preventDefault()
+          setDragging(true)
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={e => {
+          setDragging(false)
+          if (e.dataTransfer.files.length === 0) return
+          // Le dépôt ne doit pas atteindre l'éditeur (ouverture de projet, etc.).
+          e.preventDefault()
+          e.stopPropagation()
+          handle(e.dataTransfer.files)
+        }}
+      >
+        {compact ? (
+          <span className={styles.addInline}><Icon name="plus" size={14} /> {dragging ? 'Déposez les images' : 'Ajouter des images'}</span>
+        ) : (
+          <>
+            <span className={menu.mediaIcon}><Icon name="image" size={20} /></span>
+            <span className={menu.mediaTitle}>{dragging ? 'Déposez les images' : 'Ajouter des images'}</span>
+            <span className={menu.mediaHint}>ou glissez-les ici (plusieurs possibles)</span>
+          </>
+        )}
+      </button>
+      {error && <span className={menu.mediaError} role="alert">{error}</span>}
+    </div>
+  )
+}
+
+/** Bouton « Remplacer » : un vrai bouton du thème plutôt que le champ fichier natif. */
+function ReplaceButton({ onFile }: { onFile: (file: File) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={e => {
+          const file = e.target.files?.[0]
+          if (file) onFile(file)
+          e.target.value = ''
+        }}
+      />
+      <button type="button" className={styles.replaceBtn} onClick={() => inputRef.current?.click()}>
+        <Icon name="reload" size={13} /> Remplacer l'image
+      </button>
+    </>
+  )
+}
 
 /**
  * Édition des vues d'un carrousel : ajout, ordre, suppression, et les mêmes
@@ -54,14 +148,10 @@ export default function CarouselItemsEditor({ items, blockWidth, blockHeight, on
     if (expanded === id) setExpanded(null)
   }
 
-  const addFiles = async (files: FileList) => {
+  const addFiles = async (files: File[]) => {
     const added: CarouselItem[] = []
-    for (const file of Array.from(files)) {
-      // Mêmes octets bruts que le bloc image : pas de détour par une data URL.
-      const bytes = new Uint8Array(await file.arrayBuffer())
-      const key = generateMediaKey(file.name)
-      registerMedia(key, bytes, file.type)
-      added.push({ id: nextId(), src: key, alt: file.name, objectFit: 'cover' })
+    for (const file of files) {
+      added.push({ id: nextId(), src: await storeImage(file), alt: file.name, objectFit: 'cover' })
     }
     if (added.length) onChange([...items, ...added])
   }
@@ -87,45 +177,44 @@ export default function CarouselItemsEditor({ items, blockWidth, blockHeight, on
                   : <span className={`${styles.thumb} ${styles.thumbEmpty}`}>vide</span>}
                 <span className={styles.rank}>{i + 1}. {item.alt || 'Sans titre'}</span>
                 <button
+                  type="button"
                   className={styles.iconBtn}
                   title="Monter"
+                  aria-label="Monter"
                   disabled={i === 0}
                   onClick={() => move(i, -1)}
-                >↑</button>
+                ><Icon name="layerForward" size={13} /></button>
                 <button
+                  type="button"
                   className={styles.iconBtn}
                   title="Descendre"
+                  aria-label="Descendre"
                   disabled={i === items.length - 1}
                   onClick={() => move(i, 1)}
-                >↓</button>
+                ><Icon name="layerBackward" size={13} /></button>
                 <button
-                  className={styles.iconBtn}
+                  type="button"
+                  className={`${styles.iconBtn} ${open ? styles.iconBtnOn : ''}`}
                   title="Régler"
+                  aria-label="Régler cette image"
+                  aria-expanded={open}
                   onClick={() => setExpanded(open ? null : item.id)}
-                >{open ? '−' : '⚙'}</button>
+                ><Icon name="settings" size={13} /></button>
                 <button
+                  type="button"
                   className={`${styles.iconBtn} ${styles.danger}`}
                   title="Retirer"
+                  aria-label="Retirer cette image"
                   onClick={() => remove(item.id)}
-                >✕</button>
+                ><Icon name="trash" size={13} /></button>
               </div>
 
               {open && (
                 <div className={styles.details}>
-                  <span className={styles.detailLabel}>Remplacer l'image</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className={menu.input}
-                    onChange={async e => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-                      const bytes = new Uint8Array(await file.arrayBuffer())
-                      const key = generateMediaKey(file.name)
-                      registerMedia(key, bytes, file.type)
-                      patch(item.id, { src: key })
-                    }}
-                  />
+                  <ReplaceButton onFile={async file => {
+                    if (!file.type.startsWith('image/')) return
+                    patch(item.id, { src: await storeImage(file) })
+                  }} />
 
                   <span className={styles.detailLabel}>Description</span>
                   <input
@@ -179,15 +268,7 @@ export default function CarouselItemsEditor({ items, blockWidth, blockHeight, on
         })}
       </div>
 
-      <div className={styles.add}>
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          className={menu.input}
-          onChange={e => { if (e.target.files) void addFiles(e.target.files) }}
-        />
-      </div>
+      <AddZone onFiles={files => void addFiles(files)} compact={items.length > 0} />
     </div>
   )
 }

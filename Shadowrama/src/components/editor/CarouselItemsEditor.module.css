@@ -6,10 +6,13 @@
 
 .item {
   border: 1px solid var(--editor-border-light);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   background-color: var(--editor-btn-bg);
   overflow: hidden;
+  transition: border-color var(--t-fast);
 }
+
+.item:hover { border-color: var(--accent-border); }
 
 .row {
   display: flex;
@@ -19,11 +22,11 @@
 }
 
 .thumb {
-  width: 42px;
-  height: 30px;
+  width: 48px;
+  height: 34px;
   flex: 0 0 auto;
   object-fit: cover;
-  border-radius: 3px;
+  border-radius: 6px;
   background-color: var(--editor-bg-canvas);
 }
 
@@ -48,15 +51,15 @@
 
 .iconBtn {
   flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: transparent;
   border: 1px solid var(--editor-border-light);
-  border-radius: 3px;
+  border-radius: 7px;
   color: var(--editor-text-muted);
   font-size: 0.7rem;
   line-height: 1;
@@ -64,10 +67,14 @@
   transition: border-color var(--t-fast), color var(--t-fast);
 }
 
-.iconBtn:hover:not(:disabled) {
+.iconBtn:hover:not(:disabled),
+.iconBtnOn {
   border-color: var(--accent);
+  background-color: var(--accent-bg-soft);
   color: var(--editor-text);
 }
+
+.iconBtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .iconBtn:disabled {
   opacity: 0.35;
@@ -76,7 +83,8 @@
 
 .danger:hover:not(:disabled) {
   border-color: var(--danger);
-  color: var(--danger);
+  background-color: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger-soft);
 }
 
 .details {
@@ -94,7 +102,47 @@
 }
 
 .add {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
   margin-top: 6px;
-  font-size: 0.72rem;
-  color: var(--editor-text-muted);
 }
+
+/* Une fois des images présentes, la zone d'ajout se réduit à une ligne. */
+.addCompact {
+  min-height: 0;
+  padding: 0.5rem;
+}
+
+.addInline {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--editor-text);
+}
+
+.replaceBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  background: var(--overlay-1);
+  border: 1px solid var(--overlay-3);
+  border-radius: 8px;
+  color: var(--overlay-text-strong);
+  font-family: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition: background-color var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+
+.replaceBtn:hover {
+  background: var(--accent-bg-soft);
+  border-color: var(--accent-hover);
+  color: var(--editor-text);
+}
+
+.replaceBtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

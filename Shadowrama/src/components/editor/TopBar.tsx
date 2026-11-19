@@ -343,10 +343,11 @@ export default function TopBar({
           <button
             className={`${styles.btn} ${ultra ? styles.btnUltraOn : styles.btnUltra}`}
             onClick={onToggleUltra}
+            data-ultra-toggle
             aria-pressed={ultra}
             title={ultra ? 'Quitter le mode Ultra Design' : 'Activer le mode Ultra Design : effets et séquences avancées'}
           >
-            <Icon name="ultra" /> Ultra Design
+            <span className={styles.ultraIcon}><Icon name="ultra" /></span> Ultra Design
           </button>
           <button className={`${styles.btn} ${styles.btnAccent}`} onClick={() => onPresentingChange(true)}>
             <Icon name="play" /> Présenter

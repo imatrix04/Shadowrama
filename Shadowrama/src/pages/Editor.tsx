@@ -21,6 +21,7 @@ import LeftSidebars from '../components/editor/LeftSidebars'
 import TopBar from '../components/editor/TopBar'
 import SlidePanel from '../components/editor/SlidePanel'
 import AIPanel from '../components/ai/AIPanel'
+import UltraTransition from '../components/editor/UltraTransition'
 import { useAIAssistant } from '../ai/useAIAssistant'
 import { emptyConversation, loadConversation, projectKeyOf, withAvailableMedia } from '../ai/conversationStore'
 import type { SavedConversation } from '../ai/conversationStore'
@@ -120,6 +121,8 @@ function EditorView({ initialDraft, initialConversation }: {
     begin,
     patch,
     onFocusSlide: setRequestedSlide,
+    numbering,
+    onNumbering: setNumbering,
     projectKey: projectKeyOf(filePath),
     initial: initialConversation,
   })
@@ -502,6 +505,7 @@ function EditorView({ initialDraft, initialConversation }: {
             railFooterRef={setZoomSlot}
           />
           </div>
+          <UltraTransition ultra={ultra} />
           {/* Toujours monté : seule la largeur s'anime (panneau fixe à 340px, rogné),
               donc l'ouverture et la fermeture sont fluides. `inert` retire le
               panneau fermé du focus clavier et des lecteurs d'écran. */}

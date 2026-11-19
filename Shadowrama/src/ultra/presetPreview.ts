@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import type { Keyframe, MotionPreset } from '../types'
+import type { Keyframe, MotionPreset, SlideTransition } from '../types'
 
 type ResolvedKeyframe = Required<Keyframe>
 
@@ -43,5 +43,31 @@ export function previewStyle(preset: MotionPreset): CSSProperties {
     '--demo-kx1': `${to.skewX}deg`,
     '--demo-ky1': `${to.skewY}deg`,
     '--demo-b1': shrinkBlur(to.blur),
+  } as CSSProperties
+}
+/**
+ * Même mini-scène pour une transition de diapositive : la puce joue l'arrivée
+ * de la diapositive entrante, de son état de départ (`to`) vers le repos.
+ * Les rotations 3D n'existent pas dans la mini-scène : un léger biais les évoque.
+ */
+export function transitionPreviewStyle(transition: SlideTransition): CSSProperties {
+  const t = transition.to
+  return {
+    '--demo-o0': t.opacity ?? 1,
+    '--demo-x0': shrinkOffset((t.xPercent ?? 0) * 1.1),
+    '--demo-y0': shrinkOffset((t.yPercent ?? 0) * 1.1),
+    '--demo-s0': Math.min(1.6, Math.max(0.4, t.scale ?? 1)),
+    '--demo-r0': `${t.rotateZ ?? 0}deg`,
+    '--demo-kx0': `${(t.rotateY ?? 0) * 0.3}deg`,
+    '--demo-ky0': '0deg',
+    '--demo-b0': shrinkBlur(t.blur ?? 0),
+    '--demo-o1': 1,
+    '--demo-x1': '0px',
+    '--demo-y1': '0px',
+    '--demo-s1': 1,
+    '--demo-r1': '0deg',
+    '--demo-kx1': '0deg',
+    '--demo-ky1': '0deg',
+    '--demo-b1': '0px',
   } as CSSProperties
 }

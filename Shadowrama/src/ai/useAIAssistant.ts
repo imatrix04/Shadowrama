@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Slide } from '../types'
+import type { Slide, SlideNumbering } from '../types'
 import {
   UNSAVED_PROJECT_KEY, deleteConversation, emptyConversation, loadConversation, saveConversation,
   withAvailableMedia,
@@ -55,6 +55,9 @@ interface Params {
   /** Remplace l'état sans nouvelle entrée d'historique. */
   patch: (updater: (prev: Slide[]) => Slide[]) => void
   onFocusSlide: (index: number) => void
+  /** Numérotation actuelle du projet, et son setter (réglage hors historique). */
+  numbering: SlideNumbering
+  onNumbering: (numbering: SlideNumbering) => void
   /** Identité du projet : chemin du fichier, ou « draft » tant qu'il n'est pas enregistré. */
   projectKey: string
   /** Conversation enregistrée de ce projet, lue au démarrage de l'éditeur. */
@@ -77,7 +80,7 @@ interface Params {
  * sous ») est le MÊME projet : la conversation le suit.
  */
 export function useAIAssistant({
-  slides, currentSlide, selectedIds, ultra, begin, patch, onFocusSlide, projectKey, initial,
+  slides, currentSlide, selectedIds, ultra, begin, patch, onFocusSlide, numbering, onNumbering, projectKey, initial,
 }: Params) {
   const [start] = useState(() => restore(initial ?? emptyConversation()))
   const [items, setItems] = useState<ChatItem[]>(start.items)
@@ -105,8 +108,8 @@ export function useAIAssistant({
   const generationRef = useRef(0)
 
   // L'état courant est lu au moment de l'envoi, pas à celui du rendu.
-  const latest = useRef({ slides, currentSlide, selectedIds, ultra })
-  useEffect(() => { latest.current = { slides, currentSlide, selectedIds, ultra } })
+  const latest = useRef({ slides, currentSlide, selectedIds, ultra, numbering })
+  useEffect(() => { latest.current = { slides, currentSlide, selectedIds, ultra, numbering } })
   useEffect(() => { attachmentsRef.current = attachments }, [attachments])
 
   // ── Rattachement au projet ──
@@ -298,6 +301,8 @@ export function useAIAssistant({
           if (!began) { began = true; begin() }
           patch(() => next)
         },
+        numbering: state.numbering,
+        onNumbering,
         onFocusSlide,
         onUsage: u => { if (current()) setUsage(prev => addUsage(prev, u)) },
         onEvent: event => {
@@ -330,7 +335,7 @@ export function useAIAssistant({
         setRunning(false)
       }
     }
-  }, [begin, patch, onFocusSlide, push, showStream, finishStream])
+  }, [begin, patch, onFocusSlide, onNumbering, push, showStream, finishStream])
 
   const stop = useCallback(() => controllerRef.current?.abort(), [])
 

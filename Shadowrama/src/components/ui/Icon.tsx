@@ -4,7 +4,7 @@ export type IconName =
   | 'new' | 'save' | 'open' | 'export' | 'play' | 'undo' | 'redo'
   | 'ultra' | 'motion' | 'effects' | 'transition' | 'background'
   | 'animNone' | 'animFade' | 'animSlideLeft' | 'animSlideRight' | 'animSlideUp' | 'animZoom'
-  | 'settings' | 'sun' | 'moon' | 'monitor' | 'lock' | 'hash' | 'align' | 'sparkles' | 'send' | 'stop' | 'close' | 'paperclip'
+  | 'settings' | 'sun' | 'moon' | 'monitor' | 'lock' | 'hash' | 'align' | 'sparkles' | 'send' | 'stop' | 'close' | 'paperclip' | 'copy' | 'trash' | 'plus' | 'layerFront' | 'layerForward' | 'layerBackward' | 'layerBack'
 
 interface Props {
   name: IconName
@@ -252,6 +252,23 @@ const PATHS: Record<IconName, React.ReactNode> = {
   send: <path d="M4 12l16-8-6 16-3-7z" />,
   stop: <rect x="6" y="6" width="12" height="12" rx="2" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
+  copy: (
+    <>
+      <rect x="9" y="9" width="11" height="11" rx="2.5" />
+      <path d="M5 15V6.5A2.5 2.5 0 017.5 4H15" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M4 7h16M10 11v6M14 11v6" />
+      <path d="M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4.5A1.5 1.5 0 0110.5 3h3A1.5 1.5 0 0115 4.5V7" />
+    </>
+  ),
+  layerFront: <path d="M5 4h14M12 20V9M7 13l5-5 5 5" />,
+  layerForward: <path d="M7 14l5-5 5 5" />,
+  layerBackward: <path d="M7 10l5 5 5-5" />,
+  layerBack: <path d="M5 20h14M12 4v11M7 11l5 5 5-5" />,
+  plus: <path d="M12 5v14M5 12h14" />,
   paperclip: <path d="M20 11.5l-8.2 8.2a5 5 0 0 1-7.1-7.1l8.6-8.6a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.4-2.4l7.9-7.9" />,
 }
 

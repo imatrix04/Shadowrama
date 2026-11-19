@@ -746,3 +746,225 @@
   border: 1px solid var(--editor-border-light);
   border-radius: var(--r-lg);
 }
+
+/* ── Panneau Mouvement : phases, familles, cartes ──────────────────────── */
+
+.phaseDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  background: currentColor;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+.familyChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.6rem;
+}
+
+.familyChip {
+  padding: 0.22rem 0.6rem;
+  background: transparent;
+  border: 1px solid var(--editor-border-light);
+  border-radius: 999px;
+  color: var(--editor-text-muted);
+  font-family: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast), background-color var(--t-fast);
+}
+
+.familyChip:hover { border-color: var(--accent); color: var(--editor-text); }
+.familyChip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.familyChipActive,
+.familyChipActive:hover {
+  background: var(--accent-bg-soft);
+  border-color: var(--accent);
+  color: var(--editor-text);
+}
+
+.motionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.7rem;
+}
+
+.motionCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.35rem;
+  background: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-md);
+  color: var(--editor-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--t-fast),
+    background-color var(--t-fast),
+    transform var(--t-fast) var(--ease-out),
+    box-shadow var(--t-fast);
+}
+
+.motionCard:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.motionCard:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.motionCardUltra {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 7%, transparent), transparent 70%);
+}
+
+.motionCardActive,
+.motionCardActive:hover {
+  background-color: var(--accent-bg-soft);
+  border-color: var(--accent);
+  box-shadow: 0 0 14px -4px var(--accent-glow);
+}
+
+/* La mini-scène occupe toute la largeur de la carte. */
+.motionCard .motionPreviewWide {
+  width: 100%;
+  height: 2.2rem;
+}
+
+.motionCard:hover .motionChip {
+  background-image: linear-gradient(135deg, var(--accent), var(--accent-hover));
+}
+
+.motionCardActive .motionChip {
+  background-image: linear-gradient(135deg, var(--accent-hover), var(--accent-2));
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.motionCardName {
+  padding: 0 0.15rem 0.1rem;
+  font-size: 0.7rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.motionUltraTag {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  color: var(--accent-hover);
+}
+
+.motionSummary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.motionSummaryName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--editor-text);
+}
+
+.motionPlay {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  background: var(--accent-bg-soft);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--editor-text);
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.motionPlay:hover { background: var(--accent); color: var(--on-accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .motionChip { animation: none; }
+}
+
+/* ── Réglages d'un mouvement posé : durée, délai, aperçu ───────────────── */
+
+.motionSettings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.7rem 0.75rem 0.75rem;
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--editor-text) 3%, transparent), color-mix(in srgb, var(--editor-text) 1%, transparent));
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-lg);
+}
+
+.sliderBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+/* Libellé à gauche, valeur à droite, sur la même ligne : plus de colonne
+   étroite où le texte se coupe. */
+.sliderHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sliderHead .fieldLabel { flex: 0 1 auto; }
+
+.sliderValue {
+  flex: 0 0 auto;
+  padding: 0.05rem 0.45rem;
+  background: var(--accent-bg-soft);
+  border-radius: 999px;
+  color: var(--editor-text);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rangeFull {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.motionReplay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem;
+  background: var(--accent-bg-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-md);
+  color: var(--editor-text);
+  font-family: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: background-color var(--t-fast), color var(--t-fast);
+}
+
+.motionReplay:hover { background: var(--accent); color: var(--on-accent); }
+.motionReplay:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
