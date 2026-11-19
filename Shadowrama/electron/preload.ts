@@ -38,4 +38,10 @@ contextBridge.exposeInMainWorld('aiAPI', {
   clearKey: (provider: string) => ipcRenderer.invoke('ai:clear-key', provider),
   turn: (request: unknown) => ipcRenderer.invoke('ai:turn', request),
   abort: (requestId: string) => ipcRenderer.send('ai:abort', requestId),
+  // Réponse en direct : renvoie la fonction qui arrête l'écoute.
+  onDelta: (callback: (delta: unknown) => void) => {
+    const listener = (_event: unknown, delta: unknown) => callback(delta)
+    ipcRenderer.on('ai:delta', listener)
+    return () => { ipcRenderer.removeListener('ai:delta', listener) }
+  },
 })

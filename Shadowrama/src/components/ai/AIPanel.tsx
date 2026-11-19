@@ -109,12 +109,12 @@ export default function AIPanel({
             </div>
           )}
           {items.map(item => (
-            <div key={item.id} className={`${styles.item} ${styles[item.kind]} ${item.isError ? styles.itemError : ''}`}>
+            <div key={item.id} className={`${styles.item} ${styles[item.kind]} ${item.isError ? styles.itemError : ''} ${item.streaming ? styles.streaming : ''}`}>
               {item.kind === 'action' && <Icon name={item.isError ? 'close' : 'sparkles'} size={12} />}
               <span>{item.text}</span>
             </div>
           ))}
-          {running && <div className={styles.working}><span className={styles.dots} /> L'assistant travaille…</div>}
+          {running && !items[items.length - 1]?.streaming && <div className={styles.working}><span className={styles.dots} /> L'assistant travaille…</div>}
         </div>
 
         <div

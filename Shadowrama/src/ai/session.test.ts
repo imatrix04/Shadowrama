@@ -78,6 +78,36 @@ describe('runAssistant', () => {
     expect(sent[1][sent[1].length - 1].content[0]).toMatchObject({ is_error: true })
   })
 
+  it('relaie la réponse en direct, ignore les autres demandes et coupe l’écoute à la fin', async () => {
+    const listeners: Array<(d: unknown) => void> = []
+    const stop = vi.fn()
+    let requestId = ''
+    const turn = vi.fn(async (req: { requestId: string }) => {
+      requestId = req.requestId
+      // Des morceaux arrivent pendant l'appel : deux pour cette demande, un pour une autre.
+      for (const l of listeners) {
+        l({ requestId, type: 'text', text: 'Bon' })
+        l({ requestId: 'autre', type: 'text', text: 'PARASITE' })
+        l({ requestId, type: 'text', text: 'jour' })
+        l({ requestId, type: 'tool', name: 'get_project' })
+      }
+      return { ok: true, stopReason: 'end', content: [{ type: 'text', text: 'Bonjour' }] } as TurnResult
+    })
+    ;(window as unknown as { aiAPI: unknown }).aiAPI = {
+      turn, abort: vi.fn(),
+      onDelta: (cb: (d: unknown) => void) => { listeners.push(cb); return stop },
+    }
+    const options = baseOptions()
+    await runAssistant(options)
+    const events = (options.onEvent as ReturnType<typeof vi.fn>).mock.calls.map(c => c[0])
+    expect(events).toEqual([
+      { type: 'stream', text: 'Bon' },
+      { type: 'stream', text: 'Bonjour' },
+      { type: 'text', text: 'Bonjour' },
+    ])
+    expect(stop).toHaveBeenCalledTimes(1)
+  })
+
   it("s'arrête sur une erreur du fournisseur et la rapporte", async () => {
     setup([{ ok: false, error: 'Clé API refusée' }])
     const result = await runAssistant(baseOptions())

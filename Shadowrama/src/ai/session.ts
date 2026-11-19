@@ -4,11 +4,13 @@ import { TOOL_DEFS, executeTool } from './tools'
 import type { Attachment, ContentBlock, Provider, Usage, WireMessage } from './types'
 
 /** Tours modèle ↔ outils par demande : borne le coût et coupe les boucles folles. */
-export const MAX_TURNS = 20
+export const MAX_TURNS = 30
 /** Appels d'outils par demande, tous tours confondus. */
-export const MAX_TOOL_CALLS = 120
+export const MAX_TOOL_CALLS = 300
 
 export type SessionEvent =
+  /** Texte de la réponse en cours d'écriture : tout ce qui est arrivé jusqu'ici pour ce tour. */
+  | { type: 'stream'; text: string }
   | { type: 'text'; text: string }
   | { type: 'action'; label: string; isError: boolean }
 
@@ -89,9 +91,17 @@ export async function runAssistant(opts: SessionOptions): Promise<SessionResult>
     for (let turn = 0; turn < MAX_TURNS; turn++) {
       if (opts.signal.aborted) { end = 'stopped'; error = undefined; break }
 
+      // La réponse s'affiche pendant qu'elle s'écrit ; le résultat complet, lui,
+      // arrive à la fin de l'appel et remplace ce texte provisoire.
+      let live = ''
+      const stopListening = api.onDelta?.(delta => {
+        if (delta.requestId !== requestId || delta.type !== 'text') return
+        live += delta.text
+        opts.onEvent({ type: 'stream', text: live })
+      })
       const response = await api.turn({
         requestId, provider: opts.provider, system: SYSTEM_PROMPT, messages, tools: TOOL_DEFS,
-      })
+      }).finally(() => stopListening?.())
       if (opts.signal.aborted) { end = 'stopped'; error = undefined; break }
       if (!response.ok) { end = 'error'; error = response.error; break }
       if (response.usage) opts.onUsage?.(response.usage)

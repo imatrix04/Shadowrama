@@ -77,7 +77,14 @@ export interface ChatItem {
   kind: 'user' | 'assistant' | 'action' | 'error'
   text: string
   isError?: boolean
+  /** Vrai tant que la réponse s'écrit en direct (jamais enregistré). */
+  streaming?: boolean
 }
+
+/** Morceau de réponse reçu pendant que le modèle écrit (voir electron/ai.ts). */
+export type StreamDelta =
+  | { requestId: string; type: 'text'; text: string }
+  | { requestId: string; type: 'tool'; name: string }
 
 /** Tokens d'un appel, normalisés entre fournisseurs. `input` exclut le cache. */
 export interface Usage {

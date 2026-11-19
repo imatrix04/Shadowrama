@@ -93,8 +93,10 @@ const DEFAULT_MODELS: Record<Provider, string> = {
 
 // La réflexion du modèle compte dans cette limite : trop basse, elle coupe la réponse.
 const MAX_OUTPUT_TOKENS = 10_000
-// Une réponse longue en mode « élevé » peut dépasser deux minutes (sans streaming).
-const REQUEST_TIMEOUT_MS = 300_000
+// Délai d'INACTIVITÉ : la réponse arrive en flux, donc une longue réponse n'est pas
+// coupée tant que des données continuent d'arriver (le fournisseur envoie aussi des
+// signaux de vie pendant la réflexion).
+const IDLE_TIMEOUT_MS = 120_000
 
 const isProvider = (value: unknown): value is Provider =>
   typeof value === 'string' && (PROVIDERS as string[]).includes(value)
@@ -218,8 +220,62 @@ function openAiEffort(model: string, effort: Effort): Record<string, unknown> {
   return { reasoning_effort: effort === 'xhigh' ? 'high' : effort }
 }
 
+// ── Flux (streaming) ─────────────────────────────────────────────────────────
+
+/** Ce que les appels signalent pendant qu'ils lisent le flux de réponse. */
+interface StreamHooks {
+  /** Texte produit par le modèle, au fil de l'eau (affiché en direct). */
+  onText: (text: string) => void
+  /** Un appel d'outil commence (nom de l'outil). */
+  onTool: (name: string) => void
+  /** Des octets sont arrivés : la connexion est vivante (délai d'inactivité). */
+  onActivity: () => void
+}
+
+type Rec = Record<string, unknown>
+const asRec = (value: unknown): Rec =>
+  value && typeof value === 'object' && !Array.isArray(value) ? value as Rec : {}
+
+/**
+ * Lit un flux « server-sent events » : un appel par événement, JSON déjà décodé.
+ * Les fournisseurs séparent les événements par une ligne vide ; un événement
+ * peut arriver coupé en deux morceaux réseau, d'où le tampon.
+ */
+async function readEvents(response: Response, onEvent: (data: Rec) => void, onActivity: () => void): Promise<void> {
+  const reader = response.body?.getReader()
+  if (!reader) throw new Error('Réponse vide du fournisseur.')
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  const handle = (raw: string) => {
+    const data = raw.split(/\r?\n/)
+      .filter(line => line.startsWith('data:'))
+      .map(line => line.slice(5).trimStart())
+      .join('\n')
+    if (!data || data === '[DONE]') return
+    let parsed: unknown
+    try { parsed = JSON.parse(data) } catch { return }
+    onEvent(asRec(parsed))
+  }
+
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    onActivity()
+    buffer += decoder.decode(value, { stream: true })
+    for (;;) {
+      const separator = /\r?\n\r?\n/.exec(buffer)
+      if (!separator) break
+      handle(buffer.slice(0, separator.index))
+      buffer = buffer.slice(separator.index + separator[0].length)
+    }
+  }
+  buffer += decoder.decode()
+  if (buffer.trim()) handle(buffer)
+}
+
 async function callAnthropic(
-  key: string, model: string, effort: Effort, req: TurnRequest, signal: AbortSignal,
+  key: string, model: string, effort: Effort, req: TurnRequest, signal: AbortSignal, hooks: StreamHooks,
 ): Promise<TurnResult> {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -232,6 +288,7 @@ async function callAnthropic(
     body: JSON.stringify({
       model,
       max_tokens: MAX_OUTPUT_TOKENS,
+      stream: true,
       // Prompt caching : l'API met en cache tout ce qui précède chaque marqueur
       // (outils → système → messages). Les lectures coûtent ~10 % du prix normal.
       system: [{ type: 'text', text: req.system, cache_control: { type: 'ephemeral' } }],
@@ -241,32 +298,84 @@ async function callAnthropic(
       ...anthropicEffort(model, effort),
     }),
   })
-  const body: unknown = await response.json().catch(() => null)
-  if (!response.ok) return { ok: false, error: httpError(response.status, body) }
+  hooks.onActivity()
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null)
+    return { ok: false, error: httpError(response.status, body) }
+  }
 
-  const data = body as { content?: unknown; stop_reason?: string; usage?: Record<string, unknown> }
+  // Blocs reconstitués morceau par morceau, dans l'ordre d'arrivée.
+  const parts = new Map<number, { block: Rec; json: string }>()
+  const usage: Usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+  let stop: unknown
+  let streamError: string | null = null
+
+  await readEvents(response, event => {
+    switch (event.type) {
+      case 'message_start': {
+        const u = asRec(asRec(event.message).usage)
+        usage.input = count(u.input_tokens)
+        usage.output = count(u.output_tokens)
+        usage.cacheRead = count(u.cache_read_input_tokens)
+        usage.cacheWrite = count(u.cache_creation_input_tokens)
+        break
+      }
+      case 'content_block_start': {
+        const block = { ...asRec(event.content_block) }
+        parts.set(count(event.index), { block, json: '' })
+        if (block.type === 'tool_use' && typeof block.name === 'string') hooks.onTool(block.name)
+        break
+      }
+      case 'content_block_delta': {
+        const part = parts.get(count(event.index))
+        if (!part) break
+        const delta = asRec(event.delta)
+        if (delta.type === 'text_delta' && typeof delta.text === 'string') {
+          part.block.text = String(part.block.text ?? '') + delta.text
+          hooks.onText(delta.text)
+        } else if (delta.type === 'thinking_delta' && typeof delta.thinking === 'string') {
+          part.block.thinking = String(part.block.thinking ?? '') + delta.thinking
+        } else if (delta.type === 'signature_delta' && typeof delta.signature === 'string') {
+          part.block.signature = String(part.block.signature ?? '') + delta.signature
+        } else if (delta.type === 'input_json_delta' && typeof delta.partial_json === 'string') {
+          part.json += delta.partial_json
+        }
+        break
+      }
+      case 'message_delta': {
+        stop = asRec(event.delta).stop_reason
+        const u = asRec(event.usage)
+        if (typeof u.output_tokens === 'number') usage.output = count(u.output_tokens)
+        break
+      }
+      case 'error': {
+        const message = asRec(event.error).message
+        streamError = (typeof message === 'string' ? message : 'erreur du fournisseur').slice(0, 300)
+        break
+      }
+    }
+  }, hooks.onActivity)
+
+  if (streamError) return { ok: false, error: `Le fournisseur a interrompu la réponse : ${streamError}` }
+
   const content: ContentBlock[] = []
-  for (const block of Array.isArray(data.content) ? data.content : []) {
-    const b = block as { type?: string; text?: unknown; id?: unknown; name?: unknown; input?: unknown }
-    if (b.type === 'text' && typeof b.text === 'string') content.push({ type: 'text', text: b.text })
-    else if (b.type === 'thinking' || b.type === 'redacted_thinking') {
+  for (const [, part] of [...parts.entries()].sort((a, b) => a[0] - b[0])) {
+    const b = part.block
+    if (b.type === 'text') {
+      // Un bloc de texte vide serait refusé par l'API au tour suivant.
+      if (typeof b.text === 'string' && b.text) content.push({ type: 'text', text: b.text })
+    } else if (b.type === 'thinking' || b.type === 'redacted_thinking') {
       // À renvoyer inchangé au tour suivant (la boucle d'outils l'exige).
-      content.push(block as ContentBlock)
+      content.push(b as ContentBlock)
     } else if (b.type === 'tool_use' && typeof b.id === 'string' && typeof b.name === 'string') {
-      content.push({
-        type: 'tool_use', id: b.id, name: b.name,
-        input: b.input && typeof b.input === 'object' ? b.input as Record<string, unknown> : {},
-      })
+      let input: Rec = {}
+      if (part.json.trim()) {
+        try { input = asRec(JSON.parse(part.json)) } catch { /* arguments coupés : l'outil le dira au modèle */ }
+      }
+      content.push({ type: 'tool_use', id: b.id, name: b.name, input })
     }
   }
-  const stopReason = data.stop_reason === 'tool_use' ? 'tool_use'
-    : data.stop_reason === 'max_tokens' ? 'max_tokens' : 'end'
-  const usage: Usage = {
-    input: count(data.usage?.input_tokens),
-    output: count(data.usage?.output_tokens),
-    cacheRead: count(data.usage?.cache_read_input_tokens),
-    cacheWrite: count(data.usage?.cache_creation_input_tokens),
-  }
+  const stopReason = stop === 'tool_use' ? 'tool_use' : stop === 'max_tokens' ? 'max_tokens' : 'end'
   return { ok: true, content, stopReason, usage }
 }
 
@@ -302,7 +411,7 @@ function toOpenAiMessages(system: string, messages: WireMessage[]): unknown[] {
 }
 
 async function callOpenAi(
-  key: string, model: string, effort: Effort, req: TurnRequest, signal: AbortSignal,
+  key: string, model: string, effort: Effort, req: TurnRequest, signal: AbortSignal, hooks: StreamHooks,
 ): Promise<TurnResult> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -311,6 +420,9 @@ async function callOpenAi(
     body: JSON.stringify({
       model,
       max_completion_tokens: MAX_OUTPUT_TOKENS,
+      stream: true,
+      // Sans cette option, le flux ne dit jamais combien de tokens ont été consommés.
+      stream_options: { include_usage: true },
       ...openAiEffort(model, effort),
       messages: toOpenAiMessages(req.system, req.messages),
       tools: req.tools.map(t => ({
@@ -319,35 +431,71 @@ async function callOpenAi(
       })),
     }),
   })
-  const body: unknown = await response.json().catch(() => null)
-  if (!response.ok) return { ok: false, error: httpError(response.status, body) }
-
-  const raw = body as { usage?: { prompt_tokens?: unknown; completion_tokens?: unknown; prompt_tokens_details?: { cached_tokens?: unknown } } } | null
-  const choice = (body as { choices?: { message?: { content?: unknown; tool_calls?: unknown }; finish_reason?: string }[] })
-    ?.choices?.[0]
-  const content: ContentBlock[] = []
-  if (typeof choice?.message?.content === 'string' && choice.message.content) {
-    content.push({ type: 'text', text: choice.message.content })
+  hooks.onActivity()
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null)
+    return { ok: false, error: httpError(response.status, body) }
   }
-  for (const call of Array.isArray(choice?.message?.tool_calls) ? choice.message.tool_calls : []) {
-    const c = call as { id?: unknown; function?: { name?: unknown; arguments?: unknown } }
-    if (typeof c.id !== 'string' || typeof c.function?.name !== 'string') continue
-    let input: Record<string, unknown> = {}
+
+  let text = ''
+  const calls = new Map<number, { id: string; name: string; args: string }>()
+  let finish: string | undefined
+  let promptTokens = 0
+  let completionTokens = 0
+  let cached = 0
+  let streamError: string | null = null
+
+  await readEvents(response, event => {
+    const failure = asRec(event.error).message
+    if (typeof failure === 'string') streamError = failure.slice(0, 300)
+
+    const u = asRec(event.usage)
+    if (Object.keys(u).length > 0) {
+      promptTokens = count(u.prompt_tokens)
+      completionTokens = count(u.completion_tokens)
+      cached = count(asRec(u.prompt_tokens_details).cached_tokens)
+    }
+
+    const choice = asRec(Array.isArray(event.choices) ? event.choices[0] : undefined)
+    const delta = asRec(choice.delta)
+    if (typeof delta.content === 'string' && delta.content) {
+      text += delta.content
+      hooks.onText(delta.content)
+    }
+    for (const raw of Array.isArray(delta.tool_calls) ? delta.tool_calls : []) {
+      const c = asRec(raw)
+      const fn = asRec(c.function)
+      const index = count(c.index)
+      const entry = calls.get(index) ?? { id: '', name: '', args: '' }
+      const hadName = entry.name !== ''
+      if (typeof c.id === 'string' && c.id) entry.id = c.id
+      if (typeof fn.name === 'string' && fn.name) entry.name = fn.name
+      if (typeof fn.arguments === 'string') entry.args += fn.arguments
+      calls.set(index, entry)
+      if (!hadName && entry.name) hooks.onTool(entry.name)
+    }
+    if (typeof choice.finish_reason === 'string') finish = choice.finish_reason
+  }, hooks.onActivity)
+
+  if (streamError) return { ok: false, error: `Le fournisseur a interrompu la réponse : ${streamError}` }
+
+  const content: ContentBlock[] = []
+  if (text) content.push({ type: 'text', text })
+  for (const [, call] of [...calls.entries()].sort((a, b) => a[0] - b[0])) {
+    if (!call.id || !call.name) continue
+    let input: Rec = {}
     try {
-      const parsed: unknown = JSON.parse(typeof c.function.arguments === 'string' ? c.function.arguments : '{}')
-      if (parsed && typeof parsed === 'object') input = parsed as Record<string, unknown>
+      input = asRec(JSON.parse(call.args || '{}'))
     } catch {
       // Arguments mal formés : l'outil recevra un objet vide et le dira au modèle.
     }
-    content.push({ type: 'tool_use', id: c.id, name: c.function.name, input })
+    content.push({ type: 'tool_use', id: call.id, name: call.name, input })
   }
-  const stopReason = choice?.finish_reason === 'tool_calls' ? 'tool_use'
-    : choice?.finish_reason === 'length' ? 'max_tokens' : 'end'
+  const stopReason = finish === 'tool_calls' ? 'tool_use' : finish === 'length' ? 'max_tokens' : 'end'
   // OpenAI compte les tokens en cache DANS prompt_tokens : on les en retire.
-  const cached = count(raw?.usage?.prompt_tokens_details?.cached_tokens)
   const usage: Usage = {
-    input: Math.max(0, count(raw?.usage?.prompt_tokens) - cached),
-    output: count(raw?.usage?.completion_tokens),
+    input: Math.max(0, promptTokens - cached),
+    output: completionTokens,
     cacheRead: cached,
     cacheWrite: 0,
   }
@@ -432,12 +580,27 @@ export function registerAiHandlers(getMainWindow: () => BrowserWindow | null) {
 
     const controller = new AbortController()
     inFlight.set(req.requestId, controller)
-    const timer = setTimeout(() => controller.abort(new Error('timeout')), REQUEST_TIMEOUT_MS)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const activity = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => controller.abort(new Error('timeout')), IDLE_TIMEOUT_MS)
+    }
+    activity()
+    // Le texte part vers l'interface au fil de l'eau ; la réponse complète, elle,
+    // revient comme avant par le résultat de cet appel.
+    const emit = (payload: Record<string, unknown>) => {
+      if (!event.sender.isDestroyed()) event.sender.send('ai:delta', { requestId: req.requestId, ...payload })
+    }
+    const hooks: StreamHooks = {
+      onText: text => emit({ type: 'text', text }),
+      onTool: name => emit({ type: 'tool', name }),
+      onActivity: activity,
+    }
     try {
       const model = settings.models[req.provider]
       return req.provider === 'anthropic'
-        ? await callAnthropic(key, model, settings.effort, req, controller.signal)
-        : await callOpenAi(key, model, settings.effort, req, controller.signal)
+        ? await callAnthropic(key, model, settings.effort, req, controller.signal, hooks)
+        : await callOpenAi(key, model, settings.effort, req, controller.signal, hooks)
     } catch (err) {
       if (controller.signal.aborted) {
         const timedOut = (controller.signal.reason as Error | undefined)?.message === 'timeout'

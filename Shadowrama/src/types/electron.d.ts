@@ -51,5 +51,7 @@ interface Window {
       tools: import('../ai/types').ToolDef[]
     }) => Promise<import('../ai/types').TurnResult>
     abort: (requestId: string) => void
+    /** Écoute la réponse pendant qu'elle s'écrit. Renvoie la fonction qui arrête l'écoute. */
+    onDelta: (callback: (delta: import('../ai/types').StreamDelta) => void) => () => void
   }
 }

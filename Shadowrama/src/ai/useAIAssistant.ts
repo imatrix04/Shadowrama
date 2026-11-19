@@ -180,6 +180,8 @@ export function useAIAssistant({
       },
     }
     if (hydratedKeyRef.current !== projectKey) return
+    // Pas d'écriture à chaque morceau de texte : la dernière, au tour fini, suffit.
+    if (items[items.length - 1]?.streaming) return
     void saveConversation(projectKey, snapshotRef.current.conversation)
   }, [projectKey, items, usage, attachments, running])
 
@@ -247,6 +249,29 @@ export function useAIAssistant({
     setItems(prev => [...prev, { ...item, id: ++idRef.current }])
   }, [])
 
+  // Réponse en cours d'écriture : une seule ligne, mise à jour à chaque morceau,
+  // puis remplacée par le texte définitif (ou retirée si le tour n'a pas de texte).
+  const streamingIdRef = useRef<number | null>(null)
+  const showStream = useCallback((text: string) => {
+    const id = streamingIdRef.current
+    if (id === null) {
+      const created = ++idRef.current
+      streamingIdRef.current = created
+      setItems(prev => [...prev, { id: created, kind: 'assistant', text, streaming: true }])
+    } else {
+      setItems(prev => prev.map(i => (i.id === id ? { ...i, text } : i)))
+    }
+  }, [])
+  const finishStream = useCallback((finalText: string | null) => {
+    const id = streamingIdRef.current
+    streamingIdRef.current = null
+    if (id === null) return false
+    setItems(prev => (finalText
+      ? prev.map(i => (i.id === id ? { id, kind: 'assistant' as const, text: finalText } : i))
+      : prev.filter(i => i.id !== id)))
+    return true
+  }, [])
+
   const send = useCallback(async (text: string, provider: Provider) => {
     const trimmed = text.trim()
     if (!trimmed || controllerRef.current) return
@@ -277,8 +302,16 @@ export function useAIAssistant({
         onUsage: u => { if (current()) setUsage(prev => addUsage(prev, u)) },
         onEvent: event => {
           if (!current()) return
-          if (event.type === 'text') push({ kind: 'assistant', text: event.text })
-          else push({ kind: 'action', text: event.label, isError: event.isError })
+          if (event.type === 'stream') {
+            showStream(event.text)
+          } else if (event.type === 'text') {
+            // Le texte définitif prend la place de la ligne écrite en direct.
+            if (!finishStream(event.text)) push({ kind: 'assistant', text: event.text })
+          } else {
+            // Un tour qui n'a que des actions : le texte provisoire n'a plus lieu d'être.
+            finishStream(null)
+            push({ kind: 'action', text: event.label, isError: event.isError })
+          }
         },
       })
       if (!current()) return
@@ -286,12 +319,18 @@ export function useAIAssistant({
       if (result.end === 'stopped') push({ kind: 'error', text: 'Interrompu. Les modifications déjà faites restent (Ctrl+Z pour les annuler).' })
       else if (result.error) push({ kind: 'error', text: result.error })
     } finally {
+      // Interrompu en plein texte : on garde ce qui est déjà écrit, sans curseur.
+      const id = streamingIdRef.current
+      streamingIdRef.current = null
+      if (id !== null) {
+        setItems(prev => prev.map(i => (i.id === id ? { id, kind: 'assistant' as const, text: i.text } : i)))
+      }
       if (controllerRef.current === controller) {
         controllerRef.current = null
         setRunning(false)
       }
     }
-  }, [begin, patch, onFocusSlide, push])
+  }, [begin, patch, onFocusSlide, push, showStream, finishStream])
 
   const stop = useCallback(() => controllerRef.current?.abort(), [])
 
