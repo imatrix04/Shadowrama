@@ -7,6 +7,8 @@ import Switch from '../components/ui/Switch'
 import { useFeatures } from '../hooks/useFeatures'
 import { useTheme } from '../hooks/useTheme'
 import { PALETTES, type ThemeMode } from '../utils/theme'
+import AISetup from '../components/ai/AISetup'
+import { useAISettings } from '../ai/useAISettings'
 import styles from './Settings.module.css'
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: 'moon' | 'sun' | 'monitor' }[] = [
@@ -29,6 +31,7 @@ export default function Settings() {
   const navigate = useNavigate()
   const { mode, setMode, palette, setPalette } = useTheme()
   const { features, setFeature } = useFeatures()
+  const ai = useAISettings()
   const activeIndex = THEME_OPTIONS.findIndex(opt => opt.mode === mode)
 
   return (
@@ -99,6 +102,28 @@ export default function Settings() {
                 ))}
               </div>
             </SettingRow>
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Assistant IA</h2>
+            <p className={styles.sectionHint}>
+              Utilise votre propre clé API. Le contenu des diapositives consultées par l'assistant est
+              envoyé au fournisseur choisi : rien ne part sans votre autorisation explicite.
+            </p>
+            {!ai.available ? (
+              <p className={styles.sectionHint}>Disponible dans l'application de bureau.</p>
+            ) : ai.settings ? (
+              <AISetup
+                key={ai.settings.provider}
+                settings={ai.settings}
+                error={ai.error}
+                onSave={ai.save}
+                onSetKey={ai.setKey}
+                onClearKey={ai.clearKey}
+              />
+            ) : (
+              <p className={styles.sectionHint}>{ai.error ?? 'Chargement…'}</p>
+            )}
           </section>
 
           <section className={styles.section}>

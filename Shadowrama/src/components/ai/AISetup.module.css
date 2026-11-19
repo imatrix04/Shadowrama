@@ -1,0 +1,111 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--editor-text);
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  background: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-sm);
+  color: var(--editor-text);
+  font-family: inherit;
+  font-size: 0.84rem;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.hint {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--editor-text-muted);
+}
+
+.hint a {
+  color: var(--accent, inherit);
+  text-decoration: underline;
+}
+
+.notice {
+  padding: 0.75rem 0.85rem;
+  background: var(--accent-bg-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: var(--r-md);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--editor-text);
+}
+
+.notice strong { font-size: 0.8rem; }
+.notice p { margin: 0.4rem 0 0; color: var(--editor-text-muted); }
+
+.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.consent input { margin-top: 0.15rem; accent-color: var(--accent); }
+
+.error {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--danger-soft);
+}
+
+.actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.primary,
+.danger {
+  height: 32px;
+  padding: 0 0.9rem;
+  border-radius: var(--r-md);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--t-fast), opacity var(--t-fast);
+}
+
+.primary {
+  background: var(--accent);
+  border: 1px solid var(--accent-border);
+  color: var(--on-accent);
+}
+
+.primary:hover:not(:disabled) { background: var(--accent-hover); }
+.primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.danger {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+  color: var(--danger-soft);
+}
+
+.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.danger:disabled { opacity: 0.45; cursor: not-allowed; }

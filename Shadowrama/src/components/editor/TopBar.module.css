@@ -226,3 +226,10 @@
 .btnUltraOn:hover:not(:disabled) {
   filter: brightness(1.08);
 }
+
+/* Assistant IA : discret fermé, teinté d'accent une fois ouvert. */
+.btnAiOn {
+  background-color: var(--accent-bg-soft);
+  border-color: var(--accent);
+  color: var(--editor-text);
+}

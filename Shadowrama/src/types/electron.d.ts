@@ -36,4 +36,20 @@ interface Window {
     /** Écrit le .pptx à l'emplacement choisi par `pickPptxPath`. Rend le nom du fichier. */
     writePptx: (data: Uint8Array) => Promise<string>
   }
+  /** Assistant IA (voir electron/ai.ts). Absent hors de l'application de bureau. */
+  aiAPI?: {
+    getSettings: () => Promise<import('../ai/types').AISettings>
+    saveSettings: (patch: { provider?: string; model?: string; consent?: boolean }) => Promise<import('../ai/types').AISettings>
+    /** Enregistre la clé (chiffrée côté système). Elle ne peut jamais être relue. */
+    setKey: (provider: string, key: string) => Promise<import('../ai/types').AISettings>
+    clearKey: (provider: string) => Promise<import('../ai/types').AISettings>
+    turn: (request: {
+      requestId: string
+      provider: string
+      system: string
+      messages: import('../ai/types').WireMessage[]
+      tools: import('../ai/types').ToolDef[]
+    }) => Promise<import('../ai/types').TurnResult>
+    abort: (requestId: string) => void
+  }
 }

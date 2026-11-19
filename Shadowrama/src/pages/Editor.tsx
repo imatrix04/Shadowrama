@@ -20,6 +20,8 @@ import Canvas from '../components/editor/Canvas'
 import LeftSidebars from '../components/editor/LeftSidebars'
 import TopBar from '../components/editor/TopBar'
 import SlidePanel from '../components/editor/SlidePanel'
+import AIPanel from '../components/ai/AIPanel'
+import { useAIAssistant } from '../ai/useAIAssistant'
 
 const AUTOSAVE_DELAY_MS = 500
 const DUPLICATE_OFFSET = 16
@@ -93,10 +95,20 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
   // Emplacement en bas du rail de droite où le canvas affiche ses contrôles de
   // zoom (portail) : ils ne recouvrent plus les diapositives.
   const [zoomSlot, setZoomSlot] = useState<HTMLElement | null>(null)
+  const [aiOpen, setAiOpen] = useState(false)
 
   const { slides, begin, commit, patch, undo, redo, reset, canUndo, canRedo } = useEditorHistory(
     initialDraft?.slides ?? [{ id: nextId(), blocks: [] }]
   )
+  const assistant = useAIAssistant({
+    slides,
+    currentSlide: Math.min(requestedSlide, slides.length - 1),
+    selectedIds: selectedBlockIds,
+    ultra,
+    begin,
+    patch,
+    onFocusSlide: setRequestedSlide,
+  })
   // Couleurs déjà utilisées dans le projet : proposées par le sélecteur de couleur.
   const projectColors = useMemo(() => collectProjectColors(slides, numbering), [slides, numbering])
 
@@ -392,6 +404,9 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
   return (
     <ProjectColorsContext.Provider value={projectColors}>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--editor-bg)', color: 'var(--editor-text)' }}>
+        {/* Pendant que l'assistant travaille, l'éditeur est figé : une édition
+            manuelle simultanée serait écrasée par son prochain changement. */}
+        <div inert={assistant.running}>
         <TopBar
           slides={slides}
           numbering={numbering}
@@ -418,8 +433,12 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
           onToggleUltra={toggleUltra}
           presenting={presenting}
           onPresentingChange={handlePresentingChange}
+          aiOpen={aiOpen}
+          onToggleAi={() => setAiOpen(open => !open)}
         />
+        </div>
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <div inert={assistant.running} style={{ display: 'flex', flex: 1, minWidth: 0, overflow: 'hidden' }}>
           <LeftSidebars
             onAddBlock={addBlock}
             ultra={ultra}
@@ -465,6 +484,22 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
             onPreviewNumbering={() => setNumberingPreview(Date.now())}
             railFooterRef={setZoomSlot}
           />
+          </div>
+          {aiOpen && (
+            <AIPanel
+              items={assistant.items}
+              running={assistant.running}
+              usage={assistant.usage}
+              attachments={assistant.attachments}
+              attachError={assistant.attachError}
+              onAttach={assistant.attach}
+              onRemoveAttachment={assistant.removeAttachment}
+              onSend={assistant.send}
+              onStop={assistant.stop}
+              onClear={assistant.clear}
+              onClose={() => setAiOpen(false)}
+            />
+          )}
         </div>
       </div>
     </ProjectColorsContext.Provider>

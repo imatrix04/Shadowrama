@@ -4,7 +4,7 @@ export type IconName =
   | 'new' | 'save' | 'open' | 'export' | 'play' | 'undo' | 'redo'
   | 'ultra' | 'motion' | 'effects' | 'transition' | 'background'
   | 'animNone' | 'animFade' | 'animSlideLeft' | 'animSlideRight' | 'animSlideUp' | 'animZoom'
-  | 'settings' | 'sun' | 'moon' | 'monitor' | 'lock' | 'hash' | 'align'
+  | 'settings' | 'sun' | 'moon' | 'monitor' | 'lock' | 'hash' | 'align' | 'sparkles' | 'send' | 'stop' | 'close' | 'paperclip'
 
 interface Props {
   name: IconName
@@ -242,6 +242,17 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M8 11V7a4 4 0 018 0v4" />
     </>
   ),
+  sparkles: (
+    <>
+      <path d="M10 4l1.6 4.4L16 10l-4.4 1.6L10 16l-1.6-4.4L4 10l4.4-1.6z" />
+      <path d="M18 3v4M16 5h4" />
+      <path d="M18 16v4M16 18h4" />
+    </>
+  ),
+  send: <path d="M4 12l16-8-6 16-3-7z" />,
+  stop: <rect x="6" y="6" width="12" height="12" rx="2" />,
+  close: <path d="M6 6l12 12M18 6L6 18" />,
+  paperclip: <path d="M20 11.5l-8.2 8.2a5 5 0 0 1-7.1-7.1l8.6-8.6a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.4-2.4l7.9-7.9" />,
 }
 
 export default function Icon({ name, size = 16, className }: Props) {

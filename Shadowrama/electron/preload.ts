@@ -28,3 +28,14 @@ contextBridge.exposeInMainWorld('fileAPI', {
   pickPptxPath: (defaultName: string): Promise<string | null> => ipcRenderer.invoke('pick-pptx-path', defaultName),
   writePptx: (data: Uint8Array): Promise<string> => ipcRenderer.invoke('write-pptx', data),
 })
+// Assistant IA (voir electron/ai.ts). La clé API n'est jamais exposée ici :
+// l'interface peut l'envoyer pour l'enregistrer, jamais la relire.
+contextBridge.exposeInMainWorld('aiAPI', {
+  getSettings: () => ipcRenderer.invoke('ai:get-settings'),
+  saveSettings: (patch: { provider?: string; model?: string; consent?: boolean }) =>
+    ipcRenderer.invoke('ai:save-settings', patch),
+  setKey: (provider: string, key: string) => ipcRenderer.invoke('ai:set-key', provider, key),
+  clearKey: (provider: string) => ipcRenderer.invoke('ai:clear-key', provider),
+  turn: (request: unknown) => ipcRenderer.invoke('ai:turn', request),
+  abort: (requestId: string) => ipcRenderer.send('ai:abort', requestId),
+})

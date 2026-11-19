@@ -44,6 +44,9 @@ interface Props {
   onToggleUltra: () => void
   presenting: boolean
   onPresentingChange: (value: boolean) => void
+  /** Panneau de l'assistant IA : ouvert ou non, et bascule. */
+  aiOpen?: boolean
+  onToggleAi?: () => void
 }
 
 type ReplaceAction = 'new' | 'open' | 'import'
@@ -73,7 +76,7 @@ function isBlankProject(slides: Slide[]): boolean {
 export default function TopBar({
   slides, numbering, projectName, setProjectName, filePath, setFilePath, onLoad, onNew,
   onUndo, onRedo, canUndo, canRedo, draftFailed, initialDirty, onDirtyChange, ultra, onToggleUltra,
-  presenting, onPresentingChange,
+  presenting, onPresentingChange, aiOpen = false, onToggleAi,
 }: Props) {
   const navigate = useNavigate()
   const [nameDialogOpen, setNameDialogOpen] = useState(false)
@@ -327,6 +330,16 @@ export default function TopBar({
 
         <div className={styles.actions}>
           <DropdownMenu label="Fichier" items={fileItems} />
+          {onToggleAi && (
+            <button
+              className={`${styles.btn} ${aiOpen ? styles.btnAiOn : ''}`}
+              onClick={onToggleAi}
+              aria-pressed={aiOpen}
+              title="Assistant IA : créer et modifier le diaporama par la conversation"
+            >
+              <Icon name="sparkles" /> Assistant
+            </button>
+          )}
           <button
             className={`${styles.btn} ${ultra ? styles.btnUltraOn : styles.btnUltra}`}
             onClick={onToggleUltra}

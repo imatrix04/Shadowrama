@@ -4,6 +4,7 @@ import log from 'electron-log'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 import './fileHandlers'
+import { registerAiHandlers } from './ai'
 import { secureWebviews } from './webviewSecurity'
 import { openUpdateDialog } from './update-window/updateWindow'
 
@@ -201,6 +202,7 @@ ipcMain.handle('check-for-updates', async () => {
 })
 
 app.whenReady().then(() => {
+  registerAiHandlers(() => mainWindow)
   createWindow()
 
   if (process.env.NODE_ENV !== 'development') {

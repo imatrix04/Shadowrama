@@ -1,0 +1,98 @@
+.root {
+  position: relative;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  background: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-sm);
+  color: var(--editor-text);
+  font-family: inherit;
+  font-size: 0.84rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--t-fast);
+}
+
+.trigger:hover,
+.triggerOpen {
+  border-color: var(--accent-border, var(--accent));
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caret {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  margin-top: -3px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  color: var(--editor-text-muted);
+  transform: rotate(45deg);
+  transition: transform var(--t-base) var(--ease-out);
+}
+
+.triggerOpen .caret {
+  margin-top: 2px;
+  transform: rotate(-135deg);
+}
+
+@keyframes selectIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  max-height: 240px;
+  margin: 0;
+  padding: 0.3rem;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--menu-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-md);
+  box-shadow: var(--menu-shadow);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  transform-origin: top center;
+  animation: selectIn var(--t-base) var(--ease-out);
+}
+
+.option {
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--r-sm);
+  color: var(--editor-text);
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.optionActive {
+  background: var(--accent-bg-soft);
+}
+
+.optionSelected {
+  color: var(--accent-hover);
+  font-weight: 600;
+}
