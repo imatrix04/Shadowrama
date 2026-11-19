@@ -112,7 +112,23 @@ export async function runAssistant(opts: SessionOptions): Promise<SessionResult>
         finalText = text
       }
 
+      // Recherches web faites par le fournisseur : on les montre à l'utilisateur.
+      for (const block of response.content) {
+        if (block.type !== 'server_tool_use') continue
+        const query = (block.input as { query?: unknown } | undefined)?.query
+        opts.onEvent({
+          type: 'action',
+          label: typeof query === 'string' && query ? `Recherche web : ${query.slice(0, 120)}` : 'Recherche web',
+          isError: false,
+        })
+      }
+
       const calls = response.content.filter((b): b is ToolUse => b.type === 'tool_use')
+      if (calls.length === 0 && response.stopReason === 'pause_turn') {
+        // Le fournisseur a mis sa recherche en pause : on relance pour qu'il la termine.
+        messages.push({ role: 'assistant', content: response.content })
+        continue
+      }
       if (calls.length === 0) {
         if (response.stopReason === 'max_tokens') {
           end = 'limit'

@@ -1,4 +1,5 @@
-import type { BlockData, BlockEffects, BlockMotion, Gradient } from '../types'
+import type { CSSProperties } from 'react'
+import type { BlockData, BlockEffects, BlockMotion, Glass, Gradient } from '../types'
 import { getPreset } from './presets'
 
 
@@ -26,6 +27,48 @@ export function cornerRadius(fx: BlockEffects): string | undefined {
   if (!fx.corners) return undefined
   const { tl, tr, br, bl } = fx.corners
   return `${tl}px ${tr}px ${br}px ${bl}px`
+}
+
+/** Glass avec tous ses réglages renseignés (les projets anciens n'en ont que la moitié). */
+export function resolveGlass(g: Glass): Required<Omit<Glass, 'tint2'>> & Pick<Glass, 'tint2'> {
+  return {
+    ...g,
+    saturate: g.saturate ?? 160,
+    border: g.border ?? 0.28,
+    grain: g.grain ?? 0,
+    sheen: g.sheen ?? 1,
+    tilt: g.tilt ?? 0,
+    shine: g.shine ?? false,
+    tint2: g.tint2,
+  }
+}
+
+const mix = (color: string, alpha: number) =>
+  `color-mix(in srgb, ${color} ${Math.round(alpha * 100)}%, transparent)`
+
+/**
+ * Verre dépoli. Le flou de l'arrière-plan et la teinte sont posés ici ; le
+ * reste (liseré, grain, reflet, balayage, inclinaison) vient de Glass.module.css
+ * et lit les variables définies ci-dessous.
+ */
+export function glassStyle(input: Glass): CSSProperties {
+  const g = resolveGlass(input)
+  const blur = `blur(${g.blur}px) saturate(${g.saturate}%)`
+  const tint = g.tint2
+    ? `linear-gradient(135deg, ${mix(g.tint, g.opacity)}, ${mix(g.tint2, g.opacity)})`
+    : undefined
+  return {
+    backdropFilter: blur,
+    WebkitBackdropFilter: blur,
+    backgroundColor: tint ? undefined : mix(g.tint, g.opacity),
+    backgroundImage: tint,
+    ['--glass-boost' as string]: `${g.blur + 6}px`,
+    ['--glass-sat' as string]: `${Math.round(g.saturate * 1.2)}%`,
+    ['--g-b' as string]: Math.round(g.border * 100),
+    ['--g-grain' as string]: g.grain,
+    ['--g-sheen' as string]: g.sheen,
+    ['--g-tilt' as string]: g.tilt,
+  }
 }
 
 export function gradientCss(g: Gradient): string {

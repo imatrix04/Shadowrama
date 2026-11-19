@@ -1,0 +1,117 @@
+/*
+ * Effet « Verre » (mode Ultra Design), voir BlockEffects.glass.
+ * Le flou et la teinte sont posés en style inline par glassStyle() ; ici : le
+ * liseré, le grain, le reflet, le balayage, l'inclinaison et le survol.
+ * Variables : --g-b (liseré, en %), --g-grain, --g-sheen, --g-tilt.
+ */
+
+.glass {
+  /* Liseré clair + reflet interne en haut : ce qui fait « lire » du verre. */
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #fff calc(var(--g-b, 28) * 1%), transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff calc(var(--g-b, 28) * 1.6%), transparent),
+    inset 0 -12px 24px -16px color-mix(in srgb, #fff calc(var(--g-b, 28) * 0.65%), transparent);
+}
+
+.reactive {
+  --gx: 50%;
+  --gy: 30%;
+  --rx: 0deg;
+  --ry: 0deg;
+  /* Le parent (.blockWrapper en présentation) coupe les événements souris ;
+     comme pour le flottement, le bloc doit redevenir survolable. Le clic
+     continue de remonter. */
+  pointer-events: auto;
+  transition:
+    backdrop-filter 0.35s ease,
+    -webkit-backdrop-filter 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.reactive:hover {
+  backdrop-filter: blur(var(--glass-boost)) saturate(var(--glass-sat)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-boost)) saturate(var(--glass-sat)) !important;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #fff calc(var(--g-b, 28) * 2%), transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff calc(var(--g-b, 28) * 2.3%), transparent),
+    inset 0 -12px 24px -16px color-mix(in srgb, #fff calc(var(--g-b, 28) * 1%), transparent);
+}
+
+/* Inclinaison 3D vers le curseur. La transition courte lisse les sauts entre
+   deux événements souris ; au départ du curseur, elle ramène le bloc à plat. */
+.tilt {
+  transform: perspective(700px) rotateX(var(--rx)) rotateY(var(--ry));
+  transition:
+    transform 0.18s ease-out,
+    backdrop-filter 0.35s ease,
+    -webkit-backdrop-filter 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+/* Reflet spéculaire qui suit le curseur. */
+.sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle 140px at var(--gx) var(--gy),
+    color-mix(in srgb, #fff 42%, transparent),
+    transparent 70%
+  );
+  transition: opacity 0.35s ease;
+}
+
+.reactive:hover .sheen { opacity: var(--g-sheen, 1); }
+
+/* Grain de givre : bruit fractal en SVG, fondu en « overlay ». */
+.grain {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--g-grain, 0);
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -0.2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 160px 160px;
+}
+
+/* Balayage lumineux automatique : une bande claire traverse le bloc, puis
+   une pause avant le passage suivant. Indépendant de la souris. */
+.shine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.shine::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 38%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    color-mix(in srgb, #fff 38%, transparent),
+    transparent
+  );
+  transform: translateX(-130%) skewX(-18deg);
+  animation: glassShine 5.5s ease-in-out infinite;
+}
+
+@keyframes glassShine {
+  0%, 55% { transform: translateX(-130%) skewX(-18deg); }
+  100% { transform: translateX(380%) skewX(-18deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reactive,
+  .tilt,
+  .sheen { transition: none; }
+  .shine::before { animation: none; opacity: 0; }
+}

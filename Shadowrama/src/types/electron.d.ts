@@ -39,7 +39,7 @@ interface Window {
   /** Assistant IA (voir electron/ai.ts). Absent hors de l'application de bureau. */
   aiAPI?: {
     getSettings: () => Promise<import('../ai/types').AISettings>
-    saveSettings: (patch: { provider?: string; model?: string; consent?: boolean; effort?: string }) => Promise<import('../ai/types').AISettings>
+    saveSettings: (patch: { provider?: string; model?: string; consent?: boolean; effort?: string; webSearch?: boolean }) => Promise<import('../ai/types').AISettings>
     /** Enregistre la clé (chiffrée côté système). Elle ne peut jamais être relue. */
     setKey: (provider: string, key: string) => Promise<import('../ai/types').AISettings>
     clearKey: (provider: string) => Promise<import('../ai/types').AISettings>

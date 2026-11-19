@@ -26,6 +26,8 @@ export type ContentBlock =
   | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }
   /** Réflexion du modèle : opaque, renvoyée telle quelle dans la boucle d'outils. */
   | { type: 'thinking' | 'redacted_thinking'; [key: string]: unknown }
+  /** Recherche web faite côté fournisseur (Anthropic) : opaque, renvoyée telle quelle. */
+  | { type: 'server_tool_use' | 'web_search_tool_result'; [key: string]: unknown }
 
 export interface WireMessage {
   role: 'user' | 'assistant'
@@ -52,6 +54,8 @@ export interface AISettings {
   provider: Provider
   models: Record<Provider, string>
   effort: Effort
+  /** Recherche sur internet activée (Anthropic seulement). */
+  webSearch: boolean
   consent: Record<Provider, boolean>
   hasKey: Record<Provider, boolean>
   secureStorage: boolean
@@ -106,5 +110,5 @@ export function addUsage(a: Usage, b: Usage): Usage {
 }
 
 export type TurnResult =
-  | { ok: true; content: ContentBlock[]; stopReason: 'tool_use' | 'end' | 'max_tokens'; usage?: Usage }
+  | { ok: true; content: ContentBlock[]; stopReason: 'tool_use' | 'end' | 'max_tokens' | 'pause_turn'; usage?: Usage }
   | { ok: false; error: string }

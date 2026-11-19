@@ -17,7 +17,7 @@ const MODEL_SUGGESTIONS: Record<Provider, string[]> = {
 interface Props {
   settings: AISettings
   error: string | null
-  onSave: (patch: { provider?: string; model?: string; consent?: boolean; effort?: string }) => Promise<boolean>
+  onSave: (patch: { provider?: string; model?: string; consent?: boolean; effort?: string; webSearch?: boolean }) => Promise<boolean>
   onSetKey: (provider: string, key: string) => Promise<boolean>
   onClearKey: (provider: string) => Promise<boolean>
   /** Appelé quand tout est enregistré (clé + consentement). */

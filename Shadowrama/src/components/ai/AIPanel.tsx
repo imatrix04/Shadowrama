@@ -214,6 +214,7 @@ export default function AIPanel({
             <button
               type="button"
               className={styles.attach}
+              data-tip-up
               onClick={() => fileRef.current?.click()}
               disabled={running}
               aria-label="Joindre une image ou une vidéo"
@@ -221,8 +222,30 @@ export default function AIPanel({
             >
               <Icon name="paperclip" size={16} />
             </button>
+            {settings && provider && (() => {
+              const supported = provider === 'anthropic'
+              const active = supported && settings.webSearch
+              return (
+                <button
+                  type="button"
+                  className={`${styles.attach} ${active ? styles.webOn : ''}`}
+                  data-tip-up
+                  onClick={() => void save({ webSearch: !settings.webSearch })}
+                  disabled={running || !supported}
+                  aria-pressed={active}
+                  aria-label="Recherche sur internet"
+                  title={!supported
+                    ? 'Recherche internet disponible avec Anthropic (Claude) uniquement.'
+                    : active
+                      ? "Recherche internet activée : l'IA peut consulter le web. Coût supplémentaire : chaque recherche est facturée par Anthropic en plus des tokens (environ 0,01 $, jusqu'à 5 par message). Cliquer pour désactiver."
+                      : "Activer la recherche internet : l'IA pourra chercher des informations récentes et citer ses sources. Attention, cela entraîne des coûts supplémentaires : chaque recherche est facturée par Anthropic en plus des tokens (environ 0,01 $, jusqu'à 5 par message)."}
+                >
+                  <Icon name="globe" size={16} />
+                </button>
+              )
+            })()}
             {settings && (
-              <span className={styles.effort} title={`Puissance de réflexion — ${EFFORT_LEVELS.find(l => l.value === settings.effort)?.hint ?? ''}`}>
+              <span className={styles.effort} data-tip-up title={`Puissance de réflexion — ${EFFORT_LEVELS.find(l => l.value === settings.effort)?.hint ?? ''}`}>
                 <Select
                   compact
                   up

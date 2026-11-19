@@ -28,6 +28,8 @@ type ContentBlock =
   | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }
   /** Réflexion du modèle : renvoyée telle quelle (signature comprise) dans la boucle d'outils. */
   | { type: 'thinking' | 'redacted_thinking'; [key: string]: unknown }
+  /** Recherche web faite par Anthropic : renvoyée telle quelle (résultats chiffrés compris). */
+  | { type: 'server_tool_use' | 'web_search_tool_result'; [key: string]: unknown }
 
 interface WireMessage {
   role: 'user' | 'assistant'
@@ -49,7 +51,7 @@ interface TurnRequest {
 }
 
 type TurnResult =
-  | { ok: true; content: ContentBlock[]; stopReason: 'tool_use' | 'end' | 'max_tokens'; usage: Usage }
+  | { ok: true; content: ContentBlock[]; stopReason: 'tool_use' | 'end' | 'max_tokens' | 'pause_turn'; usage: Usage }
   | { ok: false; error: string }
 
 /** Tokens d'un appel, normalisés entre fournisseurs (`input` exclut le cache). */
@@ -68,6 +70,8 @@ interface StoredSettings {
   provider: Provider
   models: Record<Provider, string>
   effort: Effort
+  /** Recherche sur internet (outil du fournisseur), activée par l'utilisateur. Anthropic seulement. */
+  webSearch: boolean
   /** Consentement explicite, par fournisseur : un autre fournisseur = un autre destinataire. */
   consent: Record<Provider, boolean>
   /** Clés chiffrées (base64). */
@@ -78,6 +82,7 @@ export interface PublicSettings {
   provider: Provider
   models: Record<Provider, string>
   effort: Effort
+  webSearch: boolean
   consent: Record<Provider, boolean>
   hasKey: Record<Provider, boolean>
   /** Faux : impossible d'enregistrer une clé en sécurité sur cette machine. */
@@ -97,6 +102,8 @@ const MAX_OUTPUT_TOKENS = 10_000
 // coupée tant que des données continuent d'arriver (le fournisseur envoie aussi des
 // signaux de vie pendant la réflexion).
 const IDLE_TIMEOUT_MS = 120_000
+// Recherches web autorisées par tour : borne le coût (facturé par recherche).
+const MAX_WEB_SEARCHES = 5
 
 const isProvider = (value: unknown): value is Provider =>
   typeof value === 'string' && (PROVIDERS as string[]).includes(value)
@@ -110,6 +117,7 @@ function defaults(): StoredSettings {
     provider: 'anthropic',
     models: { ...DEFAULT_MODELS },
     effort: DEFAULT_EFFORT,
+    webSearch: false,
     consent: { anthropic: false, openai: false },
     keys: {},
   }
@@ -123,6 +131,7 @@ async function readSettings(): Promise<StoredSettings> {
     const data = raw as Partial<StoredSettings>
     if (isProvider(data.provider)) base.provider = data.provider
     if (isEffort(data.effort)) base.effort = data.effort
+    base.webSearch = data.webSearch === true
     for (const p of PROVIDERS) {
       const model = data.models?.[p]
       if (typeof model === 'string' && model.trim()) base.models[p] = model.trim()
@@ -152,6 +161,7 @@ function toPublic(settings: StoredSettings): PublicSettings {
     provider: settings.provider,
     models: settings.models,
     effort: settings.effort,
+    webSearch: settings.webSearch,
     consent: settings.consent,
     hasKey: { anthropic: !!settings.keys.anthropic, openai: !!settings.keys.openai },
     secureStorage: secureStorageAvailable(),
@@ -186,11 +196,14 @@ function httpError(status: number, body: unknown): string {
  * d'outils, tout l'historique précédent est relu depuis le cache. Copie
  * superficielle, les messages d'origine ne sont pas modifiés.
  */
+const isServerBlock = (block: ContentBlock) =>
+  block.type === 'server_tool_use' || block.type === 'web_search_tool_result'
+
 function withMessageCache(messages: WireMessage[]): unknown[] {
   if (messages.length === 0) return messages
   const last = messages[messages.length - 1]
   if (last.content.length === 0) return messages
-  const content = last.content.map((block, i) => i === last.content.length - 1
+  const content = last.content.map((block, i) => i === last.content.length - 1 && !isServerBlock(block)
     ? { ...block, cache_control: { type: 'ephemeral' } } : block)
   return [...messages.slice(0, -1), { ...last, content }]
 }
@@ -275,8 +288,11 @@ async function readEvents(response: Response, onEvent: (data: Rec) => void, onAc
 }
 
 async function callAnthropic(
-  key: string, model: string, effort: Effort, req: TurnRequest, signal: AbortSignal, hooks: StreamHooks,
+  key: string, model: string, effort: Effort, webSearch: boolean, req: TurnRequest, signal: AbortSignal, hooks: StreamHooks,
 ): Promise<TurnResult> {
+  // L'outil de recherche est exécuté par Anthropic : l'application ne contacte aucun autre site.
+  const tools: unknown[] = [...req.tools]
+  if (webSearch) tools.push({ type: 'web_search_20250305', name: 'web_search', max_uses: MAX_WEB_SEARCHES })
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     signal,
@@ -293,8 +309,8 @@ async function callAnthropic(
       // (outils → système → messages). Les lectures coûtent ~10 % du prix normal.
       system: [{ type: 'text', text: req.system, cache_control: { type: 'ephemeral' } }],
       messages: withMessageCache(req.messages),
-      tools: req.tools.map((t, i) => i === req.tools.length - 1
-        ? { ...t, cache_control: { type: 'ephemeral' } } : t),
+      tools: tools.map((t, i) => i === tools.length - 1
+        ? { ...(t as Rec), cache_control: { type: 'ephemeral' } } : t),
       ...anthropicEffort(model, effort),
     }),
   })
@@ -323,7 +339,7 @@ async function callAnthropic(
       case 'content_block_start': {
         const block = { ...asRec(event.content_block) }
         parts.set(count(event.index), { block, json: '' })
-        if (block.type === 'tool_use' && typeof block.name === 'string') hooks.onTool(block.name)
+        if ((block.type === 'tool_use' || block.type === 'server_tool_use') && typeof block.name === 'string') hooks.onTool(block.name)
         break
       }
       case 'content_block_delta': {
@@ -367,15 +383,18 @@ async function callAnthropic(
     } else if (b.type === 'thinking' || b.type === 'redacted_thinking') {
       // À renvoyer inchangé au tour suivant (la boucle d'outils l'exige).
       content.push(b as ContentBlock)
-    } else if (b.type === 'tool_use' && typeof b.id === 'string' && typeof b.name === 'string') {
+    } else if (b.type === 'web_search_tool_result') {
+      content.push(b as ContentBlock)
+    } else if ((b.type === 'tool_use' || b.type === 'server_tool_use') && typeof b.id === 'string' && typeof b.name === 'string') {
       let input: Rec = {}
       if (part.json.trim()) {
         try { input = asRec(JSON.parse(part.json)) } catch { /* arguments coupés : l'outil le dira au modèle */ }
       }
-      content.push({ type: 'tool_use', id: b.id, name: b.name, input })
+      content.push({ type: b.type, id: b.id, name: b.name, input } as ContentBlock)
     }
   }
-  const stopReason = stop === 'tool_use' ? 'tool_use' : stop === 'max_tokens' ? 'max_tokens' : 'end'
+  const stopReason = stop === 'tool_use' ? 'tool_use'
+    : stop === 'max_tokens' ? 'max_tokens' : stop === 'pause_turn' ? 'pause_turn' : 'end'
   return { ok: true, content, stopReason, usage }
 }
 
@@ -518,7 +537,7 @@ export function registerAiHandlers(getMainWindow: () => BrowserWindow | null) {
     return toPublic(await readSettings())
   })
 
-  ipcMain.handle('ai:save-settings', async (event, patch: { provider?: unknown; model?: unknown; consent?: unknown; effort?: unknown }) => {
+  ipcMain.handle('ai:save-settings', async (event, patch: { provider?: unknown; model?: unknown; consent?: unknown; effort?: unknown; webSearch?: unknown }) => {
     guard(event.sender)
     const settings = await readSettings()
     if (isProvider(patch?.provider)) settings.provider = patch.provider
@@ -528,6 +547,7 @@ export function registerAiHandlers(getMainWindow: () => BrowserWindow | null) {
     }
     if (typeof patch?.consent === 'boolean') settings.consent[target] = patch.consent
     if (isEffort(patch?.effort)) settings.effort = patch.effort
+    if (typeof patch?.webSearch === 'boolean') settings.webSearch = patch.webSearch
     await writeSettings(settings)
     return toPublic(settings)
   })
@@ -599,7 +619,7 @@ export function registerAiHandlers(getMainWindow: () => BrowserWindow | null) {
     try {
       const model = settings.models[req.provider]
       return req.provider === 'anthropic'
-        ? await callAnthropic(key, model, settings.effort, req, controller.signal, hooks)
+        ? await callAnthropic(key, model, settings.effort, settings.webSearch, req, controller.signal, hooks)
         : await callOpenAi(key, model, settings.effort, req, controller.signal, hooks)
     } catch (err) {
       if (controller.signal.aborted) {

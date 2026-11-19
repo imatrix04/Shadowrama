@@ -41,7 +41,7 @@ const MAX_POLYGON_POINTS = 60
 const BLEND_MODES = ['normal', 'multiply', 'screen', 'overlay', 'difference', 'exclusion', 'luminosity'] as const
 const EFFECT_KEYS = [
   'shadow', 'glow', 'gradient', 'blur', 'brightness', 'saturate', 'contrast',
-  'blendMode', 'corners', 'textStroke', 'float',
+  'blendMode', 'corners', 'textStroke', 'float', 'glass',
 ] as const
 
 /** Blocs qui portent un fichier de l'utilisateur : remplis seulement par set_block_media. */
@@ -318,6 +318,11 @@ export const TOOL_DEFS: ToolDef[] = [
           type: ['object', 'null'],
           description: 'Contour du texte. width : 0 à 10 ; color.',
           properties: { width: { type: 'number' }, color: { type: 'string' } },
+        },
+        glass: {
+          type: ['object', 'null'],
+          description: 'Verre dépoli (glassmorphism) : floute ce qui est DERRIÈRE le bloc, donc à placer devant une image, une forme ou un fond. blur : 0 à 60 px ; tint : couleur de la teinte ; opacity : 0 à 1 (teinte, ~0.1 à 0.25) ; radius : arrondi 0 à 200 px ; reactive : true = reflet qui suit la souris et flou renforcé au survol, false = verre statique. Optionnels : saturate 50 à 300 (%, défaut 160) ; border 0 à 1 (liseré lumineux, défaut 0.28) ; grain 0 à 1 (givre, défaut 0) ; tint2 : seconde couleur, la teinte devient un dégradé ; sheen 0 à 1 (reflet souris) ; tilt 0 à 20 (inclinaison 3D en degrés, mode réactif) ; shine : true = balayage lumineux automatique.',
+          properties: { blur: { type: 'number' }, tint: { type: 'string' }, tint2: { type: 'string' }, opacity: { type: 'number' }, radius: { type: 'number' }, reactive: { type: 'boolean' }, saturate: { type: 'number' }, border: { type: 'number' }, grain: { type: 'number' }, sheen: { type: 'number' }, tilt: { type: 'number' }, shine: { type: 'boolean' } },
         },
         float: {
           type: ['object', 'null'],
@@ -898,6 +903,24 @@ function run(slides: Slide[], name: string, input: Input, ctx: ToolContext): Too
           case 'textStroke': {
             const o = asObject(value, '`textStroke`')
             effects.textStroke = { width: num(o, 'width', 0, 10, 1), color: color(o, 'color', '#000000') }
+            break
+          }
+          case 'glass': {
+            const o = asObject(value, '`glass`')
+            effects.glass = {
+              blur: num(o, 'blur', 0, 60, 16),
+              tint: color(o, 'tint', '#ffffff'),
+              opacity: num(o, 'opacity', 0, 1, 0.12),
+              radius: num(o, 'radius', 0, 200, 16),
+              reactive: o.reactive !== false,
+              saturate: num(o, 'saturate', 50, 300, 160),
+              border: num(o, 'border', 0, 1, 0.28),
+              grain: num(o, 'grain', 0, 1, 0),
+              sheen: num(o, 'sheen', 0, 1, 1),
+              tilt: num(o, 'tilt', 0, 20, 0),
+              shine: o.shine === true,
+              ...(o.tint2 != null ? { tint2: color(o, 'tint2', '#ffffff') } : {}),
+            }
             break
           }
           case 'float': {

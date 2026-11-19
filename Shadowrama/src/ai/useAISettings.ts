@@ -37,7 +37,7 @@ export function useAISettings() {
   }, [])
 
   const save = useCallback(
-    (patch: { provider?: string; model?: string; consent?: boolean; effort?: string }) =>
+    (patch: { provider?: string; model?: string; consent?: boolean; effort?: string; webSearch?: boolean }) =>
       run(() => api!.saveSettings(patch)),
     [api, run],
   )

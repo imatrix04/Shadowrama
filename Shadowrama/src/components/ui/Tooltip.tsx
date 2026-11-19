@@ -47,7 +47,9 @@ export default function Tooltip() {
       el.removeAttribute('title')
       timer = window.setTimeout(() => {
         const r = el.getBoundingClientRect()
-        const below = r.bottom + 48 < window.innerHeight
+        // `data-tip-up` force l'affichage au-dessus (éléments collés au bas de la fenêtre,
+        // dont l'infobulle, souvent longue, serait coupée).
+        const below = !el.hasAttribute('data-tip-up') && r.bottom + 48 < window.innerHeight
         setTip({ text, x: r.left + r.width / 2, y: below ? r.bottom + GAP : r.top - GAP, below })
       }, SHOW_DELAY_MS)
     }

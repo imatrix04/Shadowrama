@@ -332,6 +332,10 @@
   min-width: 0;
 }
 
+/* En colonne, le curseur prend toute la largeur et la valeur reste à droite. */
+.fieldStacked .rangeGroup { width: 100%; }
+.fieldStacked .range { flex: 1 1 auto; width: auto; }
+
 .fieldLabel {
   flex: 1 1 auto;
   min-width: 0;
@@ -606,4 +610,139 @@
   margin-bottom: 0.5rem;
   object-fit: cover;
   border-radius: var(--r-md);
+}
+
+/* Bouton à bascule séparé de ce qui le précède dans un groupe. */
+.toggleSpaced { margin: 0.5rem 0 0.35rem; }
+
+/* ── Tuiles de préréglage du verre ─────────────────────────────────────── */
+
+.glassTiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.7rem;
+}
+
+.glassTile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  background: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-md);
+  color: var(--editor-text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast), transform var(--t-fast) var(--ease-out);
+}
+
+.glassTile:hover {
+  border-color: var(--accent);
+  color: var(--editor-text);
+  transform: translateY(-1px);
+}
+
+.glassTile:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Fond coloré commun : sans lui, un verre posé sur du vide serait invisible. */
+.glassTileBackdrop {
+  position: relative;
+  display: block;
+  height: 2.4rem;
+  overflow: hidden;
+  border-radius: calc(var(--r-md) - 3px);
+  background:
+    radial-gradient(circle at 25% 30%, var(--accent) 0 28%, transparent 30%),
+    radial-gradient(circle at 78% 70%, var(--accent-2) 0 30%, transparent 32%),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 35%, var(--editor-bg-canvas)), var(--editor-bg-canvas));
+}
+
+.glassTileSample {
+  position: absolute;
+  inset: 22% 14%;
+  border-radius: 6px;
+}
+
+.glassTileLabel {
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+/* ── Grille d'effets (panneau Effets) ──────────────────────────────────── */
+
+.effectGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+}
+
+.effectTile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.65rem 0.25rem 0.5rem;
+  background: var(--editor-btn-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-md);
+  color: var(--editor-text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--t-fast),
+    background-color var(--t-fast),
+    color var(--t-fast),
+    transform var(--t-fast) var(--ease-out);
+}
+
+.effectTile:hover {
+  border-color: var(--accent);
+  color: var(--editor-text);
+  transform: translateY(-1px);
+}
+
+.effectTile:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.effectTileSelected,
+.effectTileSelected:hover {
+  background: var(--accent-bg-soft);
+  border-color: var(--accent);
+  color: var(--editor-text);
+  box-shadow: 0 0 14px -4px var(--accent-glow);
+}
+
+.effectTileSelected svg { color: var(--accent-hover); }
+
+.effectTileLabel {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.7rem;
+}
+
+/* Point : l'effet est actif sur ce bloc. */
+.effectTileDot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+/* Zone de réglages sous la grille : un fond léger la relie à l'icône choisie. */
+.effectDetail {
+  padding: 0.6rem 0.7rem 0.4rem;
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--editor-text) 3%, transparent), color-mix(in srgb, var(--editor-text) 1%, transparent));
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-lg);
 }

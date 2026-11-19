@@ -52,10 +52,45 @@ export interface CornerRadius {
   bl: number
 }
 
+/**
+ * Verre dépoli (« glassmorphism ») : floute ce qui se trouve DERRIÈRE le bloc,
+ * avec une teinte translucide et un liseré clair.
+ */
+export interface Glass {
+  /** Flou de l'arrière-plan, en pixels. */
+  blur: number
+  /** Teinte du verre. */
+  tint: string
+  /** Opacité de la teinte, 0–1. */
+  opacity: number
+  /** Arrondi des coins, en pixels. */
+  radius: number
+  /** Réagit à la souris : reflet qui suit le curseur, flou renforcé au survol.
+   *  Faux : verre statique, identique en permanence. */
+  reactive: boolean
+  // Réglages ajoutés ensuite : tous optionnels, pour que les projets déjà
+  // enregistrés gardent leur rendu (voir resolveGlass pour les valeurs par défaut).
+  /** Saturation de l'arrière-plan, en %. 100 = neutre. */
+  saturate?: number
+  /** Intensité du liseré lumineux, 0–1. */
+  border?: number
+  /** Grain de givre, 0–1. */
+  grain?: number
+  /** Seconde teinte : la teinte devient un dégradé diagonal tint → tint2. */
+  tint2?: string
+  /** Intensité du reflet qui suit la souris, 0–1 (mode réactif). */
+  sheen?: number
+  /** Inclinaison 3D vers le curseur, en degrés max (mode réactif). 0 = aucune. */
+  tilt?: number
+  /** Balayage lumineux automatique, indépendant de la souris. */
+  shine?: boolean
+}
+
 /** Effets visuels avancés, appliqués par-dessus le rendu propre au bloc. */
 export interface BlockEffects {
   shadow?: Shadow
   glow?: Glow
+  glass?: Glass
   /** Remplace la couleur unie du bloc quand il en accepte une (forme, texte). */
   gradient?: Gradient
   /** Flou gaussien, en pixels. */

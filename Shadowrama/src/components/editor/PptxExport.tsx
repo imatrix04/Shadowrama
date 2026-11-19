@@ -91,7 +91,13 @@ function layout(job: CaptureJob, backdrop: string, inert: boolean): View {
  * fausserait la double prise de vue.
  */
 function captureBlock(block: BlockData, inert: boolean): BlockData {
-  const effects = block.effects ? { ...block.effects, blendMode: undefined, float: undefined } : undefined
+  const effects = block.effects ? {
+    ...block.effects,
+    blendMode: undefined,
+    float: undefined,
+    // Le flou d'arrière-plan n'a rien à flouter sur une prise de vue isolée.
+    glass: block.effects.glass && { ...block.effects.glass, reactive: false },
+  } : undefined
   const base = { ...block, effects, opacity: 1, rotation: 0 } as BlockData
   // Sans barre d'adresse : la page occupe tout le bloc, comme l'image exportée.
   if (base.type === 'webview' && !inert) return { ...base, showToolbar: false }
