@@ -1,21 +1,11 @@
 .panel {
   display: flex;
   flex-direction: column;
-  width: 340px;
+  width: 340px; /* fixe : seul le conteneur de l'éditeur s'anime en largeur */
   flex-shrink: 0;
   min-height: 0;
   background: var(--editor-bg-panel);
   border-left: 1px solid var(--editor-border);
-  animation: slideIn var(--t-slow) var(--ease-out);
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(16px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .panel { animation: none; }
 }
 
 .header {
@@ -66,23 +56,13 @@
 .chip:focus-visible,
 .send:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-.privacy {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.85rem;
-  background: var(--overlay-1);
-  border-bottom: 1px solid var(--editor-border);
-  font-size: 0.7rem;
-  color: var(--editor-text-muted);
+.lock {
+  display: inline-flex;
+  color: var(--editor-text-dim);
+  cursor: help;
 }
 
-.effort {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-left: auto;
-}
+.effort { display: inline-flex; margin-right: auto; }
 
 .setup { padding: 0.9rem; overflow-y: auto; }
 
@@ -260,12 +240,6 @@
   padding: 0.3rem 0.45rem 0.45rem;
 }
 
-.keys {
-  flex: 1;
-  font-size: 0.68rem;
-  color: var(--editor-text-dim);
-}
-
 .attach {
   display: flex;
   align-items: center;
@@ -331,6 +305,7 @@
 }
 
 .send {
+  margin-left: auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -349,21 +324,27 @@
 .stop { background: var(--danger); color: #fff; }
 .stop:hover { background: var(--danger-hover) !important; }
 
-.footnote {
-  margin: 0;
-  padding: 0.4rem 0.85rem 0.7rem;
-  text-align: center;
-  font-size: 0.68rem;
+.foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.95rem 0.5rem;
+  font-size: 0.65rem;
   color: var(--editor-text-dim);
+  white-space: nowrap;
 }
 
 .usage {
-  margin: 0;
-  padding: 0.45rem 0.85rem 0;
-  text-align: center;
-  font-size: 0.68rem;
   color: var(--editor-text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  overflow: hidden;
+  margin-left: auto;
+  text-overflow: ellipsis;
+  cursor: help;
 }
 
 /* Curseur clignotant pendant que la réponse s'écrit. */
@@ -383,4 +364,45 @@
 
 @media (prefers-reduced-motion: reduce) {
   .streaming::after { animation: none; }
+}
+
+.bold {
+  font-weight: 700;
+  color: var(--editor-text);
+}
+
+.user .bold { color: inherit; }
+
+/* Échantillon de la couleur citée par l'assistant. */
+.swatch {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-left: 0.3em;
+  vertical-align: -0.1em;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px var(--editor-border-light), 0 0 0 2px var(--overlay-1);
+}
+
+/* Code couleur : pastille aux couleurs du thème, en police mono. */
+.colorCode {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.35em;
+  background: var(--accent-bg-soft);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-sm);
+  color: var(--accent-hover);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.92em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.colorCode .swatch { margin-left: 0.4em; }
+
+.user .colorCode {
+  background: color-mix(in srgb, var(--on-accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--on-accent) 35%, transparent);
+  color: inherit;
 }

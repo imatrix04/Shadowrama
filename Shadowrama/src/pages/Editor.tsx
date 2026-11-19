@@ -502,7 +502,21 @@ function EditorView({ initialDraft, initialConversation }: {
             railFooterRef={setZoomSlot}
           />
           </div>
-          {aiOpen && (
+          {/* Toujours monté : seule la largeur s'anime (panneau fixe à 340px, rogné),
+              donc l'ouverture et la fermeture sont fluides. `inert` retire le
+              panneau fermé du focus clavier et des lecteurs d'écran. */}
+          <div
+            inert={!aiOpen}
+            aria-hidden={!aiOpen}
+            style={{
+              display: 'flex',
+              flexShrink: 0,
+              overflow: 'hidden',
+              width: aiOpen ? 340 : 0,
+              opacity: aiOpen ? 1 : 0,
+              transition: 'width 320ms var(--ease-out), opacity 220ms ease',
+            }}
+          >
             <AIPanel
               items={assistant.items}
               running={assistant.running}
@@ -517,8 +531,9 @@ function EditorView({ initialDraft, initialConversation }: {
               onStop={assistant.stop}
               onClear={assistant.clear}
               onClose={() => setAiOpen(false)}
+              open={aiOpen}
             />
-          )}
+          </div>
         </div>
       </div>
     </ProjectColorsContext.Provider>

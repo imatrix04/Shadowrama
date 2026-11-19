@@ -13,10 +13,14 @@ interface Props {
   'aria-label'?: string
   /** Version réduite, pour une barre d'outils : largeur du contenu, menu aligné à droite. */
   compact?: boolean
+  /** Ouvre le menu vers le haut (sélecteur placé en bas d'un panneau). */
+  up?: boolean
+  /** Libellé affiché avant la valeur, dans le bouton. */
+  prefix?: string
 }
 
 /** Liste déroulante stylée (le menu natif ne peut pas suivre le thème). */
-export default function Select({ value, options, onChange, compact, ...rest }: Props) {
+export default function Select({ value, options, onChange, compact, up, prefix, ...rest }: Props) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -59,7 +63,7 @@ export default function Select({ value, options, onChange, compact, ...rest }: P
   }
 
   return (
-    <div className={`${styles.root} ${compact ? styles.compact : ''}`} ref={rootRef}>
+    <div className={`${styles.root} ${compact ? styles.compact : ''} ${up ? styles.up : ''}`} ref={rootRef}>
       <button
         type="button"
         className={`${styles.trigger} ${open ? styles.triggerOpen : ''}`}
@@ -70,6 +74,7 @@ export default function Select({ value, options, onChange, compact, ...rest }: P
         onClick={() => (open ? setOpen(false) : openList())}
         onKeyDown={onKeyDown}
       >
+        {prefix && <span className={styles.prefix}>{prefix}</span>}
         <span className={styles.value}>{options[selected]?.label ?? value}</span>
         <span className={styles.caret} aria-hidden="true" />
       </button>

@@ -172,3 +172,35 @@
 .disabled .animChip {
   animation-play-state: paused;
 }
+
+/* Blocs réservés au mode Ultra : bordure dégradée, fond teinté et pastille,
+   pour les distinguer des blocs de base sans qu'on ait à lire l'étiquette. */
+.itemUltra {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--editor-btn-bg), var(--editor-btn-bg)) padding-box,
+    var(--accent-fill) border-box;
+  box-shadow: 0 0 14px -4px var(--accent-glow);
+}
+
+.itemUltra:hover {
+  background:
+    linear-gradient(var(--editor-btn-bg-hover), var(--editor-btn-bg-hover)) padding-box,
+    var(--accent-fill) border-box;
+  border-color: transparent;
+  box-shadow: 0 0 18px -2px var(--accent-glow);
+}
+
+.itemUltra .itemIcon { color: var(--accent-hover); }
+
+.ultraBadge {
+  margin-left: auto;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

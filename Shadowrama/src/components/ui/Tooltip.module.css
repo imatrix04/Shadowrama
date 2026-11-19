@@ -1,0 +1,42 @@
+.tip {
+  position: fixed;
+  z-index: 4000;
+  max-width: 260px;
+  padding: 0.4rem 0.65rem;
+  background: var(--menu-bg);
+  border: 1px solid var(--editor-border-light);
+  border-radius: var(--r-md);
+  box-shadow: var(--menu-shadow);
+  color: var(--editor-text);
+  font-size: 0.74rem;
+  line-height: 1.4;
+  pointer-events: none;
+  animation: tipIn 140ms var(--ease-out);
+}
+
+.below { transform-origin: top center; }
+.above { transform: translateY(-100%); transform-origin: bottom center; }
+
+/* Petite pointe vers l'élément survolé. */
+.tip::before {
+  content: '';
+  position: absolute;
+  left: var(--arrow-x, 50%);
+  width: 8px;
+  height: 8px;
+  background: var(--editor-border-light);
+  transform: translateX(-50%) rotate(45deg);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.below::before { top: -4px; }
+.above::before { bottom: -4px; transform: translateX(-50%) rotate(225deg); }
+
+@keyframes tipIn {
+  from { opacity: 0; margin-top: 3px; }
+  to { opacity: 1; margin-top: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip { animation: none; }
+}

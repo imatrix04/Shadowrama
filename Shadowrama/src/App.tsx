@@ -3,6 +3,7 @@ import ErrorBoundary from './components/ui/ErrorBoundary'
 import Home from './pages/Home'
 import Editor from './pages/Editor'
 import Settings from './pages/Settings'
+import Tooltip from './components/ui/Tooltip'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </HashRouter>
+      <Tooltip />
     </ErrorBoundary>
   )
 }

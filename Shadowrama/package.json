@@ -33,6 +33,11 @@
     "directories": {
       "output": "release"
     },
+    "nsis": {
+      "include": "build/installer.nsh",
+      "installerIcon": "public/icon.ico",
+      "uninstallerIcon": "public/icon.ico"
+    },
     "win": {
       "target": "nsis",
       "icon": "public/icon.ico"

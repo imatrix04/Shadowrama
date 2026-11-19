@@ -70,13 +70,14 @@ export default function LeftSidebars({
           {BLOCKS_CONFIG.filter(config => !config.ultraOnly || ultra).map((config, i) => (
           <button
             key={config.type}
-            className={styles.item}
+            className={`${styles.item} ${config.ultraOnly ? styles.itemUltra : ''}`}
             style={stagger(i)}
             onClick={() => onAddBlock({ type: config.type, ...config.defaultProps })}
             title={`Ajouter un bloc ${config.label.toLowerCase()}`}
           >
             <span className={styles.itemIcon}><Icon name={config.icon} /></span>
             {config.label}
+            {config.ultraOnly && <span className={styles.ultraBadge}>Ultra</span>}
           </button>
         ))}
       </div>

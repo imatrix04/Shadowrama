@@ -111,3 +111,12 @@
 }
 
 .compact .option { font-size: 0.76rem; }
+
+.prefix { color: var(--editor-text-dim); }
+
+.up .menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.compact.up .menu { left: 0; right: auto; }
