@@ -96,3 +96,18 @@
   color: var(--accent-hover);
   font-weight: 600;
 }
+
+.compact .trigger {
+  width: auto;
+  gap: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+.compact .menu {
+  left: auto;
+  right: 0;
+  min-width: 9rem;
+}
+
+.compact .option { font-size: 0.76rem; }

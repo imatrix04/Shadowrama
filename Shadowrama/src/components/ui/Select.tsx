@@ -11,10 +11,12 @@ interface Props {
   options: SelectOption[]
   onChange: (value: string) => void
   'aria-label'?: string
+  /** Version réduite, pour une barre d'outils : largeur du contenu, menu aligné à droite. */
+  compact?: boolean
 }
 
 /** Liste déroulante stylée (le menu natif ne peut pas suivre le thème). */
-export default function Select({ value, options, onChange, ...rest }: Props) {
+export default function Select({ value, options, onChange, compact, ...rest }: Props) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -57,7 +59,7 @@ export default function Select({ value, options, onChange, ...rest }: Props) {
   }
 
   return (
-    <div className={styles.root} ref={rootRef}>
+    <div className={`${styles.root} ${compact ? styles.compact : ''}`} ref={rootRef}>
       <button
         type="button"
         className={`${styles.trigger} ${open ? styles.triggerOpen : ''}`}

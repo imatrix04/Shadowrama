@@ -26,6 +26,8 @@ type ContentBlock =
   | { type: 'text'; text: string }
   | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }
+  /** Réflexion du modèle : renvoyée telle quelle (signature comprise) dans la boucle d'outils. */
+  | { type: 'thinking' | 'redacted_thinking'; [key: string]: unknown }
 
 interface WireMessage {
   role: 'user' | 'assistant'
@@ -55,9 +57,17 @@ interface Usage { input: number; output: number; cacheRead: number; cacheWrite: 
 
 const count = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0)
 
+/** Puissance de réflexion : plus c'est haut, plus le modèle raisonne (et consomme de tokens). */
+export type Effort = 'low' | 'medium' | 'high' | 'xhigh'
+const EFFORTS: Effort[] = ['low', 'medium', 'high', 'xhigh']
+const DEFAULT_EFFORT: Effort = 'medium'
+const isEffort = (value: unknown): value is Effort =>
+  typeof value === 'string' && (EFFORTS as string[]).includes(value)
+
 interface StoredSettings {
   provider: Provider
   models: Record<Provider, string>
+  effort: Effort
   /** Consentement explicite, par fournisseur : un autre fournisseur = un autre destinataire. */
   consent: Record<Provider, boolean>
   /** Clés chiffrées (base64). */
@@ -67,6 +77,7 @@ interface StoredSettings {
 export interface PublicSettings {
   provider: Provider
   models: Record<Provider, string>
+  effort: Effort
   consent: Record<Provider, boolean>
   hasKey: Record<Provider, boolean>
   /** Faux : impossible d'enregistrer une clé en sécurité sur cette machine. */
@@ -80,8 +91,10 @@ const DEFAULT_MODELS: Record<Provider, string> = {
   openai: 'gpt-4.1',
 }
 
-const MAX_OUTPUT_TOKENS = 4096
-const REQUEST_TIMEOUT_MS = 120_000
+// La réflexion du modèle compte dans cette limite : trop basse, elle coupe la réponse.
+const MAX_OUTPUT_TOKENS = 10_000
+// Une réponse longue en mode « élevé » peut dépasser deux minutes (sans streaming).
+const REQUEST_TIMEOUT_MS = 300_000
 
 const isProvider = (value: unknown): value is Provider =>
   typeof value === 'string' && (PROVIDERS as string[]).includes(value)
@@ -94,6 +107,7 @@ function defaults(): StoredSettings {
   return {
     provider: 'anthropic',
     models: { ...DEFAULT_MODELS },
+    effort: DEFAULT_EFFORT,
     consent: { anthropic: false, openai: false },
     keys: {},
   }
@@ -106,6 +120,7 @@ async function readSettings(): Promise<StoredSettings> {
     if (!raw || typeof raw !== 'object') return base
     const data = raw as Partial<StoredSettings>
     if (isProvider(data.provider)) base.provider = data.provider
+    if (isEffort(data.effort)) base.effort = data.effort
     for (const p of PROVIDERS) {
       const model = data.models?.[p]
       if (typeof model === 'string' && model.trim()) base.models[p] = model.trim()
@@ -134,6 +149,7 @@ function toPublic(settings: StoredSettings): PublicSettings {
   return {
     provider: settings.provider,
     models: settings.models,
+    effort: settings.effort,
     consent: settings.consent,
     hasKey: { anthropic: !!settings.keys.anthropic, openai: !!settings.keys.openai },
     secureStorage: secureStorageAvailable(),
@@ -177,7 +193,34 @@ function withMessageCache(messages: WireMessage[]): unknown[] {
   return [...messages.slice(0, -1), { ...last, content }]
 }
 
-async function callAnthropic(key: string, model: string, req: TurnRequest, signal: AbortSignal): Promise<TurnResult> {
+/**
+ * Modèles Claude qui acceptent `output_config.effort` (famille 5 et Opus / Sonnet
+ * 4.6 à 4.8). Pour les autres (Haiku 4.5, Sonnet 4.5…), le paramètre est refusé :
+ * on ne l'envoie pas. La réflexion elle-même n'est jamais forcée ni coupée ici :
+ * chaque modèle garde son comportement adaptatif par défaut.
+ */
+const ANTHROPIC_EFFORT_MODELS = /^claude-(?:(?:sonnet|opus|haiku|fable|mythos)-5(?:-\d+)?|opus-4-[678]|sonnet-4-6)$/
+/** « xhigh » n'existe qu'à partir d'Opus 4.7. */
+const ANTHROPIC_NO_XHIGH = /^claude-(?:opus|sonnet)-4-6$/
+
+function anthropicEffort(model: string, effort: Effort): Record<string, unknown> {
+  if (!ANTHROPIC_EFFORT_MODELS.test(model)) return {}
+  const level = effort === 'xhigh' && ANTHROPIC_NO_XHIGH.test(model) ? 'high' : effort
+  return { output_config: { effort: level } }
+}
+
+/** Modèles de raisonnement OpenAI (série « o », GPT-5) : seuls à accepter `reasoning_effort`. */
+const OPENAI_REASONING_MODELS = /^(?:o\d|gpt-5)/
+
+function openAiEffort(model: string, effort: Effort): Record<string, unknown> {
+  if (!OPENAI_REASONING_MODELS.test(model)) return {}
+  // OpenAI n'a que trois niveaux courants : « très élevé » devient « élevé ».
+  return { reasoning_effort: effort === 'xhigh' ? 'high' : effort }
+}
+
+async function callAnthropic(
+  key: string, model: string, effort: Effort, req: TurnRequest, signal: AbortSignal,
+): Promise<TurnResult> {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     signal,
@@ -195,6 +238,7 @@ async function callAnthropic(key: string, model: string, req: TurnRequest, signa
       messages: withMessageCache(req.messages),
       tools: req.tools.map((t, i) => i === req.tools.length - 1
         ? { ...t, cache_control: { type: 'ephemeral' } } : t),
+      ...anthropicEffort(model, effort),
     }),
   })
   const body: unknown = await response.json().catch(() => null)
@@ -205,7 +249,10 @@ async function callAnthropic(key: string, model: string, req: TurnRequest, signa
   for (const block of Array.isArray(data.content) ? data.content : []) {
     const b = block as { type?: string; text?: unknown; id?: unknown; name?: unknown; input?: unknown }
     if (b.type === 'text' && typeof b.text === 'string') content.push({ type: 'text', text: b.text })
-    else if (b.type === 'tool_use' && typeof b.id === 'string' && typeof b.name === 'string') {
+    else if (b.type === 'thinking' || b.type === 'redacted_thinking') {
+      // À renvoyer inchangé au tour suivant (la boucle d'outils l'exige).
+      content.push(block as ContentBlock)
+    } else if (b.type === 'tool_use' && typeof b.id === 'string' && typeof b.name === 'string') {
       content.push({
         type: 'tool_use', id: b.id, name: b.name,
         input: b.input && typeof b.input === 'object' ? b.input as Record<string, unknown> : {},
@@ -254,7 +301,9 @@ function toOpenAiMessages(system: string, messages: WireMessage[]): unknown[] {
   return out
 }
 
-async function callOpenAi(key: string, model: string, req: TurnRequest, signal: AbortSignal): Promise<TurnResult> {
+async function callOpenAi(
+  key: string, model: string, effort: Effort, req: TurnRequest, signal: AbortSignal,
+): Promise<TurnResult> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     signal,
@@ -262,6 +311,7 @@ async function callOpenAi(key: string, model: string, req: TurnRequest, signal: 
     body: JSON.stringify({
       model,
       max_completion_tokens: MAX_OUTPUT_TOKENS,
+      ...openAiEffort(model, effort),
       messages: toOpenAiMessages(req.system, req.messages),
       tools: req.tools.map(t => ({
         type: 'function',
@@ -320,7 +370,7 @@ export function registerAiHandlers(getMainWindow: () => BrowserWindow | null) {
     return toPublic(await readSettings())
   })
 
-  ipcMain.handle('ai:save-settings', async (event, patch: { provider?: unknown; model?: unknown; consent?: unknown }) => {
+  ipcMain.handle('ai:save-settings', async (event, patch: { provider?: unknown; model?: unknown; consent?: unknown; effort?: unknown }) => {
     guard(event.sender)
     const settings = await readSettings()
     if (isProvider(patch?.provider)) settings.provider = patch.provider
@@ -329,6 +379,7 @@ export function registerAiHandlers(getMainWindow: () => BrowserWindow | null) {
       settings.models[target] = patch.model.trim().slice(0, 100)
     }
     if (typeof patch?.consent === 'boolean') settings.consent[target] = patch.consent
+    if (isEffort(patch?.effort)) settings.effort = patch.effort
     await writeSettings(settings)
     return toPublic(settings)
   })
@@ -385,8 +436,8 @@ export function registerAiHandlers(getMainWindow: () => BrowserWindow | null) {
     try {
       const model = settings.models[req.provider]
       return req.provider === 'anthropic'
-        ? await callAnthropic(key, model, req, controller.signal)
-        : await callOpenAi(key, model, req, controller.signal)
+        ? await callAnthropic(key, model, settings.effort, req, controller.signal)
+        : await callOpenAi(key, model, settings.effort, req, controller.signal)
     } catch (err) {
       if (controller.signal.aborted) {
         const timedOut = (controller.signal.reason as Error | undefined)?.message === 'timeout'

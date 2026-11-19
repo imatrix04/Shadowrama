@@ -32,7 +32,7 @@ contextBridge.exposeInMainWorld('fileAPI', {
 // l'interface peut l'envoyer pour l'enregistrer, jamais la relire.
 contextBridge.exposeInMainWorld('aiAPI', {
   getSettings: () => ipcRenderer.invoke('ai:get-settings'),
-  saveSettings: (patch: { provider?: string; model?: string; consent?: boolean }) =>
+  saveSettings: (patch: { provider?: string; model?: string; consent?: boolean; effort?: string }) =>
     ipcRenderer.invoke('ai:save-settings', patch),
   setKey: (provider: string, key: string) => ipcRenderer.invoke('ai:set-key', provider, key),
   clearKey: (provider: string) => ipcRenderer.invoke('ai:clear-key', provider),

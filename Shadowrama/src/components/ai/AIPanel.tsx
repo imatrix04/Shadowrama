@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { PROVIDER_ORGS } from '../../ai/types'
+import { EFFORT_LEVELS, PROVIDER_ORGS } from '../../ai/types'
+import type { Effort } from '../../ai/types'
 import type { Attachment, Usage } from '../../ai/types'
 import { useAISettings } from '../../ai/useAISettings'
 import type { ChatItem } from '../../ai/useAIAssistant'
 import Icon from '../ui/Icon'
+import Select from '../ui/Select'
 import AISetup from './AISetup'
 import styles from './AIPanel.module.css'
 
@@ -242,6 +244,16 @@ export default function AIPanel({
       {ready && provider && (
         <div className={styles.privacy} title="Le contenu des diapositives consultées est envoyé à ce fournisseur.">
           <Icon name="lock" size={11} /> Données envoyées à {PROVIDER_ORGS[provider]}
+          <span className={styles.effort} title={EFFORT_LEVELS.find(l => l.value === settings.effort)?.hint}>
+            Réflexion
+            <Select
+              compact
+              aria-label="Puissance de réflexion"
+              value={settings.effort}
+              options={EFFORT_LEVELS.map(l => ({ value: l.value, label: l.label }))}
+              onChange={v => void save({ effort: v as Effort })}
+            />
+          </span>
         </div>
       )}
       {body()}

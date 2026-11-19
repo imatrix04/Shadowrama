@@ -24,6 +24,8 @@ export type ContentBlock =
   | { type: 'text'; text: string }
   | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }
+  /** Réflexion du modèle : opaque, renvoyée telle quelle dans la boucle d'outils. */
+  | { type: 'thinking' | 'redacted_thinking'; [key: string]: unknown }
 
 export interface WireMessage {
   role: 'user' | 'assistant'
@@ -36,9 +38,20 @@ export interface ToolDef {
   input_schema: Record<string, unknown>
 }
 
+/** Puissance de réflexion : plus c'est haut, plus l'IA raisonne et consomme de tokens. */
+export type Effort = 'low' | 'medium' | 'high' | 'xhigh'
+
+export const EFFORT_LEVELS: { value: Effort; label: string; hint: string }[] = [
+  { value: 'low', label: 'Faible', hint: 'Rapide et économe : modifications simples, textes courts.' },
+  { value: 'medium', label: 'Moyen', hint: 'Équilibré : la plupart des demandes.' },
+  { value: 'high', label: 'Élevé', hint: 'Plus de réflexion : mises en page et enchaînements complexes. Consomme davantage.' },
+  { value: 'xhigh', label: 'Très élevé', hint: 'Réflexion maximale : formes calculées, présentations entières. Le plus lent et le plus coûteux.' },
+]
+
 export interface AISettings {
   provider: Provider
   models: Record<Provider, string>
+  effort: Effort
   consent: Record<Provider, boolean>
   hasKey: Record<Provider, boolean>
   secureStorage: boolean

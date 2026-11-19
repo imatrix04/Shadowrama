@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { PROVIDER_KEY_URLS, PROVIDER_LABELS, PROVIDER_ORGS } from '../../ai/types'
-import type { AISettings, Provider } from '../../ai/types'
+import { EFFORT_LEVELS, PROVIDER_KEY_URLS, PROVIDER_LABELS, PROVIDER_ORGS } from '../../ai/types'
+import type { AISettings, Effort, Provider } from '../../ai/types'
 import Select from '../ui/Select'
 import styles from './AISetup.module.css'
 
@@ -17,7 +17,7 @@ const MODEL_SUGGESTIONS: Record<Provider, string[]> = {
 interface Props {
   settings: AISettings
   error: string | null
-  onSave: (patch: { provider?: string; model?: string; consent?: boolean }) => Promise<boolean>
+  onSave: (patch: { provider?: string; model?: string; consent?: boolean; effort?: string }) => Promise<boolean>
   onSetKey: (provider: string, key: string) => Promise<boolean>
   onClearKey: (provider: string) => Promise<boolean>
   /** Appelé quand tout est enregistré (clé + consentement). */
@@ -33,6 +33,7 @@ export default function AISetup({ settings, error, onSave, onSetKey, onClearKey,
   const [provider, setProvider] = useState<Provider>(settings.provider)
   const [model, setModel] = useState(settings.models[settings.provider])
   const [custom, setCustom] = useState(!MODEL_SUGGESTIONS[settings.provider].includes(settings.models[settings.provider]))
+  const [effort, setEffort] = useState<Effort>(settings.effort)
   const [key, setKey] = useState('')
   const [consent, setConsent] = useState(settings.consent[settings.provider])
   const [busy, setBusy] = useState(false)
@@ -58,7 +59,7 @@ export default function AISetup({ settings, error, onSave, onSetKey, onClearKey,
       // La clé d'abord : si elle est refusée, ni le fournisseur ni le
       // consentement ne sont enregistrés pour rien.
       if (key.trim() && !await onSetKey(provider, key.trim())) return
-      if (!await onSave({ provider, model: model.trim(), consent: true })) return
+      if (!await onSave({ provider, model: model.trim(), consent: true, effort })) return
       setKey('')
       onDone?.()
     } finally {
@@ -118,6 +119,20 @@ export default function AISetup({ settings, error, onSave, onSetKey, onClearKey,
         )}
         <span className={styles.hint}>
           Un modèle recommandé est déjà sélectionné : vous n'avez rien à changer.
+        </span>
+      </div>
+
+      <div className={styles.field}>
+        <span className={styles.label}>Puissance de réflexion</span>
+        <Select
+          aria-label="Puissance de réflexion"
+          value={effort}
+          options={EFFORT_LEVELS.map(l => ({ value: l.value, label: l.label }))}
+          onChange={v => setEffort(v as Effort)}
+        />
+        <span className={styles.hint}>
+          {EFFORT_LEVELS.find(l => l.value === effort)?.hint} Modifiable à tout moment depuis l'en-tête
+          du panneau ; plus c'est élevé, plus l'IA consomme de tokens (facturés par {org}).
         </span>
       </div>
 
