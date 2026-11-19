@@ -58,6 +58,14 @@ export interface Attachment {
   height?: number
 }
 
+/** Une ligne affichée dans la conversation. */
+export interface ChatItem {
+  id: number
+  kind: 'user' | 'assistant' | 'action' | 'error'
+  text: string
+  isError?: boolean
+}
+
 /** Tokens d'un appel, normalisés entre fournisseurs. `input` exclut le cache. */
 export interface Usage {
   input: number

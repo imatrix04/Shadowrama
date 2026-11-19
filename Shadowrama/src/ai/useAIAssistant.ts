@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Slide } from '../types'
+import {
+  UNSAVED_PROJECT_KEY, deleteConversation, emptyConversation, loadConversation, saveConversation,
+  withAvailableMedia,
+} from './conversationStore'
+import type { SavedConversation } from './conversationStore'
 import { runAssistant } from './session'
 import { EMPTY_USAGE, addUsage } from './types'
 import { generateMediaKey, registerMedia } from '../utils/mediaStore'
 import { MAX_VIDEO_BYTES, readVideoSize } from '../utils/video'
-import type { Attachment, Provider, Usage, WireMessage } from './types'
+import type { Attachment, ChatItem, Provider, Usage, WireMessage } from './types'
+
+export type { ChatItem } from './types'
 
 const MAX_ATTACHMENTS = 20
 const MAX_IMAGE_BYTES = 30 * 1024 * 1024
@@ -19,11 +26,23 @@ function readImageSize(url: string): Promise<{ width: number; height: number } |
   })
 }
 
-export interface ChatItem {
-  id: number
-  kind: 'user' | 'assistant' | 'action' | 'error'
-  text: string
-  isError?: boolean
+/**
+ * Conversation relue du stockage. Une demande interrompue par la fermeture de
+ * l'application est signalée, comme un arrêt manuel : les modifications déjà
+ * faites sur les diapositives, elles, sont restées.
+ */
+function restore(saved: SavedConversation): SavedConversation {
+  if (!saved.interrupted) return saved
+  const id = saved.nextItemId + 1
+  return {
+    ...saved,
+    interrupted: false,
+    nextItemId: id,
+    items: [...saved.items, {
+      id, kind: 'error',
+      text: "Interrompu : l'éditeur a été quitté pendant la demande. Les modifications déjà faites restent (Ctrl+Z pour les annuler).",
+    }],
+  }
 }
 
 interface Params {
@@ -36,6 +55,10 @@ interface Params {
   /** Remplace l'état sans nouvelle entrée d'historique. */
   patch: (updater: (prev: Slide[]) => Slide[]) => void
   onFocusSlide: (index: number) => void
+  /** Identité du projet : chemin du fichier, ou « draft » tant qu'il n'est pas enregistré. */
+  projectKey: string
+  /** Conversation enregistrée de ce projet, lue au démarrage de l'éditeur. */
+  initial: SavedConversation | null
 }
 
 /**
@@ -45,26 +68,138 @@ interface Params {
  * modification (pas avant, pour qu'une simple question ne laisse pas un faux
  * point d'annulation), puis chaque changement passe par `patch`. Un seul Ctrl+Z
  * défait donc tout ce que l'IA a fait pour cette demande.
+ *
+ * La conversation est rattachée au projet et enregistrée à chaque changement
+ * (voir conversationStore) : elle survit à la navigation vers les réglages, à
+ * l'accueil et au redémarrage. Quand l'éditeur change de projet (ouverture,
+ * nouveau projet), l'appelant le signale avec `switchProject` ; un simple
+ * changement de chemin sans signal (premier enregistrement, « Enregistrer
+ * sous ») est le MÊME projet : la conversation le suit.
  */
-export function useAIAssistant({ slides, currentSlide, selectedIds, ultra, begin, patch, onFocusSlide }: Params) {
-  const [items, setItems] = useState<ChatItem[]>([])
+export function useAIAssistant({
+  slides, currentSlide, selectedIds, ultra, begin, patch, onFocusSlide, projectKey, initial,
+}: Params) {
+  const [start] = useState(() => restore(initial ?? emptyConversation()))
+  const [items, setItems] = useState<ChatItem[]>(start.items)
   const [running, setRunning] = useState(false)
   // Cumul de la conversation en cours (remis à zéro par « Effacer »).
-  const [usage, setUsage] = useState<Usage>(EMPTY_USAGE)
+  const [usage, setUsage] = useState<Usage>(start.usage)
   // Fichiers joints : leur contenu reste dans le magasin de médias de l'éditeur,
   // le modèle n'en reçoit que le numéro, le nom et les dimensions.
-  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [attachments, setAttachments] = useState<Attachment[]>(start.attachments)
   const [attachError, setAttachError] = useState<string | null>(null)
-  const attachmentsRef = useRef<Attachment[]>([])
-  const attachIdRef = useRef(0)
-  const historyRef = useRef<WireMessage[]>([])
+  // Texte en cours de frappe : conservé avec la conversation (voir plus bas).
+  const [draft, setDraftState] = useState(start.draft)
+  const draftRef = useRef(start.draft)
+  const setDraft = useCallback((value: string) => {
+    draftRef.current = value
+    setDraftState(value)
+  }, [])
+  const attachmentsRef = useRef<Attachment[]>(start.attachments)
+  const attachIdRef = useRef(start.nextAttachmentId)
+  const historyRef = useRef<WireMessage[]>(start.history)
   const controllerRef = useRef<AbortController | null>(null)
-  const idRef = useRef(0)
+  const idRef = useRef(start.nextItemId)
+  // Change à chaque changement de projet : une demande de l'ancien projet encore
+  // en vol ne doit plus rien écrire dans la conversation du nouveau.
+  const generationRef = useRef(0)
 
   // L'état courant est lu au moment de l'envoi, pas à celui du rendu.
   const latest = useRef({ slides, currentSlide, selectedIds, ultra })
   useEffect(() => { latest.current = { slides, currentSlide, selectedIds, ultra } })
   useEffect(() => { attachmentsRef.current = attachments }, [attachments])
+
+  // ── Rattachement au projet ──
+  const switchRef = useRef(false)
+  const [epoch, setEpoch] = useState(0)
+  const prevKeyRef = useRef(projectKey)
+  // Clé pour laquelle l'état affiché est celui du stockage : tant qu'elle diffère
+  // de `projectKey`, on n'enregistre rien (on écraserait la conversation du projet
+  // qu'on est en train de charger).
+  const hydratedKeyRef = useRef<string | null>(projectKey)
+
+  const switchProject = useCallback(() => {
+    switchRef.current = true
+    setEpoch(e => e + 1)
+  }, [])
+
+  useEffect(() => {
+    const previous = prevKeyRef.current
+    const switching = switchRef.current
+    if (!switching && previous === projectKey) return
+    prevKeyRef.current = projectKey
+    switchRef.current = false
+
+    if (!switching) {
+      // Même projet, nouveau chemin : l'enregistrement ci-dessous écrit sous la
+      // nouvelle clé, on retire l'ancienne.
+      hydratedKeyRef.current = projectKey
+      void deleteConversation(previous)
+      return
+    }
+
+    // Autre projet : on coupe ce qui tourne et on charge celui de la nouvelle clé.
+    // Un projet pas encore enregistré n'a pas d'identité stable : il repart de zéro.
+    const generation = ++generationRef.current
+    controllerRef.current?.abort()
+    controllerRef.current = null
+    hydratedKeyRef.current = null
+    setRunning(false)
+    void (async () => {
+      let saved: SavedConversation | null = null
+      if (projectKey === UNSAVED_PROJECT_KEY) await deleteConversation(projectKey)
+      else saved = await loadConversation(projectKey)
+      if (generation !== generationRef.current) return
+      const next = restore(withAvailableMedia(saved ?? emptyConversation()))
+      historyRef.current = next.history
+      idRef.current = next.nextItemId
+      attachIdRef.current = next.nextAttachmentId
+      attachmentsRef.current = next.attachments
+      setDraft(next.draft)
+      setItems(next.items)
+      setUsage(next.usage)
+      setAttachments(next.attachments)
+      setAttachError(null)
+      hydratedKeyRef.current = projectKey
+    })()
+  }, [projectKey, epoch])
+
+  // Enregistrement à chaque changement. `running` en fait partie : si l'éditeur
+  // est quitté en pleine demande, la dernière écriture porte « interrompu ».
+  const snapshotRef = useRef<{ key: string; conversation: SavedConversation } | null>(null)
+  useEffect(() => {
+    snapshotRef.current = {
+      key: projectKey,
+      conversation: {
+        items, usage, attachments,
+        history: historyRef.current,
+        nextItemId: idRef.current,
+        nextAttachmentId: attachIdRef.current,
+        draft: draftRef.current,
+        interrupted: running,
+      },
+    }
+    if (hydratedKeyRef.current !== projectKey) return
+    void saveConversation(projectKey, snapshotRef.current.conversation)
+  }, [projectKey, items, usage, attachments, running])
+
+  // La frappe, elle, est enregistrée avec un léger délai (une écriture par
+  // touche serait inutile), et une dernière fois à la sortie de l'éditeur pour
+  // ne rien perdre de ce qui a été tapé juste avant de quitter.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const snapshot = snapshotRef.current
+      if (!snapshot || hydratedKeyRef.current !== snapshot.key) return
+      void saveConversation(snapshot.key, { ...snapshot.conversation, draft: draftRef.current })
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [draft])
+
+  useEffect(() => () => {
+    const snapshot = snapshotRef.current
+    if (!snapshot || hydratedKeyRef.current !== snapshot.key) return
+    void saveConversation(snapshot.key, { ...snapshot.conversation, draft: draftRef.current })
+  }, [])
 
   const attach = useCallback(async (files: File[]) => {
     setAttachError(null)
@@ -116,6 +251,8 @@ export function useAIAssistant({ slides, currentSlide, selectedIds, ultra, begin
     const trimmed = text.trim()
     if (!trimmed || controllerRef.current) return
 
+    const generation = generationRef.current
+    const current = () => generation === generationRef.current
     const controller = new AbortController()
     controllerRef.current = controller
     setRunning(true)
@@ -137,18 +274,22 @@ export function useAIAssistant({ slides, currentSlide, selectedIds, ultra, begin
           patch(() => next)
         },
         onFocusSlide,
-        onUsage: u => setUsage(prev => addUsage(prev, u)),
+        onUsage: u => { if (current()) setUsage(prev => addUsage(prev, u)) },
         onEvent: event => {
+          if (!current()) return
           if (event.type === 'text') push({ kind: 'assistant', text: event.text })
           else push({ kind: 'action', text: event.label, isError: event.isError })
         },
       })
+      if (!current()) return
       historyRef.current = result.history
       if (result.end === 'stopped') push({ kind: 'error', text: 'Interrompu. Les modifications déjà faites restent (Ctrl+Z pour les annuler).' })
       else if (result.error) push({ kind: 'error', text: result.error })
     } finally {
-      controllerRef.current = null
-      setRunning(false)
+      if (controllerRef.current === controller) {
+        controllerRef.current = null
+        setRunning(false)
+      }
     }
   }, [begin, patch, onFocusSlide, push])
 
@@ -167,5 +308,8 @@ export function useAIAssistant({ slides, currentSlide, selectedIds, ultra, begin
   // Quitter l'éditeur en pleine demande l'interrompt.
   useEffect(() => () => controllerRef.current?.abort(), [])
 
-  return { items, running, usage, attachments, attachError, attach, removeAttachment, send, stop, clear }
+  return {
+    items, running, usage, attachments, attachError, draft, setDraft,
+    attach, removeAttachment, send, stop, clear, switchProject,
+  }
 }

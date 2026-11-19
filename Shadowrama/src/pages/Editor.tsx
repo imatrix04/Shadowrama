@@ -22,6 +22,8 @@ import TopBar from '../components/editor/TopBar'
 import SlidePanel from '../components/editor/SlidePanel'
 import AIPanel from '../components/ai/AIPanel'
 import { useAIAssistant } from '../ai/useAIAssistant'
+import { emptyConversation, loadConversation, projectKeyOf, withAvailableMedia } from '../ai/conversationStore'
+import type { SavedConversation } from '../ai/conversationStore'
 
 const AUTOSAVE_DELAY_MS = 500
 const DUPLICATE_OFFSET = 16
@@ -36,25 +38,32 @@ const DUPLICATE_OFFSET = 16
  * reconstruit, ils retombent tous sur le placeholder.
  */
 export default function Editor() {
-  const [boot, setBoot] = useState<{ draft: ProjectDraft | null } | null>(null)
+  const [boot, setBoot] = useState<{ draft: ProjectDraft | null; conversation: SavedConversation | null } | null>(null)
 
   useEffect(() => {
     let cancelled = false
     Promise.all([loadDraft(), hydrateMediaStore()])
-      .then(([draft]) => {
+      .then(async ([draft]) => {
+        // Conversation de l'assistant pour ce projet : lue ici, avant la purge,
+        // pour que les fichiers qu'on lui a joints ne soient pas supprimés.
+        const conversation = withAvailableMedia(
+          (await loadConversation(projectKeyOf(draft?.filePath ?? null))) ?? emptyConversation(),
+        )
         // L'historique est vide à l'amorçage : un média que le brouillon ne
         // référence plus est définitivement inutile, on libère sa place.
-        pruneMediaStore(collectUsedMediaKeys(draft?.slides ?? []))
-        if (!cancelled) setBoot({ draft })
+        const used = collectUsedMediaKeys(draft?.slides ?? [])
+        for (const a of conversation.attachments) used.add(a.key)
+        pruneMediaStore(used)
+        if (!cancelled) setBoot({ draft, conversation })
       })
       // Un stockage inaccessible ne doit pas bloquer l'éditeur sur son écran de
       // chargement : on démarre alors sur un projet vierge.
-      .catch(() => { if (!cancelled) setBoot({ draft: null }) })
+      .catch(() => { if (!cancelled) setBoot({ draft: null, conversation: null }) })
     return () => { cancelled = true }
   }, [])
 
   if (!boot) return <div style={BOOT_STYLE}>Chargement…</div>
-  return <EditorView initialDraft={boot.draft} />
+  return <EditorView initialDraft={boot.draft} initialConversation={boot.conversation} />
 }
 
 // Couleurs du thème (clair ou sombre), et non des valeurs figées : l'écran de
@@ -64,7 +73,10 @@ const BOOT_STYLE: React.CSSProperties = {
   height: '100vh', backgroundColor: 'var(--editor-bg)', color: 'var(--editor-text-muted)',
 }
 
-function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
+function EditorView({ initialDraft, initialConversation }: {
+  initialDraft: ProjectDraft | null
+  initialConversation: SavedConversation | null
+}) {
   // Index *demandé*. L'index réellement utilisé est recadré plus bas sur la
   // taille courante de `slides` (voir `currentSlide`).
   const [requestedSlide, setRequestedSlide] = useState(0)
@@ -108,6 +120,8 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
     begin,
     patch,
     onFocusSlide: setRequestedSlide,
+    projectKey: projectKeyOf(filePath),
+    initial: initialConversation,
   })
   // Couleurs déjà utilisées dans le projet : proposées par le sélecteur de couleur.
   const projectColors = useMemo(() => collectProjectColors(slides, numbering), [slides, numbering])
@@ -233,6 +247,7 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
   }, [commit, currentSlide])
 
   const handleNewProject = () => {
+    assistant.switchProject()
     reset([{ id: nextId(), blocks: [] }])
     setNumbering(DEFAULT_NUMBERING)
     setProjectName(null)
@@ -415,6 +430,8 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
           filePath={filePath}
           setFilePath={setFilePath}
           onLoad={(loaded, name, loadedNumbering) => {
+            // Autre projet : l'assistant charge SA conversation (voir useAIAssistant).
+            assistant.switchProject()
             reset(loaded)
             setNumbering(loadedNumbering)
             setRequestedSlide(0)
@@ -492,6 +509,8 @@ function EditorView({ initialDraft }: { initialDraft: ProjectDraft | null }) {
               usage={assistant.usage}
               attachments={assistant.attachments}
               attachError={assistant.attachError}
+              draft={assistant.draft}
+              onDraftChange={assistant.setDraft}
               onAttach={assistant.attach}
               onRemoveAttachment={assistant.removeAttachment}
               onSend={assistant.send}

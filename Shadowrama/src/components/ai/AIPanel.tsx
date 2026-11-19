@@ -13,6 +13,9 @@ interface Props {
   usage: Usage
   attachments: Attachment[]
   attachError: string | null
+  /** Texte en cours de frappe, conservé par l'appelant (survit à la navigation). */
+  draft: string
+  onDraftChange: (value: string) => void
   onAttach: (files: File[]) => void
   onRemoveAttachment: (id: number) => void
   onSend: (text: string, provider: 'anthropic' | 'openai') => void
@@ -31,10 +34,10 @@ const SUGGESTIONS = [
 const formatTokens = (n: number) => n.toLocaleString('fr-FR')
 
 export default function AIPanel({
-  items, running, usage, attachments, attachError, onAttach, onRemoveAttachment, onSend, onStop, onClear, onClose }: Props) {
+  items, running, usage, attachments, attachError, draft, onDraftChange, onAttach, onRemoveAttachment, onSend, onStop, onClear, onClose }: Props) {
   const { available, settings, error, save, setKey, clearKey } = useAISettings()
   const [editingSetup, setEditingSetup] = useState(false)
-  const [draft, setDraft] = useState('')
+  const setDraft = onDraftChange
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)

@@ -1,11 +1,15 @@
 import { BLOCKS_CONFIG, getBlockConfig, getBlockProperties } from '../blocks'
-import type { BlockData, BlockProperty, ParticleSettings, Slide, SlideBackground } from '../types'
+import type {
+  BlockData, BlockEffects, BlockProperty, ParticleSettings, Slide, SlideBackground,
+} from '../types'
 import { MOTION_PRESETS, getPreset } from '../ultra/presets'
 import {
   PARTICLE_MOTIONS, PARTICLE_MOUSE_MODES, PARTICLE_PRESETS, PARTICLE_SHAPES, mergeParticles,
 } from '../ultra/particles'
 import { availableTransitions, getSlideTransition } from '../ultra/slideTransitions'
 import { nextId } from '../utils/ids'
+import { POLYGON_PRESETS } from '../utils/shapePolygon'
+import type { ShapePolygon } from '../utils/shapePolygon'
 import { creamInkFor, readableTextColor } from '../utils/textContrast'
 import { normalizeWebUrl } from '../utils/webUrl'
 import type { Attachment, ToolDef } from './types'
@@ -31,6 +35,14 @@ const MAX_SLIDES = 60
 const MAX_BLOCKS_PER_SLIDE = 60
 const MAX_TEXT_LENGTH = 5000
 const MAX_CAROUSEL_ITEMS = 30
+const MIN_POLYGON_POINTS = 3
+const MAX_POLYGON_POINTS = 60
+
+const BLEND_MODES = ['normal', 'multiply', 'screen', 'overlay', 'difference', 'exclusion', 'luminosity'] as const
+const EFFECT_KEYS = [
+  'shadow', 'glow', 'gradient', 'blur', 'brightness', 'saturate', 'contrast',
+  'blendMode', 'corners', 'textStroke', 'float',
+] as const
 
 /** Blocs qui portent un fichier de l'utilisateur : remplis seulement par set_block_media. */
 const MEDIA_BLOCKS = new Set<string>(['image', 'video', 'carousel'])
@@ -133,7 +145,10 @@ export const TOOL_DEFS: ToolDef[] = [
       'Ajoute un bloc (texte, titre, forme, image, vidéo, ou carrousel / page web en mode Ultra) sur une diapositive. '
       + 'Les blocs image, vidéo et carrousel sont créés VIDES : remplis-les ensuite avec set_block_media si '
       + "l'utilisateur a joint un fichier, sinon laisse l'emplacement vide pour qu'il y ajoute le sien. "
-      + '`props` suit la liste de get_reference. Renvoie l\'id du bloc créé.',
+      + '`props` suit la liste de get_reference. FORME PERSONNALISÉE : `props.customShape` = liste de points '
+      + '[x, y] entre 0 et 1 (origine en haut à gauche, 3 à 60 points, dans l\'ordre du contour), ou le nom '
+      + "d'un preset de get_reference ; pour un bloc forme elle passe `shape` à « grid », pour une image ou "
+      + 'une vidéo elle découpe le média dans ce contour. Renvoie l\'id du bloc créé.',
     input_schema: {
       type: 'object',
       properties: {
@@ -261,6 +276,58 @@ export const TOOL_DEFS: ToolDef[] = [
       required: ['slide', 'id', 'phase', 'preset'],
     },
   },
+  {
+    name: 'set_block_effects',
+    description:
+      "Règle les effets visuels d'un bloc (mode Ultra Design uniquement). Chaque effet fourni remplace "
+      + "l'actuel ; `null` retire cet effet ; `reset: true` retire d'abord tous les effets du bloc. "
+      + 'Le dégradé remplace la couleur unie des formes et des textes. Reste sobre : une ombre ou un halo '
+      + 'suffisent en général, et vérifie que le texte reste lisible après un flou ou un dégradé.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        slide: slideRef,
+        id: { type: 'integer' },
+        reset: { type: 'boolean', description: 'Retire tous les effets avant d\'appliquer ceux fournis.' },
+        shadow: {
+          type: ['object', 'null'],
+          description: 'Ombre portée. x, y : -100 à 100 ; blur : 0 à 120 ; color.',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, blur: { type: 'number' }, color: { type: 'string' } },
+        },
+        glow: {
+          type: ['object', 'null'],
+          description: 'Halo lumineux. blur : 0 à 80 ; color.',
+          properties: { blur: { type: 'number' }, color: { type: 'string' } },
+        },
+        gradient: {
+          type: ['object', 'null'],
+          description: 'Dégradé. from, to : couleurs ; angle : 0 à 360 (0 = bas vers haut, 90 = gauche vers droite).',
+          properties: { from: { type: 'string' }, to: { type: 'string' }, angle: { type: 'number' } },
+        },
+        blur: { type: ['number', 'null'], description: 'Flou en px, 0 à 40.' },
+        brightness: { type: ['number', 'null'], description: '0 à 3, 1 = neutre.' },
+        saturate: { type: ['number', 'null'], description: '0 à 3, 1 = neutre.' },
+        contrast: { type: ['number', 'null'], description: '0 à 3, 1 = neutre.' },
+        blendMode: { type: ['string', 'null'], enum: [...BLEND_MODES, null] },
+        corners: {
+          type: ['object', 'number', 'null'],
+          description: 'Arrondi par coin en px, 0 à 200 : un nombre pour tous les coins, ou { tl, tr, br, bl }.',
+          properties: { tl: { type: 'number' }, tr: { type: 'number' }, br: { type: 'number' }, bl: { type: 'number' } },
+        },
+        textStroke: {
+          type: ['object', 'null'],
+          description: 'Contour du texte. width : 0 à 10 ; color.',
+          properties: { width: { type: 'number' }, color: { type: 'string' } },
+        },
+        float: {
+          type: ['object', 'null'],
+          description: 'Flottement doux en boucle. amplitude : 2 à 60 px ; duration : 1 à 10 s.',
+          properties: { amplitude: { type: 'number' }, duration: { type: 'number' } },
+        },
+      },
+      required: ['slide', 'id'],
+    },
+  },
 ]
 
 // ── Validation ───────────────────────────────────────────────────────────────
@@ -299,8 +366,39 @@ function findBlock(slide: Slide, id: unknown): BlockData {
     ?? fail(`Bloc ${blockId} introuvable sur cette diapositive. Utilisez get_slide pour lire les id.`)
 }
 
-/** Types de champ qu'un modèle n'a pas le droit de renseigner (fichiers, formes dessinées…). */
-const FORBIDDEN_PROPERTY_TYPES = new Set<BlockProperty['type']>(['file', 'carouselItems', 'shapePolygon'])
+/**
+ * Types de champ qu'un modèle ne renseigne pas par `props` : fichiers et vues de
+ * carrousel (set_block_media). Le polygone, lui, a sa propre validation (asPolygon).
+ */
+const FORBIDDEN_PROPERTY_TYPES = new Set<BlockProperty['type']>(['file', 'carouselItems'])
+
+/** Comparaison de noms sans accents ni casse (« Cœur » = « coeur » = « COEUR »). */
+const plain = (text: string) => text
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/œ/gi, 'oe').replace(/æ/gi, 'ae')
+  .trim().toLowerCase()
+
+/**
+ * Contour d'une forme personnalisée : liste de points normalisés (0–1), ou nom
+ * d'un preset de l'éditeur. Les valeurs hors bornes sont ramenées dans [0, 1].
+ */
+function asPolygon(value: unknown): ShapePolygon {
+  if (typeof value === 'string') {
+    const preset = POLYGON_PRESETS.find(p => plain(p.label) === plain(value))
+    if (!preset) fail(`Preset de forme « ${value} » inconnu. Disponibles : ${POLYGON_PRESETS.map(p => p.label).join(', ')}.`)
+    return preset!.points.map(([x, y]) => [x, y])
+  }
+  if (!Array.isArray(value) || value.length < MIN_POLYGON_POINTS || value.length > MAX_POLYGON_POINTS) {
+    fail(`\`customShape\` doit contenir de ${MIN_POLYGON_POINTS} à ${MAX_POLYGON_POINTS} points [x, y] (ou un nom de preset).`)
+  }
+  return (value as unknown[]).map((point, index) => {
+    if (!Array.isArray(point) || point.length !== 2 || point.some(n => typeof n !== 'number' || !Number.isFinite(n))) {
+      fail(`Point ${index + 1} de \`customShape\` invalide : attendu [x, y] avec deux nombres entre 0 et 1.`)
+    }
+    const [x, y] = point as [number, number]
+    return [Math.round(Math.min(1, Math.max(0, x)) * 1000) / 1000, Math.round(Math.min(1, Math.max(0, y)) * 1000) / 1000]
+  })
+}
 
 /**
  * Valide les propriétés fournies pour un type de bloc et renvoie celles à poser.
@@ -310,6 +408,7 @@ function validateProps(type: string, rawProps: unknown): Partial<BlockData> {
   const props = asObject(rawProps ?? {}, '`props`')
   const known = new Map(getBlockProperties(type).map(p => [p.key, p]))
   const out: Record<string, unknown> = {}
+  let polygon: ShapePolygon | undefined
 
   for (const [key, value] of Object.entries(props)) {
     if ((GEOMETRY_KEYS as readonly string[]).includes(key)) {
@@ -317,6 +416,10 @@ function validateProps(type: string, rawProps: unknown): Partial<BlockData> {
       continue
     }
     const def = known.get(key)
+    if (def?.type === 'shapePolygon') {
+      polygon = asPolygon(value)
+      continue
+    }
     if (!def || FORBIDDEN_PROPERTY_TYPES.has(def.type)) {
       fail(`Propriété « ${key} » non modifiable pour un bloc ${type}. Voir get_reference.`)
     }
@@ -359,6 +462,13 @@ function validateProps(type: string, rawProps: unknown): Partial<BlockData> {
         fail(`Propriété « ${key} » non modifiable.`)
     }
   }
+  if (polygon) {
+    // Poser un contour active la forme personnalisée : une forme passe à « grid »,
+    // une image ou une vidéo découpe son média dans ce contour.
+    out.customShape = polygon
+    if (type === 'shape') out.shape = 'grid'
+    else out.shapeMode = 'grid'
+  }
   return out as Partial<BlockData>
 }
 
@@ -380,7 +490,7 @@ function describeBlock(block: BlockData): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(raw)) {
     if (value === undefined) continue
-    if (key === 'src' || key === 'items' || key === 'customShape') continue
+    if (key === 'src' || key === 'items') continue
     if (typeof value === 'string' && value.length > 1000) out[key] = `${value.slice(0, 1000)}…`
     else out[key] = value
   }
@@ -421,13 +531,19 @@ function reference(ctx: ToolContext) {
       .filter(p => ctx.ultra || p.tier === 'basic')
       .map(p => ({ id: p.id, label: p.label, phase: p.phase, family: p.family })),
     slideTransitions: availableTransitions(ctx.ultra).map(t => ({ id: t.id, label: t.label })),
+    customShape: {
+      usage: 'props.customShape sur un bloc forme, image ou vidéo',
+      points: `[x, y] entre 0 et 1, origine en haut à gauche, ${MIN_POLYGON_POINTS} à ${MAX_POLYGON_POINTS} points dans l'ordre du contour (sens horaire conseillé)`,
+      presets: POLYGON_PRESETS.map(p => p.label),
+    },
     ...(ctx.ultra && {
+      effects: EFFECT_KEYS,
       particlePresets: PARTICLE_PRESETS.map(p => ({ id: p.id, label: p.label })),
       particleShapes: PARTICLE_SHAPES.map(s => s.value),
       particleMotions: PARTICLE_MOTIONS.map(m => m.value),
     }),
     ultraDesign: ctx.ultra,
-    unavailable: ctx.ultra ? [] : ['dégradés de fond', "particules d'arrière-plan", 'bloc page web', 'mouvements et transitions avancés'],
+    unavailable: ctx.ultra ? [] : ['dégradés de fond', "particules d'arrière-plan", 'effets visuels des blocs', 'bloc page web', 'mouvements et transitions avancés'],
   }
 }
 
@@ -720,6 +836,85 @@ function run(slides: Slide[], name: string, input: Input, ctx: ToolContext): Too
         blocks: slide.blocks.map(b => (b.id === block.id ? ({ ...b, motion } as BlockData) : b)),
       })
       return ok(next, { id: block.id, phase, preset: input.preset }, 'Animation réglée', i)
+    }
+
+    case 'set_block_effects': {
+      if (!ctx.ultra) fail("Les effets visuels exigent le mode Ultra Design, qui n'est pas activé.")
+      const i = slideIndex(slides, input.slide)
+      const slide = slides[i]
+      const block = findBlock(slide, input.id)
+      const unknown = Object.keys(input).find(k => !['slide', 'id', 'reset', ...EFFECT_KEYS].includes(k))
+      if (unknown) fail(`Champ « ${unknown} » inconnu. Effets : ${EFFECT_KEYS.join(', ')}.`)
+
+      const effects: Record<string, unknown> = input.reset === true ? {} : { ...block.effects }
+      const given = EFFECT_KEYS.filter(k => input[k] !== undefined)
+      if (given.length === 0 && input.reset !== true) fail('Aucun effet à modifier.')
+
+      const num = (o: Input, key: string, min: number, max: number, fallback?: number) =>
+        o[key] === undefined && fallback !== undefined ? fallback : asNumber(o[key], `\`${key}\``, min, max)
+      const color = (o: Input, key: string, fallback: string) =>
+        o[key] === undefined ? fallback : asColor(o[key], `\`${key}\``)
+
+      for (const key of given) {
+        const value = input[key]
+        if (value === null) { delete effects[key]; continue }
+        switch (key) {
+          case 'shadow': {
+            const o = asObject(value, '`shadow`')
+            effects.shadow = { x: num(o, 'x', -100, 100, 0), y: num(o, 'y', -100, 100, 4), blur: num(o, 'blur', 0, 120, 12), color: color(o, 'color', 'rgba(0,0,0,0.4)') }
+            break
+          }
+          case 'glow': {
+            const o = asObject(value, '`glow`')
+            effects.glow = { blur: num(o, 'blur', 0, 80, 16), color: color(o, 'color', '#ffffff') }
+            break
+          }
+          case 'gradient': {
+            const o = asObject(value, '`gradient`')
+            effects.gradient = { from: asColor(o.from, '`from`'), to: asColor(o.to, '`to`'), angle: num(o, 'angle', 0, 360, 135) }
+            break
+          }
+          case 'blur': effects.blur = asNumber(value, '`blur`', 0, 40); break
+          case 'brightness': effects.brightness = asNumber(value, '`brightness`', 0, 3); break
+          case 'saturate': effects.saturate = asNumber(value, '`saturate`', 0, 3); break
+          case 'contrast': effects.contrast = asNumber(value, '`contrast`', 0, 3); break
+          case 'blendMode': {
+            if (typeof value !== 'string' || !(BLEND_MODES as readonly string[]).includes(value)) {
+              fail(`\`blendMode\` doit valoir : ${BLEND_MODES.join(', ')}.`)
+            }
+            effects.blendMode = value
+            break
+          }
+          case 'corners': {
+            if (typeof value === 'number') {
+              const r = asNumber(value, '`corners`', 0, 200)
+              effects.corners = { tl: r, tr: r, br: r, bl: r }
+            } else {
+              const o = asObject(value, '`corners`')
+              effects.corners = { tl: num(o, 'tl', 0, 200, 0), tr: num(o, 'tr', 0, 200, 0), br: num(o, 'br', 0, 200, 0), bl: num(o, 'bl', 0, 200, 0) }
+            }
+            break
+          }
+          case 'textStroke': {
+            const o = asObject(value, '`textStroke`')
+            effects.textStroke = { width: num(o, 'width', 0, 10, 1), color: color(o, 'color', '#000000') }
+            break
+          }
+          case 'float': {
+            const o = asObject(value, '`float`')
+            effects.float = { amplitude: num(o, 'amplitude', 2, 60, 12), duration: num(o, 'duration', 1, 10, 4) }
+            break
+          }
+        }
+      }
+
+      const next = replaceSlide(slides, i, {
+        ...slide,
+        blocks: slide.blocks.map(b => (b.id === block.id
+          ? ({ ...b, effects: Object.keys(effects).length > 0 ? (effects as BlockEffects) : undefined } as BlockData)
+          : b)),
+      })
+      return ok(next, { id: block.id, effects }, 'Effets réglés', i)
     }
 
     default:

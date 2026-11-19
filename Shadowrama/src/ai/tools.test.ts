@@ -147,6 +147,60 @@ describe('executeTool — blocs', () => {
     expect(executeTool(withCarousel, 'set_block_media', { slide: 1, id: 7, attachments: [1] }, withAtt).isError).toBe(true)
   })
 
+  it('pose une forme personnalisée (points ou preset) et active le mode « grid »', () => {
+    const triangle = [[0.5, 0], [1, 1], [0, 1]]
+    let slides = apply(blank(), 'add_block', { slide: 1, type: 'shape', props: { customShape: triangle } }).slides
+    expect(slides[0].blocks[0]).toMatchObject({ type: 'shape', shape: 'grid', customShape: triangle })
+
+    // Preset par nom (accents et casse indifférents), et valeurs hors bornes ramenées dans [0, 1].
+    slides = apply(slides, 'add_block', { slide: 1, type: 'shape', props: { customShape: 'coeur' } }).slides
+    expect((slides[0].blocks[1] as { customShape: unknown[] }).customShape.length).toBeGreaterThan(10)
+    const clamped = apply(blank(), 'add_block', { slide: 1, type: 'shape', props: { customShape: [[-1, 0], [2, 0.5], [0.5, 9]] } })
+    expect(clamped.slides[0].blocks[0]).toMatchObject({ customShape: [[0, 0], [1, 0.5], [0.5, 1]] })
+
+    // Image et vidéo : le contour découpe le média (shapeMode), la forme du bloc ne change pas.
+    const image = apply(blank(), 'add_block', { slide: 1, type: 'image', props: { customShape: 'Étoile' } })
+    expect(image.slides[0].blocks[0]).toMatchObject({ type: 'image', shapeMode: 'grid' })
+
+    for (const customShape of [[[0, 0], [1, 1]], 'inconnu', [[0, 0], [1, 'x'], [1, 1]], 'x'.repeat(3), []]) {
+      const out = executeTool(blank(), 'add_block', { slide: 1, type: 'shape', props: { customShape } }, basic)
+      expect(out.isError, JSON.stringify(customShape)).toBe(true)
+    }
+  })
+
+  it('règle, retire et valide les effets visuels (Ultra seulement)', () => {
+    const base = apply(blank(), 'add_block', { slide: 1, type: 'shape' }, ultra).slides
+    const id = base[0].blocks[0].id
+    const input = { slide: 1, id, shadow: { y: 8, blur: 20 }, blur: 3, corners: 12 }
+    expect(executeTool(base, 'set_block_effects', input, basic).isError).toBe(true)
+
+    let slides = apply(base, 'set_block_effects', input, ultra).slides
+    expect(slides[0].blocks[0].effects).toMatchObject({
+      shadow: { x: 0, y: 8, blur: 20 }, blur: 3, corners: { tl: 12, tr: 12, br: 12, bl: 12 },
+    })
+    // null retire un effet, les autres restent ; retirer le dernier supprime l'objet.
+    slides = apply(slides, 'set_block_effects', { slide: 1, id, shadow: null, corners: null }, ultra).slides
+    expect(slides[0].blocks[0].effects).toEqual({ blur: 3 })
+    slides = apply(slides, 'set_block_effects', { slide: 1, id, reset: true }, ultra).slides
+    expect(slides[0].blocks[0].effects).toBeUndefined()
+
+    for (const bad of [
+      { slide: 1, id },
+      { slide: 1, id, blur: 'beaucoup' },
+      { slide: 1, id, blendMode: 'explosion' },
+      { slide: 1, id, shadow: { color: 'url(javascript:x)' } },
+      { slide: 1, id, onclick: 1 },
+      { slide: 1, id, gradient: { from: '#fff' } },
+    ]) {
+      const out = executeTool(base, 'set_block_effects', bad, ultra)
+      expect(out.isError, JSON.stringify(bad)).toBe(true)
+      expect(out.slides).toBe(base)
+    }
+    // Bornes : un flou démesuré est ramené à 40.
+    const big = apply(base, 'set_block_effects', { slide: 1, id, blur: 9999 }, ultra)
+    expect(big.slides[0].blocks[0].effects?.blur).toBe(40)
+  })
+
   it('ne laisse pas écrire la source d’un bloc média via update_block', () => {
     const slides: Slide[] = [{
       id: 1, blocks: [{ id: 5, type: 'image', x: 0, y: 0, width: 100, height: 100, src: 'media/a.png' }],

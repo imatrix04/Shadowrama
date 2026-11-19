@@ -153,6 +153,8 @@ export default function AISetup({ settings, error, onSave, onSetKey, onClearKey,
         <p>
           Ces données sont traitées par {org} selon ses propres conditions. N'utilisez pas
           l'assistant sur un contenu confidentiel que vous ne voulez pas partager avec eux.
+          La conversation (textes seulement) est conservée sur cet ordinateur, avec le projet ;
+          « Effacer » la supprime.
         </p>
       </div>
 
