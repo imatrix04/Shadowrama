@@ -5,13 +5,13 @@ import {
   PARTICLE_MOTIONS,
   PARTICLE_MOUSE_MODES,
   PARTICLE_PRESETS,
-  PARTICLE_SHAPES,
   mergeParticles,
 } from '../../ultra/particles'
 import { generateMediaKey, registerMedia, resolveMedia } from '../../utils/mediaStore'
 import ColorPicker from '../ui/ColorPicker'
 import styles from './PanelControls.module.css'
 import { Section, Segmented, SwitchRow } from './PanelWidgets'
+import { AmbianceTile, Chips, ParticleImageField, ShapePicker } from './ParticleAmbiance'
 
 interface Props {
   slideIndex: number
@@ -63,6 +63,13 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
   // Valeurs affichées : un projet antérieur à la 0.19 n'a aucun champ, les
   // curseurs doivent malgré tout partir d'un réglage cohérent.
   const p = mergeParticles(current?.particles)
+
+  const activeAmbiance = PARTICLE_PRESETS.find(pr =>
+    pr.settings.shape === p.shape
+    && pr.settings.motion === p.motion
+    && pr.settings.count === p.count
+    && pr.settings.colors.join() === p.colors.join(),
+  )?.id
 
   const setType = (type: SlideBackground['type']) => {
     if (type === 'color') {
@@ -261,64 +268,39 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
       {ultra && particlesOn && (
         <>
           <Section title="Ambiances" defaultOpen>
-            <div className={styles.presetList}>
+            <div className={styles.glassTiles} style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
               {PARTICLE_PRESETS.map(preset => (
-                <button
+                <AmbianceTile
                   key={preset.id}
-                  className={styles.preset}
+                  label={preset.label}
+                  settings={preset.settings}
+                  active={activeAmbiance === preset.id}
                   onClick={() => applyPreset(preset.settings)}
-                  style={{
-                    backgroundImage: `linear-gradient(135deg, ${preset.settings.colors[0]}, ${preset.settings.colors[preset.settings.colors.length - 1]})`,
-                    color: '#fff',
-                  }}
-                >
-                  <span className={styles.presetName}>{preset.label}</span>
-                </button>
+                />
               ))}
             </div>
             <p className={styles.subtle}>
-              Une ambiance remplace tous les réglages ci-dessous — à ajuster ensuite librement.
+              Une ambiance remplace tous les réglages : ajustez-les ensuite dans les sections ci-dessous.
             </p>
           </Section>
 
-          <Section title="Style et animation" defaultOpen>
-            <Segmented
-              options={PARTICLE_SHAPES.map(s => ({ value: s.value, label: s.label }))}
-              value={p.shape}
-              onChange={shape => setParticles({ shape })}
-            />
-            <Segmented
-              options={PARTICLE_MOTIONS.map(m => ({ value: m.value, label: m.label }))}
-              value={p.motion}
-              onChange={motion => setParticles({ motion })}
-            />
-            {p.motion === 'stream' && (
-              <Slider
-                label="Direction du flux" min={0} max={360} step={5}
-                value={p.direction} display={`${p.direction}°`}
-                onChange={v => setParticles({ direction: v })}
-              />
+          <Section title="Forme et couleurs" defaultOpen>
+            <ShapePicker value={p.shape} onChange={shape => setParticles({ shape })} />
+            {p.shape === 'image' && (
+              <>
+                <ParticleImageField value={p.image} onPick={image => setParticles({ image })} />
+                <SwitchRow
+                  label="Teinter aux couleurs ci-dessous"
+                  checked={!!p.imageTint}
+                  onChange={imageTint => setParticles({ imageTint })}
+                />
+                {!p.image && (
+                  <p className={styles.subtle}>
+                    Sans image, les particules s'affichent en points. Un PNG à fond transparent donne le meilleur rendu.
+                  </p>
+                )}
+              </>
             )}
-          </Section>
-
-          <Section title="Réglages">
-            <Slider label="Quantité" min={5} max={400} step={5} value={p.count} display={`${p.count}`}
-              onChange={v => setParticles({ count: v })} />
-            <Slider label="Vitesse" min={0.1} max={3} step={0.1} value={p.speed} display={`${p.speed.toFixed(1)}×`}
-              onChange={v => setParticles({ speed: v })} />
-            <Slider label="Taille" min={1} max={24} step={0.5} value={p.size} display={`${p.size}px`}
-              onChange={v => setParticles({ size: v })} />
-            <Slider label="Variation de taille" min={0} max={1} step={0.05} value={p.sizeVariation}
-              display={`${Math.round(p.sizeVariation * 100)}%`}
-              onChange={v => setParticles({ sizeVariation: v })} />
-            <Slider label="Opacité" min={0.05} max={1} step={0.05} value={p.opacity}
-              display={`${Math.round(p.opacity * 100)}%`}
-              onChange={v => setParticles({ opacity: v })} />
-            <Slider label="Halo" min={0} max={30} step={1} value={p.glow} display={`${p.glow}px`}
-              onChange={v => setParticles({ glow: v })} />
-          </Section>
-
-          <Section title="Couleurs et rendu">
             {p.colors.map((color, i) => (
               <div className={styles.field} key={i}>
                 <span className={styles.fieldLabel}>Couleur {i + 1}</span>
@@ -341,17 +323,51 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
                 ＋ Ajouter une couleur
               </button>
             )}
-            <div style={{ marginTop: '0.5rem' }}>
-              <SwitchRow label="Fusion additive" checked={p.additive} onChange={additive => setParticles({ additive })} />
-              <SwitchRow label="Scintillement" checked={p.twinkle} onChange={twinkle => setParticles({ twinkle })} />
-              <SwitchRow label="Rotation des formes" checked={p.rotate} onChange={rotate => setParticles({ rotate })} />
-            </div>
+          </Section>
+
+          <Section title="Mouvement">
+            <Chips
+              label="Type de mouvement"
+              options={PARTICLE_MOTIONS.map(m => ({ value: m.value, label: m.label }))}
+              value={p.motion}
+              onChange={motion => setParticles({ motion })}
+            />
+            <Slider label="Vitesse" min={0.1} max={3} step={0.1} value={p.speed} display={`${p.speed.toFixed(1)}×`}
+              onChange={v => setParticles({ speed: v })} />
+            {p.motion === 'stream' && (
+              <Slider
+                label="Direction du flux" min={0} max={360} step={5}
+                value={p.direction} display={`${p.direction}°`}
+                onChange={v => setParticles({ direction: v })}
+              />
+            )}
+          </Section>
+
+          <Section title="Densité et taille">
+            <Slider label="Quantité" min={5} max={400} step={5} value={p.count} display={`${p.count}`}
+              onChange={v => setParticles({ count: v })} />
+            <Slider label="Taille" min={1} max={24} step={0.5} value={p.size} display={`${p.size}px`}
+              onChange={v => setParticles({ size: v })} />
+            <Slider label="Variation de taille" min={0} max={1} step={0.05} value={p.sizeVariation}
+              display={`${Math.round(p.sizeVariation * 100)}%`}
+              onChange={v => setParticles({ sizeVariation: v })} />
+            <Slider label="Opacité" min={0.05} max={1} step={0.05} value={p.opacity}
+              display={`${Math.round(p.opacity * 100)}%`}
+              onChange={v => setParticles({ opacity: v })} />
+          </Section>
+
+          <Section title="Lumière">
+            <Slider label="Halo" min={0} max={30} step={1} value={p.glow} display={`${p.glow}px`}
+              onChange={v => setParticles({ glow: v })} />
+            <SwitchRow label="Fusion additive" checked={p.additive} onChange={additive => setParticles({ additive })} />
+            <SwitchRow label="Scintillement" checked={p.twinkle} onChange={twinkle => setParticles({ twinkle })} />
+            <SwitchRow label="Rotation des formes" checked={p.rotate} onChange={rotate => setParticles({ rotate })} />
           </Section>
 
           <Section title="Liens">
             <p className={styles.subtle}>
-              Relie les particules proches par un trait — l'effet « constellation ».
-              Au-delà de 220 particules, les liens sont ignorés pour préserver la fluidité.
+              Relie les particules proches par un trait (effet « constellation »).
+              Au-delà de 220 particules, les liens sont ignorés pour garder la fluidité.
             </p>
             <SwitchRow
               label="Activer les liens"
@@ -383,7 +399,8 @@ export default function BackgroundPanel({ slideIndex, current, ultra, onChange }
           </Section>
 
           <Section title="Réaction à la souris">
-            <Segmented
+            <Chips
+              label="Réaction du curseur"
               options={PARTICLE_MOUSE_MODES.map(m => ({ value: m.value, label: m.label }))}
               value={p.mouse.mode}
               onChange={mode => setParticles({ mouse: { ...p.mouse, mode } })}

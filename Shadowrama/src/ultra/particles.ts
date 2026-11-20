@@ -6,6 +6,8 @@ import type {
 } from '../types'
 
 /** Vitesse de référence, en pixels par seconde, pour `speed = 1`. */
+import { resolveMedia } from '../utils/mediaStore'
+
 const BASE_SPEED = 34
 /** Au-delà, le calcul des liens (O(n²)) coûte plus qu'il n'apporte. */
 const LINK_LIMIT = 220
@@ -230,6 +232,57 @@ export function createParticleField(
   let raf = 0
   let last = 0
   let t = 0
+
+  // ── Image des particules ──
+  // L'image est réduite une fois pour toutes dans un petit canvas : une photo de
+  // 4000 px dessinée des centaines de fois par image coûterait cher pour un
+  // motif de quelques pixels. Les versions teintées sont mises en cache.
+  const SPRITE_MAX = 160
+  let sprite: HTMLCanvasElement | null = null
+  let spriteKey = ''
+  const tinted = new Map<string, HTMLCanvasElement>()
+
+  function loadSprite() {
+    const key = settings.shape === 'image' ? settings.image ?? '' : ''
+    if (key === spriteKey) return
+    spriteKey = key
+    sprite = null
+    tinted.clear()
+    if (!key) return
+    const src = key.startsWith('media/') ? resolveMedia(key) : key
+    if (!src) return
+    const img = new Image()
+    img.onload = () => {
+      // Réglage changé ou champ détruit pendant le chargement : on abandonne.
+      if (spriteKey !== key || !img.naturalWidth || !img.naturalHeight) return
+      const scale = Math.min(1, SPRITE_MAX / Math.max(img.naturalWidth, img.naturalHeight))
+      const small = document.createElement('canvas')
+      small.width = Math.max(1, Math.round(img.naturalWidth * scale))
+      small.height = Math.max(1, Math.round(img.naturalHeight * scale))
+      small.getContext('2d')?.drawImage(img, 0, 0, small.width, small.height)
+      sprite = small
+    }
+    img.src = src
+  }
+
+  /** Silhouette de l'image remplie d'une couleur (l'alpha d'origine est gardé). */
+  function tintedSprite(color: string): HTMLCanvasElement | null {
+    if (!sprite) return null
+    const cached = tinted.get(color)
+    if (cached) return cached
+    const out = document.createElement('canvas')
+    out.width = sprite.width
+    out.height = sprite.height
+    const oc = out.getContext('2d')
+    if (!oc) return sprite
+    oc.drawImage(sprite, 0, 0)
+    oc.globalCompositeOperation = 'source-in'
+    oc.fillStyle = color
+    oc.fillRect(0, 0, out.width, out.height)
+    tinted.set(color, out)
+    return out
+  }
+
   const pointer = { x: 0, y: 0, active: false }
 
   // ── Fabrication ──
@@ -425,6 +478,29 @@ export function createParticleField(
         c.stroke()
         c.restore()
         break
+
+      case 'image': {
+        const source = settings.imageTint ? tintedSprite(p.color) : sprite
+        if (!source) {
+          // Image absente ou pas encore chargée : des points, pour ne rien laisser de vide.
+          c.beginPath()
+          c.arc(x, y, r, 0, TWO_PI)
+          c.fill()
+          break
+        }
+        // r est un rayon : le plus grand côté de l'image fait environ 3,2 r.
+        const side = r * 3.2
+        const aspect = source.width / source.height
+        const w = aspect >= 1 ? side : side * aspect
+        const h = aspect >= 1 ? side / aspect : side
+        c.save()
+        c.translate(x, y)
+        // Droite par défaut : une image qui tourne au hasard fait brouillon.
+        if (settings.rotate) c.rotate(p.angle)
+        c.drawImage(source, -w / 2, -h / 2, w, h)
+        c.restore()
+        break
+      }
 
       case 'cross':
         c.save()
@@ -630,6 +706,7 @@ export function createParticleField(
   observer.observe(canvas)
   resize()
   syncCount()
+  loadSprite()
 
   window.addEventListener('mousemove', onMouseMove)
   document.addEventListener('mouseleave', onMouseLeave)
@@ -644,6 +721,7 @@ export function createParticleField(
         reseedDirections()
       }
       if (settings.count !== prev.count) syncCount()
+      loadSprite()
       if (
         settings.size !== prev.size ||
         settings.sizeVariation !== prev.sizeVariation ||
@@ -661,6 +739,10 @@ export function createParticleField(
     },
     destroy() {
       stop()
+      // Invalide un chargement d'image encore en cours.
+      spriteKey = '\0'
+      sprite = null
+      tinted.clear()
       observer.disconnect()
       window.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseleave', onMouseLeave)

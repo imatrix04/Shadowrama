@@ -269,6 +269,8 @@ function normalizeParticles(raw: unknown): ParticleSettings | undefined {
   if (typeof p.twinkle === 'boolean') partial.twinkle = p.twinkle
   if (typeof p.rotate === 'boolean') partial.rotate = p.rotate
   if (typeof p.direction === 'number') partial.direction = p.direction
+  if (typeof p.image === 'string') partial.image = p.image
+  if (typeof p.imageTint === 'boolean') partial.imageTint = p.imageTint
 
   if (Array.isArray(p.colors)) {
     const colors = p.colors.filter((c): c is string => typeof c === 'string').slice(0, 4)
@@ -352,6 +354,9 @@ export function collectUsedMediaKeys(slides: Slide[]): Set<string> {
     if (slide.background?.type === 'image' && slide.background.image?.startsWith('media/')) {
       keys.add(slide.background.image)
     }
+    // Sans cette ligne, l'image des particules serait purgée à l'enregistrement.
+    const particleImage = slide.background?.particles?.image
+    if (particleImage?.startsWith('media/')) keys.add(particleImage)
   }
   return keys
 }

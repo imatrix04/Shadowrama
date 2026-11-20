@@ -377,6 +377,8 @@ export interface SlideTransitionSettings {
 
 export type ParticleShape =
   | 'circle' | 'glow' | 'square' | 'triangle' | 'star' | 'ring' | 'line' | 'cross'
+  /** Image importée (voir `ParticleSettings.image`). */
+  | 'image'
 
 export type ParticleMotion =
   /** Dérive libre, direction aléatoire par particule. */
@@ -445,6 +447,12 @@ export interface ParticleSettings {
   direction: number
   links: ParticleLinks
   mouse: ParticleMouse
+  /** Clé média (voir mediaStore) ou URL de l'image des particules, pour
+   *  `shape: 'image'`. Optionnel : sans image, la forme retombe sur des points. */
+  image?: string
+  /** Teint l'image avec les couleurs des particules (utile pour un pictogramme
+   *  blanc ou noir). Sinon l'image garde ses propres couleurs. */
+  imageTint?: boolean
 }
 
 /**
