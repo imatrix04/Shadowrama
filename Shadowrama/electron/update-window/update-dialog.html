@@ -6,7 +6,9 @@
   /* Cette fenêtre est chargée via loadFile, hors bundle Vite : elle ne peut pas
      importer les polices @fontsource et ne doit pas dépendre du réseau. */
   :root {
-    --bg: rgba(20, 20, 26, 0.92);
+    /* Opaque : la fenêtre Electron est transparente, donc backdrop-filter ne floute
+       rien du bureau et un fond translucide laisse voir l'appli en dessous. */
+    --bg: #16161d;
     --border: rgba(255, 255, 255, 0.08);
     --accent: #7c5cff;
     --accent-glow: rgba(124, 92, 255, 0.45);
@@ -169,11 +171,50 @@
   .note-body {
     margin: 0;
     font-size: 12px;
-    line-height: 1.5;
-    color: var(--text-dim);
-    white-space: pre-wrap;
+    line-height: 1.55;
+    color: rgba(244, 244, 246, 0.78);
     word-break: break-word;
   }
+  .note-body strong { color: var(--text); font-weight: 700; }
+  .note-body em { color: var(--text); font-style: italic; }
+  .note-body code {
+    font-family: Consolas, 'Cascadia Code', monospace;
+    font-size: 11px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.1);
+    color: #c9bbff;
+  }
+  .note-body .md-p { margin: 0 0 8px; color: inherit; font-size: 12px; }
+  .note-body .md-quote {
+    padding: 4px 0 4px 10px;
+    border-left: 2px solid var(--accent);
+    background: rgba(124, 92, 255, 0.08);
+    border-radius: 0 6px 6px 0;
+  }
+  .note-body ul { margin: 0 0 8px; padding: 0; list-style: none; }
+  .note-body li { position: relative; padding-left: 14px; margin-bottom: 4px; }
+  .note-body li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0.6em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .note-body .md-h {
+    color: var(--text);
+    font-weight: 700;
+    margin: 12px 0 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .note-body .md-h:first-child { margin-top: 0; }
+  .note-body .md-h1 { font-size: 14px; }
+  .note-body .md-h2 { font-size: 13px; }
+  .note-body .md-h3 { font-size: 12.5px; color: #c9bbff; }
 
   .actions {
     display: flex;
@@ -292,12 +333,84 @@
       heading.textContent = 'Version ' + version
       notesEl.appendChild(heading)
 
-      const body = document.createElement('p')
+      const body = document.createElement('div')
       body.className = 'note-body'
-      body.textContent = htmlToText(note)
+      renderMarkdown(htmlToText(note), body)
       notesEl.appendChild(body)
     }
     notesEl.style.display = 'block'
+  }
+
+  /** Inline : **gras**, *italique*, `code`. Uniquement des nœuds DOM, jamais d'innerHTML. */
+  function renderInline(text, parent) {
+    const re = /(\*\*[^*]+?\*\*|`[^`]+?`|\*[^*\s][^*]*?\*)/g
+    let last = 0
+    let m
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) parent.appendChild(document.createTextNode(text.slice(last, m.index)))
+      const tok = m[0]
+      let el
+      if (tok.startsWith('**')) {
+        el = document.createElement('strong')
+        renderInline(tok.slice(2, -2), el)
+      } else if (tok.startsWith('`')) {
+        el = document.createElement('code')
+        el.textContent = tok.slice(1, -1)
+      } else {
+        el = document.createElement('em')
+        renderInline(tok.slice(1, -1), el)
+      }
+      parent.appendChild(el)
+      last = m.index + tok.length
+    }
+    if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)))
+  }
+
+  /** Markdown minimal : titres #, listes -, citations >, paragraphes. */
+  function renderMarkdown(src, container) {
+    let list = null
+    let para = null
+    const flush = () => { list = null; para = null }
+
+    for (const raw of src.split('\n')) {
+      let line = raw.trim()
+      if (line === '') { flush(); continue }
+
+      // Citation : on retire le « > » et on traite le contenu comme une ligne normale.
+      let quoted = false
+      while (line.startsWith('>')) { line = line.slice(1).trim(); quoted = true }
+      if (line === '') { flush(); continue }
+
+      const h = /^(#{1,6})\s+(.*)$/.exec(line)
+      const li = /^(?:[-*•])\s+(.*)$/.exec(line)
+
+      if (h) {
+        flush()
+        const el = document.createElement('div')
+        el.className = 'md-h md-h' + Math.min(h[1].length, 3)
+        renderInline(h[2], el)
+        container.appendChild(el)
+      } else if (li) {
+        if (!list) {
+          list = document.createElement('ul')
+          container.appendChild(list)
+        }
+        para = null
+        const item = document.createElement('li')
+        renderInline(li[1], item)
+        list.appendChild(item)
+      } else {
+        list = null
+        if (!para || quoted !== para.classList.contains('md-quote')) {
+          para = document.createElement('p')
+          para.className = 'md-p' + (quoted ? ' md-quote' : '')
+          container.appendChild(para)
+        } else {
+          para.appendChild(document.createTextNode(' '))
+        }
+        renderInline(line, para)
+      }
+    }
   }
 
   /** Réduit le HTML de la release à du texte lisible, sans jamais l'interpréter. */
@@ -307,6 +420,11 @@
       // Contenu des balises exécutables retiré avec les balises : sans ça, le
       // corps d'un <script> réapparaîtrait sous forme de texte dans la fenêtre.
       .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+      // Balises de mise en forme converties en équivalent Markdown pour être rendues par renderMarkdown.
+      .replace(/<h([1-6])[^>]*>/gi, (_m, n) => NL + '#'.repeat(Number(n)) + ' ')
+      .replace(/<\/?(strong|b)(\s[^>]*)?>/gi, '**')
+      .replace(/<\/?(em|i)(\s[^>]*)?>/gi, '*')
+      .replace(/<\/?code(\s[^>]*)?>/gi, '`')
       .replace(/<\/(p|div|li|h[1-6])>/gi, NL)
       .replace(/<li[^>]*>/gi, '• ')
       .replace(/<br\s*\/?>/gi, NL)

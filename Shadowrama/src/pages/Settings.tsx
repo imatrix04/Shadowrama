@@ -148,6 +148,22 @@ export default function Settings() {
                 />
               </div>
             </SettingRow>
+            <SettingRow
+              title="Bloc Graphique"
+              badge="Bêta"
+              description="Colonnes, barres, courbes, camemberts et anneaux, animés à l'apparition. Ajoute un bloc Graphique à l'éditeur et à l'assistant IA."
+            >
+              <div className={styles.featureControl}>
+                <span className={`${styles.featureState} ${features.chart ? styles.featureStateOn : ''}`}>
+                  {features.chart ? 'Activé' : 'Désactivé'}
+                </span>
+                <Switch
+                  checked={features.chart}
+                  onChange={checked => setFeature('chart', checked)}
+                  label="Bloc Graphique"
+                />
+              </div>
+            </SettingRow>
           </section>
         </div>
       </div>

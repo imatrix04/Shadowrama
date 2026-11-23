@@ -1,3 +1,4 @@
+import type { Features } from '../hooks/useFeatures'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Slide, SlideNumbering } from '../types'
 import {
@@ -50,6 +51,8 @@ interface Params {
   currentSlide: number
   selectedIds: number[]
   ultra: boolean
+  /** Fonctionnalités bêta déverrouillées (le bloc Graphique, par exemple). */
+  features: Features
   /** Ouvre une entrée d'historique (voir useEditorHistory). */
   begin: () => void
   /** Remplace l'état sans nouvelle entrée d'historique. */
@@ -80,7 +83,7 @@ interface Params {
  * sous ») est le MÊME projet : la conversation le suit.
  */
 export function useAIAssistant({
-  slides, currentSlide, selectedIds, ultra, begin, patch, onFocusSlide, numbering, onNumbering, projectKey, initial,
+  slides, currentSlide, selectedIds, ultra, features, begin, patch, onFocusSlide, numbering, onNumbering, projectKey, initial,
 }: Params) {
   const [start] = useState(() => restore(initial ?? emptyConversation()))
   const [items, setItems] = useState<ChatItem[]>(start.items)
@@ -108,8 +111,8 @@ export function useAIAssistant({
   const generationRef = useRef(0)
 
   // L'état courant est lu au moment de l'envoi, pas à celui du rendu.
-  const latest = useRef({ slides, currentSlide, selectedIds, ultra, numbering })
-  useEffect(() => { latest.current = { slides, currentSlide, selectedIds, ultra, numbering } })
+  const latest = useRef({ slides, currentSlide, selectedIds, ultra, features, numbering })
+  useEffect(() => { latest.current = { slides, currentSlide, selectedIds, ultra, features, numbering } })
   useEffect(() => { attachmentsRef.current = attachments }, [attachments])
 
   // ── Rattachement au projet ──
@@ -294,7 +297,7 @@ export function useAIAssistant({
         history: historyRef.current,
         userText: trimmed,
         slides: state.slides,
-        editor: { currentSlide: state.currentSlide, selectedIds: state.selectedIds, ultra: state.ultra },
+        editor: { currentSlide: state.currentSlide, selectedIds: state.selectedIds, ultra: state.ultra, features: state.features },
         attachments: attachmentsRef.current,
         signal: controller.signal,
         onSlides: next => {

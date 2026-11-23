@@ -24,7 +24,7 @@ const baseOptions = (over: Partial<SessionOptions> = {}): SessionOptions => ({
   history: [],
   userText: 'Ajoute un titre',
   slides: [{ id: 1, blocks: [] }] as Slide[],
-  editor: { currentSlide: 0, selectedIds: [], ultra: false },
+  editor: { currentSlide: 0, selectedIds: [], ultra: false, features: { alignment: false, chart: false } },
   onSlides: vi.fn(),
   onFocusSlide: vi.fn(),
   onEvent: vi.fn(),

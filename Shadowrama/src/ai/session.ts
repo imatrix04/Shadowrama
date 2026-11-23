@@ -1,3 +1,4 @@
+import type { Features } from '../hooks/useFeatures'
 import type { Slide, SlideNumbering } from '../types'
 import { SYSTEM_PROMPT, editorContext } from './prompt'
 import { TOOL_DEFS, executeTool } from './tools'
@@ -22,7 +23,7 @@ export interface SessionOptions {
   history: WireMessage[]
   userText: string
   slides: Slide[]
-  editor: { currentSlide: number; selectedIds: number[]; ultra: boolean }
+  editor: { currentSlide: number; selectedIds: number[]; ultra: boolean; features: Features }
   /** Fichiers joints à la conversation (seuls nom et dimensions sont décrits au modèle). */
   attachments?: Attachment[]
   /** Appelé à chaque modification, avec l'état complet des diapositives. */
@@ -79,6 +80,7 @@ export async function runAssistant(opts: SessionOptions): Promise<SessionResult>
     slideCount: opts.slides.length,
     selectedIds: opts.editor.selectedIds,
     ultra: opts.editor.ultra,
+    features: opts.editor.features,
     attachments: opts.attachments,
   })
   const userMessage: WireMessage = { role: 'user', content: [{ type: 'text', text: `${context}\n\n${opts.userText}` }] }
@@ -155,7 +157,7 @@ export async function runAssistant(opts: SessionOptions): Promise<SessionResult>
           continue
         }
         const outcome = executeTool(working, call.name, call.input, {
-          ultra: opts.editor.ultra, attachments: opts.attachments, numbering: workingNumbering,
+          ultra: opts.editor.ultra, features: opts.editor.features, attachments: opts.attachments, numbering: workingNumbering,
         })
         if (outcome.slides !== working) {
           working = outcome.slides

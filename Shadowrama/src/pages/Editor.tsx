@@ -118,6 +118,7 @@ function EditorView({ initialDraft, initialConversation }: {
     currentSlide: Math.min(requestedSlide, slides.length - 1),
     selectedIds: selectedBlockIds,
     ultra,
+    features,
     begin,
     patch,
     onFocusSlide: setRequestedSlide,
@@ -469,6 +470,7 @@ function EditorView({ initialDraft, initialConversation }: {
             selectedBlocks={slides[currentSlide].blocks.filter(b => selectedBlockIds.includes(b.id))}
             onCommitBlocks={commitBlocks}
             alignmentEnabled={features.alignment}
+            features={features}
           />
           <Canvas
               blocks={slides[currentSlide].blocks}

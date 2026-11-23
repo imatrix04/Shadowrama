@@ -3,6 +3,7 @@ import { isKnownBlockType } from '../blocks'
 import { registerMedia, getAllMediaForSave, clearMediaStore } from './mediaStore'
 import { clipboardMediaKeys } from './clipboard'
 import { nextId } from './ids'
+import { normalizeChartData } from './chart'
 import { DEFAULT_NUMBERING, normalizeNumbering } from './numbering'
 import { PptxFormatError, importPptx } from './pptx/import'
 import type { ImportReport } from './pptx/import'
@@ -324,6 +325,12 @@ function normalizeBlock(block: BlockData): BlockData {
     ;(clean as { items: unknown }).items = items
       .filter((it): it is Record<string, unknown> => !!it && typeof it === 'object' && typeof it.src === 'string')
       .map(it => ({ ...it, id: typeof it.id === 'number' ? it.id : nextId() }))
+  }
+
+  // Un graphique sans liste de données exploitable ferait planter le rendu.
+  if (clean.type === 'chart') {
+    clean.data = normalizeChartData((clean as { data?: unknown }).data, nextId)
+    if (clean.data.length === 0) clean.data = [{ id: nextId(), label: '', value: 0 }]
   }
 
   if (clean.type === 'webview') {

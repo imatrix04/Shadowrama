@@ -201,18 +201,33 @@ ipcMain.handle('check-for-updates', async () => {
   }
 })
 
-app.whenReady().then(() => {
-  registerAiHandlers(() => mainWindow)
-  createWindow()
+// Deux instances partageraient le même dossier userData : la seconde n'arrive
+// pas à déplacer/créer le cache Chromium (« Accès refusé », base de quotas
+// corrompue…). On n'en garde qu'une et on remet la première au premier plan.
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
 
-  if (process.env.NODE_ENV !== 'development') {
-    setupAutoUpdater()
-  } else {
-    globalShortcut.register('CommandOrControl+Shift+U', () => {
-      openUpdateDialog()
-    })
-  }
-})
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  })
+
+  app.whenReady().then(() => {
+    registerAiHandlers(() => mainWindow)
+    createWindow()
+
+    if (process.env.NODE_ENV !== 'development') {
+      setupAutoUpdater()
+    } else {
+      globalShortcut.register('CommandOrControl+Shift+U', () => {
+        openUpdateDialog()
+      })
+    }
+  })
+}
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()

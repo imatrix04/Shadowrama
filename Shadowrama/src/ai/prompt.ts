@@ -1,3 +1,4 @@
+import type { Features } from '../hooks/useFeatures'
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from './tools'
 import type { Attachment } from './types'
 
@@ -28,6 +29,7 @@ export const SYSTEM_PROMPT = `Tu es l'assistant intégré à Shadowrama, un édi
 
 # Limites
 - Images, vidéos, carrousels : tu peux créer ces blocs (add_block), vides. Tu ne vois jamais le contenu des fichiers et tu n'inventes aucune adresse. Si le contexte liste des pièces jointes, place-les avec set_block_media (par numéro, en t'aidant de leur nom et de ce que dit l'utilisateur). Sinon laisse l'emplacement vide et dis à l'utilisateur d'y ajouter son fichier (clic sur le bloc) ou de le joindre à la conversation avec le bouton trombone. Le carrousel exige le mode Ultra Design.
+- Graphiques : bloc « chart » (fonctionnalité bêta : utilisable seulement si le contexte indique « bloc Graphique (bêta) : activé » ; sinon dis à l'utilisateur de l'activer dans Paramètres → Fonctionnalités, au lieu de le contourner avec des formes). Donne « chartKind » et « data » ([{ label, value }]) avec de vrais chiffres fournis par l'utilisateur ou confirmés par une recherche : n'invente aucune donnée. Colonnes/barres pour comparer, courbe/aire pour une évolution dans le temps, camembert/anneau pour des parts d'un total (5 parts maximum). Mets l'unité dans « unit », garde un titre dans un bloc titre à côté, et au moins 400×260 px. L'animation d'apparition est activée par défaut ; ne la désactive que si on te le demande.
 - Page web (mode Ultra Design) : le bloc « webview » prend une adresse http(s) dans « url ». Si l'utilisateur n'en donne pas, laisse-la vide.
 - Numérotation des pages : set_numbering. C'est un réglage du projet entier : les numéros s'affichent automatiquement et restent justes quand les diapositives bougent. N'écris JAMAIS les numéros à la main dans des blocs texte. Pour « numéroter », appelle set_numbering avec enabled: true ; ajoute skipFirst: true si la première diapositive est une page de titre, ou si l'utilisateur le demande. Elle n'est pas annulable par Ctrl+Z : dis-le si l'utilisateur veut revenir en arrière (enabled: false).
 - Particules d'arrière-plan : set_slide_particles (mode Ultra Design). Pars d'un preset de get_reference, puis ajuste ; choisis des couleurs qui ressortent sur le fond (vérifie-le avec get_slide) et reste sobre (50 à 120 particules en général).
@@ -48,6 +50,7 @@ export function editorContext(opts: {
   slideCount: number
   selectedIds: number[]
   ultra: boolean
+  features: Features
   attachments?: Attachment[]
 }): string {
   const selection = opts.selectedIds.length > 0
@@ -61,5 +64,5 @@ export function editorContext(opts: {
       return `#${a.id} « ${clean(a.name)} » (${a.kind === 'video' ? 'vidéo' : 'image'}${size})`
     }).join(' ; ')
     : 'aucune'
-  return `[Contexte de l'éditeur — diapositive affichée : ${opts.currentSlide + 1} sur ${opts.slideCount} ; ${selection} ; mode Ultra Design : ${opts.ultra ? 'activé' : 'désactivé'} ; pièces jointes (contenu non transmis) : ${files}]`
+  return `[Contexte de l'éditeur — diapositive affichée : ${opts.currentSlide + 1} sur ${opts.slideCount} ; ${selection} ; mode Ultra Design : ${opts.ultra ? 'activé' : 'désactivé'} ; bloc Graphique (bêta) : ${opts.features.chart ? 'activé' : 'désactivé'} ; pièces jointes (contenu non transmis) : ${files}]`
 }

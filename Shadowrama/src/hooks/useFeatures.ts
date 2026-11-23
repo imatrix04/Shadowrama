@@ -6,13 +6,15 @@ const KEY = 'shadowrama-features'
  * Fonctionnalités verrouillées : invisibles et inutilisables tant qu'elles ne
  * sont pas déverrouillées dans Paramètres → Fonctionnalités. Toutes sont
  * désactivées par défaut ; en ajouter une = une clé ici + une ligne dans
- * Settings.tsx + un test de la clé dans l'éditeur.
+ * Settings.tsx + un test de la clé dans l'éditeur. Un bloc peut dépendre d'une
+ * fonctionnalité (`BlockConfig.beta`) : il est alors absent de la palette et de
+ * l'assistant tant qu'elle est verrouillée, mais les blocs déjà posés restent.
  */
-export type FeatureKey = 'alignment'
+export type FeatureKey = 'alignment' | 'chart'
 
 export type Features = Record<FeatureKey, boolean>
 
-const DEFAULTS: Features = { alignment: false }
+const DEFAULTS: Features = { alignment: false, chart: false }
 
 /**
  * Lecture tolérante du stockage : clés inconnues, valeurs non booléennes ou JSON

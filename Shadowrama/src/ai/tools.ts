@@ -1,6 +1,6 @@
 import { BLOCKS_CONFIG, getBlockConfig, getBlockProperties } from '../blocks'
 import type {
-  BlockData, BlockEffects, BlockProperty, ParticleSettings, Slide, SlideBackground, SlideNumbering,
+  BlockData, BlockEffects, BlockProperty, ChartDatum, ParticleSettings, Slide, SlideBackground, SlideNumbering,
 } from '../types'
 import {
   DEFAULT_NUMBERING, NUMBERING_FORMATS, NUMBERING_POSITIONS, slideNumberText,
@@ -10,6 +10,8 @@ import {
   PARTICLE_MOTIONS, PARTICLE_MOUSE_MODES, PARTICLE_PRESETS, PARTICLE_SHAPES, mergeParticles,
 } from '../ultra/particles'
 import { availableTransitions, getSlideTransition } from '../ultra/slideTransitions'
+import { MAX_CHART_DATA } from '../utils/chart'
+import type { Features } from '../hooks/useFeatures'
 import { nextId } from '../utils/ids'
 import { POLYGON_PRESETS } from '../utils/shapePolygon'
 import type { ShapePolygon } from '../utils/shapePolygon'
@@ -67,6 +69,9 @@ const NUMBER_RANGES: Record<string, [number, number]> = {
   opacity: [0, 1],
   lineHeight: [0.5, 4],
   letterSpacing: [-20, 100],
+  animSeconds: [0.1, 10],
+  animDelay: [0, 10],
+  ringWidth: [0.2, 0.9],
 }
 
 const COLOR_PATTERN = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%deg]+\)|transparent)$/i
@@ -74,6 +79,8 @@ const COLOR_PATTERN = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%deg]+
 export interface ToolContext {
   /** Mode Ultra Design actif : débloque les blocs, mouvements et transitions avancés. */
   ultra: boolean
+  /** Fonctionnalités bêta déverrouillées : un bloc qui en dépend est refusé sinon. */
+  features?: Partial<Features>
   /** Fichiers joints par l'utilisateur dans la conversation (numérotés). */
   attachments?: Attachment[]
   /** Numérotation actuelle du projet (réglage de projet, hors diapositives). */
@@ -149,7 +156,9 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'add_block',
     description:
-      'Ajoute un bloc (texte, titre, forme, image, vidéo, ou carrousel / page web en mode Ultra) sur une diapositive. '
+      'Ajoute un bloc (texte, titre, forme, image, vidéo, graphique, ou carrousel / page web en mode Ultra) sur une diapositive. '
+      + 'GRAPHIQUE : `props.chartKind` (column, bar, line, area, pie, donut) et `props.data` = liste de { label, value, color? } ; '
+      + "il s'anime à l'apparition (animated, animSeconds, cascade). "
       + 'Les blocs image, vidéo et carrousel sont créés VIDES : remplis-les ensuite avec set_block_media si '
       + "l'utilisateur a joint un fichier, sinon laisse l'emplacement vide pour qu'il y ajoute le sien. "
       + '`props` suit la liste de get_reference. FORME PERSONNALISÉE : `props.customShape` = liste de points '
@@ -438,6 +447,23 @@ function asPolygon(value: unknown): ShapePolygon {
   })
 }
 
+/** Données d'un graphique : une liste de { label, value, color? }, au moins une, valeurs positives. */
+function asChartData(value: unknown): ChartDatum[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_CHART_DATA) {
+    fail(`\`data\` doit être une liste de 1 à ${MAX_CHART_DATA} éléments { "label": texte, "value": nombre }.`)
+  }
+  return (value as unknown[]).map((item, index) => {
+    const d = asObject(item, `\`data[${index}]\``)
+    if (typeof d.label !== 'string') fail(`\`data[${index}].label\` doit être du texte.`)
+    return {
+      id: nextId(),
+      label: (d.label as string).slice(0, 60),
+      value: asNumber(d.value, `\`data[${index}].value\``, 0, 1e12),
+      ...(d.color !== undefined && { color: asColor(d.color, `\`data[${index}].color\``) }),
+    }
+  })
+}
+
 /**
  * Valide les propriétés fournies pour un type de bloc et renvoie celles à poser.
  * Tout ce qui n'est pas listé dans la config du bloc est refusé.
@@ -489,6 +515,9 @@ function validateProps(type: string, rawProps: unknown): Partial<BlockData> {
       case 'boolean':
         if (typeof value !== 'boolean') fail(`\`${key}\` doit être vrai ou faux.`)
         out[key] = value
+        break
+      case 'chartData':
+        out[key] = asChartData(value)
         break
       case 'url': {
         const url = normalizeWebUrl(value)
@@ -551,7 +580,7 @@ function reference(ctx: ToolContext) {
   return {
     slide: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT, unit: 'px', origin: 'coin supérieur gauche' },
     blocks: BLOCKS_CONFIG
-      .filter(c => !c.ultraOnly || ctx.ultra)
+      .filter(c => (!c.ultraOnly || ctx.ultra) && (!c.beta || ctx.features?.[c.beta]))
       .map(c => ({
         type: c.type,
         label: c.label,
@@ -674,6 +703,9 @@ function run(slides: Slide[], name: string, input: Input, ctx: ToolContext): Too
       const type = typeof input.type === 'string' ? input.type : fail('`type` est requis.')
       const config = getBlockConfig(type) ?? fail(`Type de bloc inconnu : « ${type} ». Voir get_reference.`)
       if (config?.ultraOnly && !ctx.ultra) fail(`Le bloc « ${type} » exige le mode Ultra Design, qui n'est pas activé.`)
+      if (config?.beta && !ctx.features?.[config.beta]) {
+        fail(`Le bloc « ${type} » est une fonctionnalité bêta, non activée : l'utilisateur doit l'activer dans Paramètres → Fonctionnalités.`)
+      }
       const slide = slides[i]
       if (slide.blocks.length >= MAX_BLOCKS_PER_SLIDE) fail(`Limite de ${MAX_BLOCKS_PER_SLIDE} blocs par diapositive atteinte.`)
 

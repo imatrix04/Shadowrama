@@ -1,3 +1,4 @@
+import type { Features } from '../../hooks/useFeatures'
 import { useState } from 'react'
 import type { BlockConfig, BlockData, MotionPhase } from '../../types'
 import { BLOCKS_CONFIG } from '../../blocks'
@@ -23,6 +24,8 @@ interface Props {
   selectedBlocks: BlockData[]
   /** Fonctionnalité Alignement déverrouillée dans les Paramètres. */
   alignmentEnabled: boolean
+  /** Fonctionnalités bêta déverrouillées : filtrent les blocs de la palette. */
+  features: Features
   /** Lot atomique : une seule entrée d'historique pour tout l'alignement. */
   onCommitBlocks: (updates: BlockUpdate[]) => void
 }
@@ -49,7 +52,7 @@ function stagger(index: number): React.CSSProperties {
 
 export default function LeftSidebars({
   onAddBlock, ultra, selectedBlock, onUpdateSelected, onGestureStart, onPreviewMotion,
-  selectedBlocks, onCommitBlocks, alignmentEnabled,
+  selectedBlocks, onCommitBlocks, alignmentEnabled, features,
 }: Props) {
   const [openPanel, setOpenPanel] = useState<string | null>(null)
 
@@ -67,7 +70,7 @@ export default function LeftSidebars({
     <>
       <DrawerTitle>Blocs</DrawerTitle>
       <div className={styles.list}>
-          {BLOCKS_CONFIG.filter(config => !config.ultraOnly || ultra).map((config, i) => (
+          {BLOCKS_CONFIG.filter(config => (!config.ultraOnly || ultra) && (!config.beta || features[config.beta])).map((config, i) => (
           <button
             key={config.type}
             className={`${styles.item} ${config.ultraOnly ? styles.itemUltra : ''}`}
@@ -78,6 +81,7 @@ export default function LeftSidebars({
             <span className={styles.itemIcon}><Icon name={config.icon} /></span>
             {config.label}
             {config.ultraOnly && <span className={styles.ultraBadge}>Ultra</span>}
+            {config.beta && <span className={styles.betaBadge}>Bêta</span>}
           </button>
         ))}
       </div>

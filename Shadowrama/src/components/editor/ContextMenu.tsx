@@ -13,7 +13,8 @@ import CustomSelect from '../../styles/CustomSelect'
 import PolygonShapeEditor from './PolygonShapeEditor'
 import Switch from '../ui/Switch'
 import CarouselItemsEditor from './CarouselItemsEditor'
-import type { CarouselItem } from '../../types'
+import ChartDataEditor from './ChartDataEditor'
+import type { CarouselItem, ChartDatum } from '../../types'
 import { normalizePolygon } from '../../utils/shapePolygon'
 import MediaFileField from './MediaFileField'
 import { normalizeWebUrl } from '../../utils/webUrl'
@@ -255,6 +256,17 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
         />
       )
     }
+    case 'chartData': {
+      const raw = getBlockField(block, prop.key)
+      return (
+        <ChartDataEditor
+          data={Array.isArray(raw) ? (raw as ChartDatum[]) : []}
+          colorMode={getBlockField(block, 'colorMode') as 'palette' | 'single' | undefined}
+          accentColor={getBlockField(block, 'accentColor') as string | undefined}
+          onChange={data => onUpdate(block.id, setBlockField(block, prop.key, data))}
+        />
+      )
+    }
     default:
       return null
   }
@@ -269,7 +281,7 @@ const TABS: { key: TabKey; label: string; icon: 'text' | 'effects' | 'motion' }[
 ]
 
 /** Champs qui portent ce que le bloc MONTRE (texte, fichier, adresse…) ; tout le reste est du réglage. */
-const CONTENT_TYPES = new Set<BlockProperty['type']>(['text', 'textarea', 'file', 'url', 'carouselItems'])
+const CONTENT_TYPES = new Set<BlockProperty['type']>(['text', 'textarea', 'file', 'url', 'carouselItems', 'chartData'])
 
 // Onglet rouvert à l'identique d'un clic droit à l'autre : on retouche rarement
 // un seul champ. Mémoire de session ; sans stockage, on repart du premier onglet.
@@ -297,7 +309,7 @@ export default function ContextMenu({ block, x, y, onUpdate, onDelete, onReorder
 
   // Résolues depuis la config du type, pas depuis le bloc : voir BaseBlockData.
   const properties = getBlockProperties(block.type)
-    .filter(prop => !prop.showIf || String(getBlockField(block, prop.showIf.key) ?? '') === prop.showIf.value)
+    .filter(prop => !prop.showIf || prop.showIf.value.split('|').includes(String(getBlockField(block, prop.showIf.key) ?? '')))
   const config = getBlockConfig(block.type)
   const animation = block.animation
   const hasAnimation = !!animation && animation.type !== 'none'

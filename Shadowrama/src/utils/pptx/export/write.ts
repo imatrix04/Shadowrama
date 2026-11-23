@@ -608,6 +608,7 @@ const NAMES: Partial<Record<BlockData['type'], string>> = {
   webview: 'Page web',
   carousel: 'Carrousel',
   video: 'Vidéo',
+  chart: 'Graphique',
   image: 'Image',
   shape: 'Forme',
   text: 'Texte',

@@ -1,13 +1,15 @@
 // types.ts
 import type { IconName } from './components/ui/Icon'
+import type { FeatureKey } from './hooks/useFeatures'
 
 export interface BlockProperty {
   key: string
   label: string
   type: 'text' | 'textarea' | 'number' | 'color' | 'select' | 'float' | 'file'
-      | 'shapePolygon' | 'boolean' | 'carouselItems' | 'url'
+      | 'shapePolygon' | 'boolean' | 'carouselItems' | 'url' | 'chartData'
   options?: { label: string; value: string }[]
   accept?: string
+  /** Affiche le champ si la valeur du champ `key` vaut `value` ; `a|b` accepte plusieurs valeurs. */
   showIf?: { key: string; value: string }
 }
 
@@ -331,7 +333,60 @@ export interface VideoBlockData extends BaseBlockData, MediaFrameData {
   endTime?: number
 }
 
-// Futurs blocs : graphique...
+// ── Graphique ───────────────────────────────────────────────────────────────
+
+export type ChartKind = 'column' | 'bar' | 'line' | 'area' | 'pie' | 'donut'
+
+/** Une donnée du graphique : une barre, un point ou une part de camembert. */
+export interface ChartDatum {
+  id: number
+  label: string
+  /** Positive ou nulle : les valeurs négatives sont ramenées à 0 au rendu. */
+  value: number
+  /** Remplace la couleur calculée (palette ou couleur unique) pour cette donnée. */
+  color?: string
+}
+
+export type ChartEase = 'smooth' | 'bounce' | 'linear'
+
+/**
+ * Graphique dessiné en SVG, sans dépendance. L'animation ne tourne qu'en
+ * présentation et dans l'éditeur (`mode`) ; vignettes et export PowerPoint
+ * montrent toujours le graphique terminé.
+ */
+export interface ChartBlockData extends BaseBlockData {
+  type: 'chart'
+  chartKind: ChartKind
+  data: ChartDatum[]
+  /** Palette (une couleur par donnée) ou couleur unique (`accentColor`). */
+  colorMode?: 'palette' | 'single'
+  accentColor?: string
+  /** Couleur des textes et du quadrillage. */
+  textColor?: string
+  fontSize?: number
+  /** Texte accolé aux valeurs : « % », « k€ »… */
+  unit?: string
+  showLabels?: boolean
+  showValues?: boolean
+  showGrid?: boolean
+  /** Légende (camembert et anneau). */
+  showLegend?: boolean
+  /** Courbe lissée (courbe et aire). */
+  smooth?: boolean
+  /** Épaisseur de l'anneau, 0.2–0.9 (anneau). */
+  ringWidth?: number
+  backgroundColor?: string
+  borderRadius?: number
+  /** Anime l'apparition du graphique. */
+  animated?: boolean
+  /** Durée de l'animation, en secondes. */
+  animSeconds?: number
+  /** Attente avant le départ, en secondes. */
+  animDelay?: number
+  animEase?: ChartEase
+  /** Les données apparaissent l'une après l'autre plutôt que toutes ensemble. */
+  cascade?: boolean
+}
 
 // ── L'union discriminée ──
 export type BlockData =
@@ -342,6 +397,7 @@ export type BlockData =
   | CarouselBlockData
   | WebviewBlockData
   | VideoBlockData
+  | ChartBlockData
 
 export interface BlockConfig {
   type: BlockData['type']
@@ -351,6 +407,9 @@ export interface BlockConfig {
   /** Réservé au mode Ultra Design : masqué de la palette sans lui, mais un
    *  bloc déjà posé reste dans le projet (rendu dégradé, voir CarouselBlock). */
   ultraOnly?: boolean
+  /** Bloc en bêta : proposé seulement si cette fonctionnalité est activée dans
+   *  les Paramètres. Un bloc déjà posé reste affiché et modifiable. */
+  beta?: FeatureKey
   defaultProps: Partial<BlockData>
   properties: BlockProperty[]
 }

@@ -187,6 +187,13 @@ export function planExport(slides: Slide[], ultra: boolean, defaults: ExportDefa
           }
           break
 
+        case 'chart':
+          // Exporté en image : PowerPoint n'a pas d'équivalent de ce rendu, et le
+          // graphique y est montré terminé (la capture n'a pas de mode animé).
+          note(slideNo, 'Graphique : exporté en image, sans animation.')
+          raster()
+          break
+
         case 'webview': {
           const url = normalizeWebUrl(block.url)
           if (!url) break
