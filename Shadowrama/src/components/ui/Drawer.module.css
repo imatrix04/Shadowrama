@@ -187,6 +187,12 @@
 .panelLeft.panelOpen { border-right: 1px solid var(--editor-border); }
 .panelRight.panelOpen { border-left: 1px solid var(--editor-border); }
 
+/* Palette Plan d'architecte : séparations tracées en pointillé. */
+:global(:root[data-palette='draft']) .tabsLeft,
+:global(:root[data-palette='draft']) .panelLeft.panelOpen { border-right: 2px dotted var(--editor-border-light); }
+:global(:root[data-palette='draft']) .tabsRight,
+:global(:root[data-palette='draft']) .panelRight.panelOpen { border-left: 2px dotted var(--editor-border-light); }
+
 .inner {
   /* Largeur figée sur celle du panneau ouvert : un `min-width` inférieur
      faisait sauter le contenu pendant l'ouverture. */

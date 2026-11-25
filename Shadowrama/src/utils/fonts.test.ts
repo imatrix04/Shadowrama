@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { FONT_CATALOG, FONT_OPTIONS, findFont, fontFromPptx, fontStack, normalizeFontFamily } from './fonts'
 
 describe('catalogue de polices', () => {
-  it('couvre les trois familles, sans doublon', () => {
+  it('couvre les quatre familles, sans doublon', () => {
     const groups = new Set(FONT_CATALOG.map(f => f.group))
-    expect([...groups].sort()).toEqual(['creative', 'hand', 'pro'])
+    expect([...groups].sort()).toEqual(['creative', 'hand', 'pro', 'vintage'])
     expect(new Set(FONT_CATALOG.map(f => f.id)).size).toBe(FONT_CATALOG.length)
   })
 

@@ -331,6 +331,7 @@
 
 [data-palette-preview='ink'] { --pv-bg: #0f1020; --pv-panel: #15162a; --pv-accent: #7c6cff; --pv-line: #f2f1fb40; }
 [data-palette-preview='neon'] { --pv-bg: #0d0d0f; --pv-panel: #16161a; --pv-accent: #2de2e6; --pv-line: #f4f4f640; }
+[data-palette-preview='draft'] { --pv-bg: #efe3c4; --pv-panel: #e4d6b3; --pv-accent: #3f3b36; --pv-line: #2b282466; }
 [data-palette-preview='warm'] { --pv-bg: #fbf8f3; --pv-panel: #efe8dc; --pv-accent: #ff6b4a; --pv-line: #2a232055; }
 
 /* ── Fonctionnalités ── */

@@ -22,6 +22,20 @@
   animation: backdropIn var(--t-fast) ease-out;
 }
 
+/* Palette Plan d'architecte : cadre et séparations tracés en pointillé. */
+:global(:root[data-palette='draft']) .menu {
+  border: 2px dotted var(--editor-border-light);
+}
+
+:global(:root[data-palette='draft']) .typeLabel {
+  font-family: var(--heading);
+  border-bottom: 2px dotted var(--editor-border-light);
+}
+
+:global(:root[data-palette='draft']) .footer {
+  border-top: 2px dotted var(--editor-border-light);
+}
+
 .menu {
   position: fixed;
   z-index: 100;

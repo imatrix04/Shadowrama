@@ -6,7 +6,7 @@
  * c'est aussi ce qui est écrit dans le .shma et dans le .pptx exporté.
  */
 
-export type FontGroup = 'pro' | 'creative' | 'hand'
+export type FontGroup = 'pro' | 'creative' | 'hand' | 'vintage'
 export type FontKind = 'sans' | 'serif' | 'mono' | 'display' | 'script'
 
 export interface FontDef {
@@ -22,6 +22,7 @@ export const FONT_GROUP_LABELS: Record<FontGroup, string> = {
   pro: 'Sobre',
   creative: 'Créatif',
   hand: 'Manuscrit',
+  vintage: 'Ancien',
 }
 
 export const FONT_CATALOG: FontDef[] = [
@@ -36,6 +37,8 @@ export const FONT_CATALOG: FontDef[] = [
   { id: 'Playfair Display', group: 'creative', kind: 'serif', stack: "'Playfair Display', Georgia, serif" },
   { id: 'Oswald', group: 'creative', kind: 'display', stack: "'Oswald', Impact, sans-serif" },
   { id: 'Bebas Neue', group: 'creative', kind: 'display', stack: "'Bebas Neue', Impact, sans-serif" },
+
+  { id: 'IM Fell English', group: 'vintage', kind: 'serif', stack: "'IM Fell English', Georgia, serif" },
 
   { id: 'Caveat', group: 'hand', kind: 'script', stack: "'Caveat', 'Segoe Script', cursive" },
   { id: 'Dancing Script', group: 'hand', kind: 'script', stack: "'Dancing Script', 'Segoe Script', cursive" },

@@ -22,12 +22,13 @@ export function saveThemeMode(mode: ThemeMode): void {
   }
 }
  
-export type Palette = 'ink' | 'neon' | 'warm'
+export type Palette = 'ink' | 'neon' | 'warm' | 'draft'
 
 export const PALETTES: { id: Palette; label: string }[] = [
   { id: 'ink', label: 'Nuit encre' },
   { id: 'neon', label: 'Graphite néon' },
   { id: 'warm', label: 'Chaud / crème' },
+  { id: 'draft', label: "Plan d'architecte" },
 ]
 
 const PALETTE_KEY = 'shadowrama-palette'

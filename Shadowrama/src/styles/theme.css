@@ -290,6 +290,79 @@
   --poly-bg: url('../assets/lowpoly-warm-light.svg');
 }
 
+/* D — Plan d'architecte : papier ancien, trait de crayon graphite, écriture à la
+   main. Sombre = papier au fusain, traits à la craie crème. Angles presque
+   droits, remplissages d'accent hachurés comme au crayon, séparations des
+   panneaux et menus en pointillé (voir Drawer et ContextMenu), quadrillage de
+   calque en fond (assets/draft-paper-*.svg) — jamais sur les panneaux. */
+:root[data-palette='draft'] {
+  /* Écriture ancienne (caractères d'imprimerie du XVIIᵉ) pour toute l'interface. */
+  --heading: 'IM Fell English', Georgia, 'Times New Roman', serif;
+  --sans: 'IM Fell English', Georgia, 'Times New Roman', serif;
+  --r-sm: 1px;
+  --r-md: 2px;
+  --r-lg: 3px;
+  --accent-fill: repeating-linear-gradient(
+    135deg,
+    var(--accent) 0 3px,
+    color-mix(in srgb, var(--accent) 84%, var(--accent-2)) 3px 4px
+  );
+}
+
+:root[data-palette='draft'] h1,
+:root[data-palette='draft'] h2 {
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+:root[data-palette='draft']:not([data-theme='light']) {
+  --editor-bg: #1d1b18;
+  --editor-bg-panel: #26231f;
+  --editor-bg-canvas: #151412;
+  --editor-bg-raised: #2d2a25;
+  --editor-border: #433e36;
+  --editor-border-light: #5a5347;
+  --editor-btn-bg: #322e28;
+  --editor-btn-bg-hover: #3f3a32;
+  --editor-text: #efe6d0;
+  --editor-text-muted: #b2a78f;
+  --editor-text-dim: #7f7663;
+  --accent: #e6d5a8;
+  --accent-hover: #f3e6c0;
+  --accent-border: #f3e6c0;
+  --accent-2: #c98f5a;
+  --on-accent: #1d1b18;
+  --poly-bg: url('../assets/draft-paper-dark.svg');
+}
+
+:root[data-palette='draft'][data-theme='light'] {
+  --editor-bg: #efe3c4;
+  --editor-bg-panel: #f6edd4;
+  --editor-bg-canvas: #e4d6b3;
+  --editor-bg-raised: #f8f1dc;
+  --editor-border: #b9a982;
+  --editor-border-light: #9c8d68;
+  --editor-btn-bg: #e8dcbc;
+  --editor-btn-bg-hover: #ddcea8;
+  --editor-text: #2b2824;
+  --editor-text-muted: #6b6354;
+  --editor-text-dim: #9a8f78;
+  --accent: #3f3b36;
+  --accent-hover: #1f1c19;
+  --accent-border: #3f3b36;
+  --accent-2: #7a5a3a;
+  --on-accent: #f6edd4;
+  --overlay-1: rgba(43, 40, 36, 0.035);
+  --overlay-2: rgba(43, 40, 36, 0.055);
+  --overlay-3: rgba(43, 40, 36, 0.08);
+  --overlay-4: rgba(43, 40, 36, 0.13);
+  --overlay-text-dim: rgba(43, 40, 36, 0.45);
+  --overlay-text-soft: rgba(43, 40, 36, 0.62);
+  --overlay-text-strong: rgba(43, 40, 36, 0.82);
+  --shadow-ink: #3a2d18;
+  --poly-bg: url('../assets/draft-paper-light.svg');
+}
+
 /*
  * Transition circulaire entre thèmes (voir applyThemeWithTransition dans
  * utils/theme.ts, qui pose --theme-reveal-x/y/radius juste avant de
