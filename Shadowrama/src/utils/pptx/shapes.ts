@@ -8,6 +8,7 @@ import { resolveShapeFill, resolveStroke } from './fills'
 import { readAdjust, presetSpec, custGeomToPolygon } from './geometry'
 import type { ShapeSpec } from './geometry'
 import { emitText } from './text'
+import { emitTable } from './table'
 
 /**
  * Formes, images et groupes : parcours de l'arbre d'une diapositive.
@@ -185,6 +186,8 @@ export function walkTree(tree: Element, part: Part, ctx: Ctx, tx: Tx, blocks: Bl
         break
       }
       case 'graphicFrame': {
+        // Un tableau natif devient un bloc tableau ; le reste est signalé ci-dessous.
+        if (!ctx.decorOnly && emitTable(node, ctx, tx, blocks)) break
         const uri = attr(descendants(node, 'graphicData')[0], 'uri') ?? ''
         const what = uri.includes('table') ? 'tableau'
           : uri.includes('chart') ? 'graphique'

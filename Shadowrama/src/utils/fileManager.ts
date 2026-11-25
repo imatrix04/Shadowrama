@@ -4,6 +4,7 @@ import { registerMedia, getAllMediaForSave, clearMediaStore } from './mediaStore
 import { clipboardMediaKeys } from './clipboard'
 import { nextId } from './ids'
 import { normalizeChartData } from './chart'
+import { normalizeCells } from './table'
 import { DEFAULT_NUMBERING, normalizeNumbering } from './numbering'
 import { PptxFormatError, importPptx } from './pptx/import'
 import type { ImportReport } from './pptx/import'
@@ -331,6 +332,11 @@ function normalizeBlock(block: BlockData): BlockData {
   if (clean.type === 'chart') {
     clean.data = normalizeChartData((clean as { data?: unknown }).data, nextId)
     if (clean.data.length === 0) clean.data = [{ id: nextId(), label: '', value: 0 }]
+  }
+
+  // Un tableau sans grille exploitable ferait planter le rendu.
+  if (clean.type === 'table') {
+    clean.cells = normalizeCells((clean as { cells?: unknown }).cells)
   }
 
   if (clean.type === 'webview') {

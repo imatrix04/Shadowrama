@@ -285,6 +285,34 @@ describe('buildPptx', () => {
     expect(await text('ppt/slides/slide2.xml')).toContain('<a:t>2 / 2</a:t>')
   })
 
+  it('exporte un tableau natif, que l\'import retrouve à l\'identique', async () => {
+    const cells = [['Offre', 'Prix'], ['Basique', '9 €'], ['Pro', '19 €\nHT']]
+    const slides: Slide[] = [{ id: 1, blocks: [block({
+      id: 1, type: 'table', cells, x: 80, y: 60, width: 600, height: 150, headerRow: true,
+      striped: true, fontSize: 20, headerColor: '#112233', headerTextColor: '#ffffff', textAlign: 'center',
+    })] }]
+    const { data, report, plan, text } = await exportSlides(slides)
+
+    expect(plan.slides[0].blocks[0].plan.kind).toBe('native')
+    expect(report).toMatchObject({ editableCount: 1, imageCount: 0 })
+    expect(await text('ppt/slides/slide1.xml')).toContain('<a:tbl>')
+
+    const back = (await importPptx(data)).slides[0].blocks[0] as unknown as Record<string, unknown>
+    expect(back).toMatchObject({
+      type: 'table', cells, headerRow: true, striped: true, fontSize: 20,
+      headerColor: '#112233', textAlign: 'center',
+    })
+    expect(Math.round(back.x as number)).toBe(80)
+    expect(Math.round(back.width as number)).toBe(600)
+    expect(Math.round(back.height as number)).toBe(150)
+  })
+
+  it('exporte un tableau pivoté en image', async () => {
+    const slides: Slide[] = [{ id: 1, blocks: [block({ id: 1, type: 'table', cells: [['a']], rotation: 10 })] }]
+    const { plan } = await exportSlides(slides)
+    expect(plan.slides[0].blocks[0].plan.kind).toBe('raster')
+  })
+
   it('retire les caractères de contrôle, interdits en XML', async () => {
     const slides: Slide[] = [{ id: 1, blocks: [block({ id: 1, type: 'text', content: 'a\u0001b\u000Bc' })] }]
     const { text } = await exportSlides(slides)

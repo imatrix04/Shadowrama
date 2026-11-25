@@ -6,7 +6,7 @@ export interface BlockProperty {
   key: string
   label: string
   type: 'text' | 'textarea' | 'number' | 'color' | 'select' | 'float' | 'file'
-      | 'shapePolygon' | 'boolean' | 'carouselItems' | 'url' | 'chartData'
+      | 'shapePolygon' | 'boolean' | 'carouselItems' | 'url' | 'chartData' | 'tableData'
   options?: { label: string; value: string }[]
   accept?: string
   /** Affiche le champ si la valeur du champ `key` vaut `value` ; `a|b` accepte plusieurs valeurs. */
@@ -388,6 +388,35 @@ export interface ChartBlockData extends BaseBlockData {
   cascade?: boolean
 }
 
+// ── Tableau ─────────────────────────────────────────────────────────────────
+
+/**
+ * Tableau de texte : une grille régulière de cellules, colonnes et lignes de
+ * tailles égales. Rendu en HTML, exporté en tableau PowerPoint natif et
+ * reconstruit depuis un tableau PowerPoint à l'import.
+ */
+export interface TableBlockData extends BaseBlockData {
+  type: 'table'
+  /** Lignes de cellules ; toutes de même longueur (voir utils/table). */
+  cells: string[][]
+  /** La première ligne est un en-tête. Vrai par défaut. */
+  headerRow?: boolean
+  fontSize?: number
+  /** Couleur du texte du corps ; absent = couleur du thème. */
+  textColor?: string
+  textAlign?: 'left' | 'center' | 'right'
+  headerColor?: string
+  headerTextColor?: string
+  /** Lignes alternées teintées. */
+  striped?: boolean
+  stripeColor?: string
+  borderColor?: string
+  borderWidth?: number
+  /** Fond du corps du tableau. */
+  backgroundColor?: string
+  borderRadius?: number
+}
+
 // ── L'union discriminée ──
 export type BlockData =
   | ImageBlockData
@@ -398,6 +427,7 @@ export type BlockData =
   | WebviewBlockData
   | VideoBlockData
   | ChartBlockData
+  | TableBlockData
 
 export interface BlockConfig {
   type: BlockData['type']

@@ -1,8 +1,9 @@
 import JSZip from 'jszip'
 import type {
   BlockData, BlockEffects, Gradient, ImageBlockData, ShapeBlockData, Slide, SlideNumbering,
-  TextBlockData, TitleBlockData,
+  TableBlockData, TextBlockData, TitleBlockData,
 } from '../../../types'
+import { TABLE_STYLE, normalizeCells } from '../../table'
 import { getSlideTransition } from '../../../ultra/slideTransitions'
 import { slideNumberText } from '../../numbering'
 import { normalizePolygon } from '../../shapePolygon'
@@ -291,6 +292,66 @@ function writeText(w: SlideWriter, block: TextBlockData | TitleBlockData, defaul
     { x: PAD_X, y: PAD_Y }, ANCHOR[block.verticalAlign ?? 'top'],
     paragraphsXml(block.content ?? '', ALIGN[block.textAlign ?? 'center'] ?? 'ctr', block.lineHeight ?? 1.4, style),
   )
+}
+
+// ── Tableaux ─────────────────────────────────────────────────────────────────
+
+const TABLE_NS = 'http://schemas.openxmlformats.org/drawingml/2006/table'
+
+/**
+ * Tableau PowerPoint natif. Les couleurs sont écrites cellule par cellule
+ * (aucun style de tableau n'est référencé), si bien que le rendu ne dépend pas
+ * d'un thème ; `firstRow` et `bandRow` sont posés pour que l'import les retrouve.
+ */
+function writeTable(w: SlideWriter, block: TableBlockData, defaults: ExportDefaults): boolean {
+  const cells = normalizeCells(block.cells)
+  const rows = cells.length
+  const cols = cells[0].length
+  const opacity = block.opacity ?? 1
+  const header = block.headerRow !== false
+  const size = block.fontSize ?? TABLE_STYLE.fontSize
+
+  const textColor = withOpacity(colorOr(block.textColor, defaults.text), opacity)
+  const headText = withOpacity(colorOr(block.headerTextColor, TABLE_STYLE.headerTextColor), opacity)
+  const headFill = withOpacity(colorOr(block.headerColor, TABLE_STYLE.headerColor), opacity)
+  const stripe = block.striped ? withOpacity(colorOr(block.stripeColor, TABLE_STYLE.stripeColor), opacity) : undefined
+  const body = block.backgroundColor ? withOpacity(colorOr(block.backgroundColor, '#ffffff'), opacity) : undefined
+  const borderWidth = block.borderWidth ?? TABLE_STYLE.borderWidth
+  const border = withOpacity(colorOr(block.borderColor, TABLE_STYLE.borderColor), opacity)
+
+  const line = (tag: string) => borderWidth > 0
+    ? `<a:${tag} w="${emu(borderWidth)}" cap="flat" cmpd="sng" algn="ctr">${solidFill(border)}<a:prstDash val="solid"/></a:${tag}>`
+    : `<a:${tag} w="0"><a:noFill/></a:${tag}>`
+  const lines = ['lnL', 'lnR', 'lnT', 'lnB'].map(line).join('')
+
+  const rowH = emu(block.height / rows)
+  const colW = emu(block.width / cols)
+  const align = ALIGN[block.textAlign ?? 'left'] ?? 'l'
+
+  const trs = cells.map((row, y) => {
+    const isHeader = header && y === 0
+    const bodyIndex = y - (header ? 1 : 0)
+    const fill = isHeader ? headFill : stripe && bodyIndex % 2 === 1 ? stripe : body
+    const style: TextRunStyle = {
+      size, bold: isHeader, italic: false, letterSpacing: 0,
+      fill: solidFill(isHeader ? headText : textColor), outline: '', effects: '',
+    }
+    const tcs = row.map(text =>
+      '<a:tc><a:txBody><a:bodyPr/><a:lstStyle/>'
+      + paragraphsXml(text, align, SINGLE_LINE, style)
+      + `</a:txBody><a:tcPr marL="${emu(8)}" marR="${emu(8)}" marT="${emu(4)}" marB="${emu(4)}" anchor="ctr">`
+      + `${lines}${fill ? solidFill(fill) : '<a:noFill/>'}</a:tcPr></a:tc>`).join('')
+    return `<a:tr h="${rowH}">${tcs}</a:tr>`
+  }).join('')
+
+  w.shapes += '<p:graphicFrame>'
+    + `<p:nvGraphicFramePr><p:cNvPr id="${w.id()}" name="Tableau"/><p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr><p:nvPr/></p:nvGraphicFramePr>`
+    + `<p:xfrm><a:off x="${emu(block.x)}" y="${emu(block.y)}"/><a:ext cx="${colW * cols}" cy="${rowH * rows}"/></p:xfrm>`
+    + `<a:graphic><a:graphicData uri="${TABLE_NS}"><a:tbl>`
+    + `<a:tblPr firstRow="${header ? 1 : 0}" bandRow="${block.striped ? 1 : 0}"/>`
+    + `<a:tblGrid>${Array.from({ length: cols }, () => `<a:gridCol w="${colW}"/>`).join('')}</a:tblGrid>`
+    + `${trs}</a:tbl></a:graphicData></a:graphic></p:graphicFrame>`
+  return true
 }
 
 // ── Formes ───────────────────────────────────────────────────────────────────
@@ -609,6 +670,7 @@ const NAMES: Partial<Record<BlockData['type'], string>> = {
   carousel: 'Carrousel',
   video: 'Vidéo',
   chart: 'Graphique',
+  table: 'Tableau',
   image: 'Image',
   shape: 'Forme',
   text: 'Texte',
@@ -627,6 +689,8 @@ async function writeNative(
       return writeShape(w, block, defaults)
     case 'image':
       return writeImage(w, block, media, assets)
+    case 'table':
+      return writeTable(w, block, defaults)
     default:
       return false
   }

@@ -11,6 +11,7 @@ import {
 } from '../ultra/particles'
 import { availableTransitions, getSlideTransition } from '../ultra/slideTransitions'
 import { MAX_CHART_DATA } from '../utils/chart'
+import { MAX_TABLE_COLS, MAX_TABLE_ROWS, normalizeCells, parseDelimited } from '../utils/table'
 import type { Features } from '../hooks/useFeatures'
 import { nextId } from '../utils/ids'
 import { POLYGON_PRESETS } from '../utils/shapePolygon'
@@ -159,6 +160,9 @@ export const TOOL_DEFS: ToolDef[] = [
       'Ajoute un bloc (texte, titre, forme, image, vidéo, graphique, ou carrousel / page web en mode Ultra) sur une diapositive. '
       + 'GRAPHIQUE : `props.chartKind` (column, bar, line, area, pie, donut) et `props.data` = liste de { label, value, color? } ; '
       + "il s'anime à l'apparition (animated, animSeconds, cascade). "
+      + `TABLEAU : \`props.cells\` = liste de lignes, chacune une liste de cellules (la première ligne est l'en-tête), `
+      + `ex. [["Offre","Prix"],["Basique","9 €"]] (jusqu'à ${MAX_TABLE_ROWS} lignes × ${MAX_TABLE_COLS} colonnes), `
+      + "ou du texte CSV ; la taille s'ajuste avec width/height. "
       + 'Les blocs image, vidéo et carrousel sont créés VIDES : remplis-les ensuite avec set_block_media si '
       + "l'utilisateur a joint un fichier, sinon laisse l'emplacement vide pour qu'il y ajoute le sien. "
       + '`props` suit la liste de get_reference. FORME PERSONNALISÉE : `props.customShape` = liste de points '
@@ -465,6 +469,26 @@ function asChartData(value: unknown): ChartDatum[] {
 }
 
 /**
+ * Cellules d'un tableau : liste de lignes (listes de cellules, texte ou nombres),
+ * ou directement du texte CSV / tabulé. Les lignes courtes sont complétées.
+ */
+function asTableCells(value: unknown): string[][] {
+  if (typeof value === 'string') {
+    const parsed = parseDelimited(value)
+    if (parsed.length === 0) fail('`cells` est vide.')
+    return parsed
+  }
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_TABLE_ROWS
+    || value.some(row => !Array.isArray(row))) {
+    fail(`\`cells\` doit être une liste de 1 à ${MAX_TABLE_ROWS} lignes, chacune une liste de cellules (ex. [["Nom","Prix"],["Thé","3"]]), ou du texte CSV.`)
+  }
+  if ((value as unknown[][]).some(row => row.length > MAX_TABLE_COLS)) {
+    fail(`Un tableau est limité à ${MAX_TABLE_COLS} colonnes.`)
+  }
+  return normalizeCells(value)
+}
+
+/**
  * Valide les propriétés fournies pour un type de bloc et renvoie celles à poser.
  * Tout ce qui n'est pas listé dans la config du bloc est refusé.
  */
@@ -518,6 +542,9 @@ function validateProps(type: string, rawProps: unknown): Partial<BlockData> {
         break
       case 'chartData':
         out[key] = asChartData(value)
+        break
+      case 'tableData':
+        out[key] = asTableCells(value)
         break
       case 'url': {
         const url = normalizeWebUrl(value)
@@ -720,6 +747,9 @@ function run(slides: Slide[], name: string, input: Input, ctx: ToolContext): Too
       // le texte et les formes restent lisibles sur le fond de la diapositive.
       if ((block.type === 'text' || block.type === 'title') && !('color' in props)) {
         block.color = readableTextColor(slide.background, ctx.ultra)
+      }
+      if (block.type === 'table' && !('textColor' in props)) {
+        block.textColor = readableTextColor(slide.background, ctx.ultra)
       }
       if (block.type === 'shape') {
         if (!('backgroundColor' in props)) block.backgroundColor = creamInkFor(slide.background, ctx.ultra)

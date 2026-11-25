@@ -1,5 +1,5 @@
 export type IconName =
-  | 'text' | 'title' | 'image' | 'shape' | 'carousel' | 'globe' | 'reload' | 'pin' | 'video' | 'pause' | 'chart'
+  | 'text' | 'title' | 'image' | 'shape' | 'carousel' | 'globe' | 'reload' | 'pin' | 'video' | 'pause' | 'chart' | 'table'
   | 'slides' | 'chevronLeft' | 'chevronRight'
   | 'new' | 'save' | 'open' | 'export' | 'play' | 'undo' | 'redo'
   | 'ultra' | 'motion' | 'effects' | 'transition' | 'background'
@@ -63,6 +63,14 @@ const PATHS: Record<IconName, React.ReactNode> = {
     <>
     <rect x="3" y="5" width="18" height="14" rx="2" />
     <path d="M10 9.5v5l4.5-2.5z" />
+    </>
+  ),
+  table: (
+    <>
+      <rect x="4" y="5" width="16" height="14" rx="2" />
+      <path d="M4 10h16" />
+      <path d="M10 10v9" />
+      <path d="M15 10v9" />
     </>
   ),
   chart: (

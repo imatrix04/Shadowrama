@@ -187,6 +187,17 @@ export function planExport(slides: Slide[], ultra: boolean, defaults: ExportDefa
           }
           break
 
+        case 'table':
+          // Tableau PowerPoint natif, donc modifiable. Un tableau ne tourne pas et
+          // n'a pas d'effet visuel dans PowerPoint : dans ces cas, une image.
+          if (fxRaster || block.rotation) {
+            if (block.rotation) note(slideNo, 'Tableau pivoté : exporté en image (PowerPoint ne fait pas pivoter les tableaux).')
+            raster()
+          } else {
+            blocks.push({ block, plan: { kind: 'native' } })
+          }
+          break
+
         case 'chart':
           // Exporté en image : PowerPoint n'a pas d'équivalent de ce rendu, et le
           // graphique y est montré terminé (la capture n'a pas de mode animé).

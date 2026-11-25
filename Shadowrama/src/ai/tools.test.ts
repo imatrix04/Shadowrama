@@ -256,6 +256,39 @@ describe('executeTool — diapositives', () => {
   })
 })
 
+describe('executeTool — tableaux', () => {
+  it('crée un tableau depuis une liste de lignes, complétée en grille', () => {
+    const out = apply(blank(), 'add_block', {
+      slide: 1, type: 'table',
+      props: { cells: [['Offre', 'Prix', 'Durée'], ['Basique', 9], ['Pro', '19 €', '12 mois']], width: 500, height: 120 },
+    })
+    const table = out.slides[0].blocks[0] as unknown as { cells: string[][]; headerRow: boolean; textColor: string }
+    expect(table.cells).toEqual([['Offre', 'Prix', 'Durée'], ['Basique', '9', ''], ['Pro', '19 €', '12 mois']])
+    expect(table.headerRow).toBe(true)
+    expect(table.textColor).toBeTruthy()
+  })
+
+  it('accepte du texte CSV ou tabulé', () => {
+    const out = apply(blank(), 'add_block', { slide: 1, type: 'table', props: { cells: 'a;b\n1;2' } })
+    expect((out.slides[0].blocks[0] as unknown as { cells: string[][] }).cells).toEqual([['a', 'b'], ['1', '2']])
+  })
+
+  it('remplace la grille avec update_block et refuse une entrée invalide', () => {
+    const added = apply(blank(), 'add_block', { slide: 1, type: 'table' })
+    const id = JSON.parse(added.result).id
+    const updated = apply(added.slides, 'update_block', { slide: 1, id, props: { cells: [['x']] } })
+    expect((updated.slides[0].blocks[0] as unknown as { cells: string[][] }).cells).toEqual([['x']])
+    for (const cells of [[], '  ', 42, [['a'], 'b'], Array(40).fill(['a']), [Array(20).fill('a')]]) {
+      expect(executeTool(added.slides, 'update_block', { slide: 1, id, props: { cells } }, basic).isError).toBe(true)
+    }
+  })
+
+  it('figure dans la référence', () => {
+    const ref = JSON.parse(apply(blank(), 'get_reference', {}).result)
+    expect(ref.blocks.some((b: { type: string }) => b.type === 'table')).toBe(true)
+  })
+})
+
 describe('executeTool — numérotation', () => {
   it('active la numérotation sans toucher aux diapositives', () => {
     const slides = blank()

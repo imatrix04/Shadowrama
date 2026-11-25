@@ -1,0 +1,76 @@
+.scroll {
+  overflow: auto;
+  max-height: 260px;
+}
+
+.grid {
+  border-collapse: separate;
+  border-spacing: 3px;
+}
+
+.cell {
+  width: 84px;
+  min-width: 84px;
+}
+
+.head {
+  font-weight: 700;
+}
+
+.remove {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: 1px solid var(--editor-border-light);
+  border-radius: 6px;
+  color: var(--editor-text-muted);
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast), background-color var(--t-fast);
+}
+
+.remove:hover:not(:disabled) {
+  border-color: var(--danger);
+  background-color: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger-soft);
+}
+
+.remove:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.remove:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.add {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  background: var(--overlay-1);
+  border: 1px dashed var(--overlay-3);
+  border-radius: 8px;
+  color: var(--overlay-text-strong);
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--t-fast), border-color var(--t-fast);
+}
+
+.add:hover:not(:disabled) { border-color: var(--accent); background-color: var(--accent-bg-soft); }
+.add:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.add:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.hint {
+  margin-top: 4px;
+  font-size: 0.68rem;
+  color: var(--editor-text-dim);
+}

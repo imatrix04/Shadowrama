@@ -9,6 +9,7 @@ import carouselConfig from './configs/carousel.config'
 import webviewConfig from './configs/webview.config'
 import videoConfig from './configs/video.config'
 import chartConfig from './configs/chart.config'
+import tableConfig from './configs/table.config'
 
 import TextBlock from './registry/TextBlock'
 import TitleBlock from './registry/TitleBlock'
@@ -18,6 +19,7 @@ import CarouselBlock from './registry/CarouselBlock'
 import WebviewBlock from './registry/WebviewBlock'
 import VideoBlock from './registry/VideoBlock'
 import ChartBlock from './registry/ChartBlock'
+import TableBlock from './registry/TableBlock'
 
 export const BLOCKS_CONFIG: BlockConfig[] = [
   textConfig,
@@ -27,6 +29,7 @@ export const BLOCKS_CONFIG: BlockConfig[] = [
   carouselConfig,
   videoConfig,
   chartConfig,
+  tableConfig,
   webviewConfig,
 ]
 
@@ -39,6 +42,7 @@ export const BLOCKS_REGISTRY: Record<string, ComponentType<BlockComponentProps>>
   video: VideoBlock as ComponentType<BlockComponentProps>,
   webview: WebviewBlock as ComponentType<BlockComponentProps>,
   chart: ChartBlock as ComponentType<BlockComponentProps>,
+  table: TableBlock as ComponentType<BlockComponentProps>,
 }
 /**
  * Champs valables pour tous les blocs, ajoutés après ceux du type.

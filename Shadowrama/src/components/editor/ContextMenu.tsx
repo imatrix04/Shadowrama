@@ -14,6 +14,7 @@ import PolygonShapeEditor from './PolygonShapeEditor'
 import Switch from '../ui/Switch'
 import CarouselItemsEditor from './CarouselItemsEditor'
 import ChartDataEditor from './ChartDataEditor'
+import TableDataEditor from './TableDataEditor'
 import type { CarouselItem, ChartDatum } from '../../types'
 import { normalizePolygon } from '../../utils/shapePolygon'
 import MediaFileField from './MediaFileField'
@@ -267,6 +268,16 @@ function renderField(prop: BlockProperty, block: BlockData, onUpdate: (id: numbe
         />
       )
     }
+    case 'tableData': {
+      const raw = getBlockField(block, prop.key)
+      return (
+        <TableDataEditor
+          cells={Array.isArray(raw) ? (raw as string[][]) : []}
+          headerRow={getBlockField(block, 'headerRow') !== false}
+          onChange={cells => onUpdate(block.id, setBlockField(block, prop.key, cells))}
+        />
+      )
+    }
     default:
       return null
   }
@@ -281,7 +292,7 @@ const TABS: { key: TabKey; label: string; icon: 'text' | 'effects' | 'motion' }[
 ]
 
 /** Champs qui portent ce que le bloc MONTRE (texte, fichier, adresse…) ; tout le reste est du réglage. */
-const CONTENT_TYPES = new Set<BlockProperty['type']>(['text', 'textarea', 'file', 'url', 'carouselItems', 'chartData'])
+const CONTENT_TYPES = new Set<BlockProperty['type']>(['text', 'textarea', 'file', 'url', 'carouselItems', 'chartData', 'tableData'])
 
 // Onglet rouvert à l'identique d'un clic droit à l'autre : on retouche rarement
 // un seul champ. Mémoire de session ; sans stockage, on repart du premier onglet.
