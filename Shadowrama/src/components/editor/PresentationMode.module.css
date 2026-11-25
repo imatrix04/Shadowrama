@@ -66,63 +66,77 @@
   pointer-events: none;
 }
 
+/* Barre flottante : une pastille de verre fumé, centrée, qui n'apparaît
+   qu'au survol du bas de l'écran et ne masque plus la diapositive. */
 .controls {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  background-color: #111;
-  border-top: 1px solid #222;
-  width: 100%;
-  justify-content: center;
-  box-sizing: border-box;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  transform: translateY(100%);
+  gap: 4px;
+  padding: 6px;
+  background: rgba(20, 20, 22, 0.55);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, 24px);
   opacity: 0;
+  pointer-events: none;
   transition: transform 0.25s ease, opacity 0.25s ease;
   z-index: 1001;
 }
 
 .controlsVisible {
-  transform: translateY(0);
+  transform: translate(-50%, 0);
   opacity: 1;
+  pointer-events: auto;
 }
 
 .btn {
-  padding: 0.4rem 0.8rem;
-  background-color: var(--editor-bg-panel);
-  border: 1px solid var(--editor-border-light);
-  border-radius: 6px;
-  color: var(--editor-text);
-  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
-  transition: background-color var(--t-fast), border-color var(--t-fast);
+  transition: background-color var(--t-fast), color var(--t-fast);
 }
 
-.btn:hover {
-  background-color: var(--editor-btn-bg-hover);
-  border-color: var(--accent);
+.btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
 }
 
 .btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+  opacity: 0.3;
+  cursor: default;
 }
 
 .counter {
-  color: var(--editor-text-muted);
-  font-size: 0.85rem;
+  min-width: 56px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
 }
 
-.closeBtn {
-  margin-left: 1rem;
-  border-color: var(--danger);
-  color: var(--danger);
+.divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: rgba(255, 255, 255, 0.15);
 }
 
-.closeBtn:hover {
-  background-color: rgba(255, 77, 77, 0.1);
-  border-color: var(--danger);
+.closeBtn:hover:not(:disabled) {
+  background: rgba(255, 77, 77, 0.22);
+  color: #ff6b6b;
 }

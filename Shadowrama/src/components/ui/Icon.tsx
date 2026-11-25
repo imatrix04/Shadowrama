@@ -1,5 +1,5 @@
 export type IconName =
-  | 'text' | 'title' | 'image' | 'shape' | 'carousel' | 'globe' | 'reload' | 'pin' | 'video' | 'pause' | 'chart' | 'table'
+  | 'text' | 'title' | 'image' | 'shape' | 'carousel' | 'globe' | 'reload' | 'pin' | 'video' | 'pause' | 'clock' | 'chart' | 'table'
   | 'slides' | 'chevronLeft' | 'chevronRight'
   | 'new' | 'save' | 'open' | 'export' | 'play' | 'undo' | 'redo'
   | 'ultra' | 'motion' | 'effects' | 'transition' | 'background'
@@ -79,6 +79,12 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <rect x="6" y="11" width="3" height="9" rx="1" />
       <rect x="10.5" y="6" width="3" height="14" rx="1" />
       <rect x="15" y="13" width="3" height="7" rx="1" />
+    </>
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
     </>
   ),
   pause: (

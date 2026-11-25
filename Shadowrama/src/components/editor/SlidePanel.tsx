@@ -4,6 +4,7 @@ import { BLOCKS_REGISTRY } from '../../blocks'
 import TransitionPanel from './TransitionPanel'
 import BackgroundPanel from './BackgroundPanel'
 import NumberingPanel from './NumberingPanel'
+import TimingPanel from './TimingPanel'
 import { getSlideBackgroundStyle } from '../../ultra/slideBackground'
 import Drawer, { DrawerTitle } from '../ui/Drawer'
 import Icon from '../ui/Icon'
@@ -14,6 +15,7 @@ const TABS: DrawerTab[] = [
   { key: 'slides', label: 'Diapositives', icon: 'slides' },
   { key: 'background', label: 'Arrière-plan', icon: 'background' },
   { key: 'transitions', label: 'Transitions', icon: 'transition' },
+  { key: 'timing', label: 'Durée (diaporama auto)', icon: 'clock' },
   { key: 'numbering', label: 'Numérotation', icon: 'hash' },
 ]
 
@@ -29,6 +31,7 @@ interface Props {
   ultra: boolean
   onSetTransition: (index: number, settings: SlideTransitionSettings | undefined) => void
   onSetBackground: (index: number, background: SlideBackground | undefined) => void
+  onSetDuration: (index: number, duration: number | undefined) => void
   numbering: SlideNumbering
   onNumberingChange: (numbering: SlideNumbering) => void
   onPreviewNumbering: () => void
@@ -47,6 +50,7 @@ export default function SlidePanel({
   ultra,
   onSetTransition,
   onSetBackground,
+  onSetDuration,
   numbering,
   onNumberingChange,
   onPreviewNumbering,
@@ -100,6 +104,15 @@ export default function SlidePanel({
             current={slides[currentSlide]?.transition}
             ultra={ultra}
             onChange={settings => onSetTransition(currentSlide, settings)}
+          />
+        </>
+      ) : key === 'timing' ? (
+        <>
+          <DrawerTitle>Durée d'affichage</DrawerTitle>
+          <TimingPanel
+            slideIndex={currentSlide}
+            slide={slides[currentSlide]}
+            onChange={duration => onSetDuration(currentSlide, duration)}
           />
         </>
       ) : key === 'numbering' ? (

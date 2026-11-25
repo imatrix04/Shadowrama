@@ -14,6 +14,7 @@ import DropdownMenu from '../ui/DropdownMenu'
 import type { MenuItem } from '../ui/DropdownMenu'
 import PresentationMode from './PresentationMode'
 import PptxExport from './PptxExport'
+import { useSlideshowMode } from '../../utils/slideshow'
 import type { ExportReport } from '../../utils/pptx/export/write'
 import styles from './TopBar.module.css'
 
@@ -79,6 +80,7 @@ export default function TopBar({
   presenting, onPresentingChange, aiOpen = false, onToggleAi,
 }: Props) {
   const navigate = useNavigate()
+  const slideshow = useSlideshowMode()
   const [nameDialogOpen, setNameDialogOpen] = useState(false)
   const [nameInput, setNameInput] = useState('mon-projet')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -349,6 +351,13 @@ export default function TopBar({
           >
             <span className={styles.ultraIcon}><Icon name="ultra" /></span> Ultra Design
           </button>
+          <DropdownMenu
+            label={slideshow.mode === 'auto' ? 'Diaporama : auto' : 'Diaporama : manuel'}
+            items={[
+              { label: `${slideshow.mode === 'manual' ? '✓ ' : ''}Manuel (clic / flèches)`, icon: 'play', onSelect: () => slideshow.setMode('manual') },
+              { label: `${slideshow.mode === 'auto' ? '✓ ' : ''}Automatique (en boucle)`, icon: 'clock', onSelect: () => slideshow.setMode('auto') },
+            ]}
+          />
           <button className={`${styles.btn} ${styles.btnAccent}`} onClick={() => onPresentingChange(true)}>
             <Icon name="play" /> Présenter
           </button>
@@ -441,6 +450,7 @@ export default function TopBar({
           numbering={numbering}
           onClose={() => onPresentingChange(false)}
           ultra={ultra}
+          auto={slideshow.mode === 'auto'}
         />
       )}
     </>

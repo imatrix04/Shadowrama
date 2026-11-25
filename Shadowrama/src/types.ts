@@ -456,6 +456,8 @@ export interface BlockComponentProps<T extends BlockData = BlockData> {
   /** Mode Ultra Design. Absent = rendu statique (vignettes du panneau diapos). */
   ultra?: boolean
   mode?: 'edit' | 'present'
+  /** Diaporama automatique : vidéos et carrousels défilent d'eux-mêmes. */
+  autoRun?: boolean
 }
 
 /** Transition appliquée EN ENTRANT sur cette diapositive. */
@@ -576,6 +578,8 @@ export interface Slide {
   blocks: BlockData[]
   transition?: SlideTransitionSettings
   background?: SlideBackground
+  /** Secondes d'affichage en diaporama automatique. Absent = durée par défaut. */
+  duration?: number
 }
 
 // ── Numérotation des diapositives ────────────────────────────────────────────

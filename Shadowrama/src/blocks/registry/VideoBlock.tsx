@@ -20,7 +20,7 @@ import styles from './VideoBlock.module.css'
  * - absent : vignettes et couche sortante d'une transition. Image fixe, jamais
  *   de lecture ni de son.
  */
-export default function VideoBlock({ block, mode }: BlockComponentProps<VideoBlockData>) {
+export default function VideoBlock({ block, mode, autoRun }: BlockComponentProps<VideoBlockData>) {
   const src = block.src?.startsWith('media/') ? resolveMedia(block.src) : undefined
   const frame = getFrameStyle(block, block.width, block.height)
   // Mémorise QUELLE vidéo a échoué : une autre vidéo repart à neuf, sans effet.
@@ -39,7 +39,12 @@ export default function VideoBlock({ block, mode }: BlockComponentProps<VideoBlo
       />
     )
   }
-  return <Player block={block} src={src} mode={mode} frame={frame} onFail={() => setFailedSrc(src)} />
+  // Diaporama automatique : la vidéo démarre seule et reboucle jusqu'à la fin
+  // du temps d'affichage, sans commandes.
+  const effective = autoRun && mode === 'present'
+    ? { ...block, autoplay: true, loop: true, showControls: false }
+    : block
+  return <Player block={effective} src={src} mode={mode} frame={frame} onFail={() => setFailedSrc(src)} />
 }
 
 function Player({ block, src, mode, frame, onFail }: {

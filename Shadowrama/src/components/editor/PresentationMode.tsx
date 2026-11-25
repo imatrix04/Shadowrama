@@ -13,6 +13,8 @@ import floatStyles from './BlockFloat.module.css'
 import styles from './PresentationMode.module.css'
 import ParticleLayer from './ParticleLayer'
 import SlideNumber from './SlideNumber'
+import Icon from '../ui/Icon'
+import { slideDuration } from '../../utils/slideshow'
 import gsap from 'gsap'
 
 interface Props {
@@ -21,6 +23,8 @@ interface Props {
   onClose: () => void
   /** Hors mode Ultra, la présentation ignore effets et séquences. */
   ultra: boolean
+  /** Diaporama automatique : enchaîne les diapositives en boucle. */
+  auto?: boolean
 }
 
 /** Temps nécessaire pour que toutes les sorties d'une diapositive s'achèvent. */
@@ -39,7 +43,8 @@ const CONTROLS_REVEAL_ZONE_PX = 80
 const CONTROLS_HIDE_DELAY_MS = 1500
 
 // Petit composant wrapper qui applique le hook par bloc
-function AnimatedBlockWrapper({ block, isActive, exiting, animate = true, entranceDelay = 0, ultra }: {
+function AnimatedBlockWrapper({ block, isActive, exiting, animate = true, entranceDelay = 0, ultra, autoRun }: {
+  autoRun?: boolean
   block: BlockData
   isActive: boolean
   exiting: boolean
@@ -128,6 +133,7 @@ function AnimatedBlockWrapper({ block, isActive, exiting, animate = true, entran
                 onUpdate={() => {}}
                 isEditing={false}
                 ultra={ultra}
+                autoRun={animate ? autoRun : undefined}
                 // La couche sortante (`animate` faux) reste inerte : une page web
                 // y serait rechargée le temps d'une transition.
                 mode={animate ? 'present' : undefined}
@@ -142,7 +148,7 @@ function AnimatedBlockWrapper({ block, isActive, exiting, animate = true, entran
   )
 }
 
-export default function PresentationMode({ slides, numbering, onClose, ultra }: Props) {
+export default function PresentationMode({ slides, numbering, onClose, ultra, auto = false }: Props) {
   const [current, setCurrent] = useState(0)
   // Diapositive en cours de sortie : on laisse les séquences se dérouler avant
   // de basculer, sinon les blocs disparaîtraient d'un coup.
@@ -256,6 +262,19 @@ export default function PresentationMode({ slides, numbering, onClose, ultra }: 
     if (transitionTimer.current) clearTimeout(transitionTimer.current)
   }, [])
 
+  // ── Diaporama automatique : passe à la suivante après la durée propre à la
+  // diapositive, puis repart de la première après la dernière. Le minuteur
+  // redémarre à chaque changement (aussi après une navigation manuelle) et
+  // n'est armé qu'une fois la transition terminée.
+  const transitioning = outgoing !== null || exiting
+  useEffect(() => {
+    if (!auto || transitioning || slides.length < 2) return
+    const timer = setTimeout(() => {
+      goTo(current + 1 < slides.length ? current + 1 : 0)
+    }, slideDuration(slides[current]) * 1000)
+    return () => clearTimeout(timer)
+  }, [auto, transitioning, current, slides, goTo])
+
   // ── Clavier
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -324,6 +343,7 @@ export default function PresentationMode({ slides, numbering, onClose, ultra }: 
         animate={animate}
         entranceDelay={entranceDelay}
         ultra={ultra}
+        autoRun={auto}
       />
     ))
 
@@ -403,19 +423,27 @@ export default function PresentationMode({ slides, numbering, onClose, ultra }: 
           className={styles.btn}
           onClick={() => goTo(current - 1)}
           disabled={current === 0}
+          aria-label="Diapositive précédente"
         >
-          ◀
+          <Icon name="chevronLeft" size={18} />
         </button>
         <span className={styles.counter}>{current + 1} / {slides.length}</span>
         <button
           className={styles.btn}
           onClick={() => goTo(current + 1)}
           disabled={current === slides.length - 1}
+          aria-label="Diapositive suivante"
         >
-          ▶
+          <Icon name="chevronRight" size={18} />
         </button>
-        <button className={`${styles.btn} ${styles.closeBtn}`} onClick={onClose}>
-          ✕ Quitter
+        <span className={styles.divider} aria-hidden="true" />
+        <button
+          className={`${styles.btn} ${styles.closeBtn}`}
+          onClick={onClose}
+          title="Quitter (Échap)"
+          aria-label="Quitter la présentation"
+        >
+          <Icon name="close" size={16} />
         </button>
       </div>
     </div>

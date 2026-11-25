@@ -12,14 +12,15 @@ const DEFAULT_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
 
 const NEUTRAL: CarouselLayerState = { transform: 'none', opacity: 1 }
 
-export default function CarouselBlock({ block, ultra }: BlockComponentProps<CarouselBlockData>) {
+export default function CarouselBlock({ block, ultra, autoRun }: BlockComponentProps<CarouselBlockData>) {
   const items = Array.isArray(block.items) ? block.items : []
   const count = items.length
 
   // Hors mode Ultra — et dans les vignettes du panneau diapos, où `ultra` n'est
   // pas transmis — le carrousel se fige sur sa première vue : même règle que
   // les autres réglages Ultra, la donnée est conservée mais inerte.
-  const live = !!ultra && count > 1
+  // Un diaporama automatique fait défiler les carrousels même hors Ultra.
+  const live = (!!ultra || !!autoRun) && count > 1
 
   const [index, setIndex] = useState(0)
   // Vue en cours de sortie. Elle reste montée le temps de la transition, sinon
@@ -34,7 +35,8 @@ export default function CarouselBlock({ block, ultra }: BlockComponentProps<Caro
   const def = getCarouselTransition(block.transition)
   const seconds = block.transitionSeconds ?? DEFAULT_SECONDS
   const ease = block.ease ?? DEFAULT_EASE
-  const loop = block.loop ?? true
+  const loop = autoRun ? true : (block.loop ?? true)
+  const autoplay = autoRun || block.autoplay
 
   const goTo = (next: number, direction: CarouselDirection) => {
     if (!live || next === current || next < 0 || next >= count) return
@@ -62,7 +64,7 @@ export default function CarouselBlock({ block, ultra }: BlockComponentProps<Caro
   }, [leaving, index, seconds])
 
   useEffect(() => {
-    if (!live || !block.autoplay) return
+    if (!live || !autoplay) return
     if (block.pauseOnHover && hovered) return
     if (!loop && current === count - 1) return
 
@@ -70,7 +72,7 @@ export default function CarouselBlock({ block, ultra }: BlockComponentProps<Caro
     const timer = setTimeout(() => goTo((current + 1) % count, 1), interval * 1000)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [live, block.autoplay, block.interval, block.pauseOnHover, hovered, current, count, loop])
+  }, [live, autoplay, block.interval, block.pauseOnHover, hovered, current, count, loop])
 
   if (count === 0) {
     return (

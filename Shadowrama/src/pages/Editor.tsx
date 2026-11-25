@@ -353,6 +353,15 @@ function EditorView({ initialDraft, initialConversation }: {
     [commit],
   )
 
+  const setSlideDuration = useCallback(
+    (index: number, duration: number | undefined) => {
+      commit(prev => prev.map((slide, i) =>
+        i === index ? { ...slide, duration } : slide
+      ))
+    },
+    [commit],
+  )
+
   const selectAllBlocks = useCallback(() => {
     setSelectedBlockIds(slides[currentSlide]?.blocks.map(b => b.id) ?? [])
   }, [slides, currentSlide])
@@ -501,6 +510,7 @@ function EditorView({ initialDraft, initialConversation }: {
             ultra={ultra}
             onSetTransition={setSlideTransition}
             onSetBackground={setSlideBackground}
+            onSetDuration={setSlideDuration}
             numbering={numbering}
             onNumberingChange={setNumbering}
             onPreviewNumbering={() => setNumberingPreview(Date.now())}
