@@ -128,7 +128,7 @@ export async function importPptx(data: ArrayBuffer | Uint8Array): Promise<PptxIm
   }
 
   if (report.fonts.size > 0) {
-    report.add(null, `Polices du fichier : ${[...report.fonts].join(', ')}. Shadowrama n'a pas encore de choix de police : la police par défaut est utilisée.`)
+    report.add(null, `Polices du fichier : ${[...report.fonts].join(', ')}. Celles du catalogue sont conservées, les autres remplacées par la plus proche.`)
   }
 
   return {

@@ -1,4 +1,5 @@
 import type { BlockConfig, ChartBlockData, ChartDatum } from '../../types'
+import { FONT_OPTIONS } from '../../utils/fonts'
 import { nextId } from '../../utils/ids'
 
 /** Données d'exemple d'un graphique neuf : de quoi voir l'animation tout de suite. */
@@ -70,6 +71,7 @@ const chartConfig: BlockConfig = {
     },
     { key: 'accentColor', label: 'Couleur', type: 'color', showIf: { key: 'colorMode', value: 'single' } },
     { key: 'textColor', label: 'Couleur du texte', type: 'color' },
+    { key: 'fontFamily', label: 'Police', type: 'select', options: FONT_OPTIONS },
     { key: 'fontSize', label: 'Taille du texte', type: 'number' },
     { key: 'showLabels', label: 'Étiquettes', type: 'boolean' },
     { key: 'showValues', label: 'Valeurs', type: 'boolean' },

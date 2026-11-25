@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { BlockComponentProps, TableBlockData } from '../../types'
+import { fontStack } from '../../utils/fonts'
 import { TABLE_STYLE, normalizeCells } from '../../utils/table'
 
 /**
@@ -29,6 +30,7 @@ export default function TableBlock({ block }: BlockComponentProps<TableBlockData
     tableLayout: 'fixed',
     borderCollapse: 'collapse',
     fontSize: block.fontSize ?? TABLE_STYLE.fontSize,
+    fontFamily: fontStack(block.fontFamily),
     color: block.textColor ?? TABLE_STYLE.textColor,
   }
 

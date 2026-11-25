@@ -4,6 +4,7 @@ import type {
   TableBlockData, TextBlockData, TitleBlockData,
 } from '../../../types'
 import { TABLE_STYLE, normalizeCells } from '../../table'
+import { findFont } from '../../fonts'
 import { getSlideTransition } from '../../../ultra/slideTransitions'
 import { slideNumberText } from '../../numbering'
 import { normalizePolygon } from '../../shapePolygon'
@@ -229,6 +230,8 @@ interface TextRunStyle {
   /** Contour et effets du texte, déjà en XML. */
   outline: string
   effects: string
+  /** Nom de la police ; absent = police du thème exporté. */
+  font?: string
 }
 
 function runProps(tag: 'rPr' | 'endParaRPr', s: TextRunStyle): string {
@@ -236,7 +239,7 @@ function runProps(tag: 'rPr' | 'endParaRPr', s: TextRunStyle): string {
     + (s.letterSpacing ? ` spc="${Math.round(s.letterSpacing * 100)}"` : '')
     + ' dirty="0"'
   // Ordre imposé par le schéma : contour, remplissage, effets, police.
-  return `<a:${tag} ${attrs}>${s.outline}${s.fill}${s.effects}<a:latin typeface="${FONT}"/><a:cs typeface="${FONT}"/></a:${tag}>`
+  return `<a:${tag} ${attrs}>${s.outline}${s.fill}${s.effects}<a:latin typeface="${esc(s.font ?? FONT)}"/><a:cs typeface="${esc(s.font ?? FONT)}"/></a:${tag}>`
 }
 
 function paragraphsXml(text: string, align: 'l' | 'ctr' | 'r', lineHeight: number, style: TextRunStyle): string {
@@ -284,6 +287,7 @@ function writeText(w: SlideWriter, block: TextBlockData | TitleBlockData, defaul
       : solidFill(withOpacity(colorOr(block.color, defaults.text), opacity)),
     outline: stroke,
     effects: effectLst(fx, opacity),
+    font: findFont(block.fontFamily)?.id,
   }
 
   textBox(
@@ -335,6 +339,7 @@ function writeTable(w: SlideWriter, block: TableBlockData, defaults: ExportDefau
     const style: TextRunStyle = {
       size, bold: isHeader, italic: false, letterSpacing: 0,
       fill: solidFill(isHeader ? headText : textColor), outline: '', effects: '',
+      font: findFont(block.fontFamily)?.id,
     }
     const tcs = row.map(text =>
       '<a:tc><a:txBody><a:bodyPr/><a:lstStyle/>'

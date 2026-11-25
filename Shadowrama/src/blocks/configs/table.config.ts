@@ -1,4 +1,5 @@
 import type { BlockConfig, TableBlockData } from '../../types'
+import { FONT_OPTIONS } from '../../utils/fonts'
 import { DEFAULT_TABLE_CELLS, TABLE_STYLE } from '../../utils/table'
 
 const tableConfig: BlockConfig = {
@@ -24,6 +25,7 @@ const tableConfig: BlockConfig = {
   properties: [
     { key: 'cells', label: 'Contenu', type: 'tableData' },
     { key: 'headerRow', label: 'Ligne d\'en-tête', type: 'boolean' },
+    { key: 'fontFamily', label: 'Police', type: 'select', options: FONT_OPTIONS },
     { key: 'fontSize', label: 'Taille du texte', type: 'number' },
     {
       key: 'textAlign',

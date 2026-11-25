@@ -32,7 +32,7 @@ export interface ImportReport {
   slideCount: number
   blockCount: number
   issues: ImportIssue[]
-  /** Polices utilisées par le fichier (Shadowrama n'a pas encore de choix de police). */
+  /** Polices utilisées par le fichier (remplacées par la plus proche du catalogue, voir utils/fonts). */
   fonts: string[]
 }
 

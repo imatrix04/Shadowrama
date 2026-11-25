@@ -8,6 +8,7 @@ import type { Ctx, Box } from './context'
 import { normalizePhType } from './parts'
 import type { PhInfo } from './parts'
 import { readGradient } from './fills'
+import { fontFromPptx } from '../fonts'
 
 /**
  * Texte : héritage des styles de caractère et de paragraphe, puis émission des blocs.
@@ -133,6 +134,8 @@ export interface TextStyle {
   align: 'left' | 'center' | 'right'
   lineHeight: number
   letterSpacing: number
+  /** Police du catalogue (voir utils/fonts) ; absent = police par défaut. */
+  font?: string
 }
 
 export interface ParaOut {
@@ -285,6 +288,7 @@ export function emitText(
         align: alignOf(props.algn),
         lineHeight,
         letterSpacing: dominant.spc !== undefined ? r1((dominant.spc / 100) * pxPerPt) : 0,
+        ...(fontFromPptx(dominant.font) ? { font: fontFromPptx(dominant.font) } : {}),
       },
       before: spacing(props.spcBefPts, props.spcBefPct),
       after: spacing(props.spcAftPts, props.spcAftPct),
@@ -327,6 +331,7 @@ export function emitText(
       fontStyle: g.style.italic ? 'italic' as const : 'normal' as const,
       lineHeight: g.style.lineHeight,
       letterSpacing: g.style.letterSpacing,
+      ...(g.style.font ? { fontFamily: g.style.font } : {}),
       ...(rot ? { rotation: r1(rot) } : {}),
     }
     return title

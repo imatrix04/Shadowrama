@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { fontStack } from '../../utils/fonts'
 import type { BlockComponentProps, ChartBlockData } from '../../types'
 import {
   DEFAULT_CHART_INK, arcPath, clamp01, datumColor, easeProgress, formatValue,
@@ -322,7 +323,7 @@ export default function ChartBlock({ block, mode }: BlockComponentProps<ChartBlo
       <svg
         width="100%" height="100%"
         viewBox={`0 0 ${width} ${height}`}
-        style={{ display: 'block', fontFamily: 'inherit' }}
+        style={{ display: 'block', fontFamily: fontStack(block.fontFamily) ?? 'inherit' }}
         role="img"
         aria-label={`Graphique. ${summary}`}
       >

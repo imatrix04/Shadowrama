@@ -307,6 +307,28 @@ describe('buildPptx', () => {
     expect(Math.round(back.height as number)).toBe(150)
   })
 
+  it('écrit la police choisie et la retrouve à l\'import', async () => {
+    const slides: Slide[] = [{ id: 1, blocks: [
+      block({ id: 1, type: 'title', content: 'Salut', fontFamily: 'Playfair Display', x: 50, y: 50, width: 400, height: 80 }),
+      block({ id: 2, type: 'text', content: 'Note', fontFamily: 'Caveat', x: 50, y: 200, width: 400, height: 80 }),
+      block({ id: 3, type: 'table', cells: [['a', 'b']], fontFamily: 'Merriweather', x: 50, y: 320, width: 400, height: 60 }),
+      block({ id: 4, type: 'text', content: 'Défaut', x: 50, y: 420, width: 400, height: 60 }),
+    ] }]
+    const { data, text } = await exportSlides(slides)
+    const xml = await text('ppt/slides/slide1.xml')
+    expect(xml).toContain('typeface="Playfair Display"')
+    expect(xml).toContain('typeface="Caveat"')
+    expect(xml).toContain('typeface="Merriweather"')
+
+    const back = (await importPptx(data)).slides[0].blocks as unknown as { type: string; content?: string; fontFamily?: string }[]
+    const byContent = (c: string) => back.find(b => b.content === c)
+    expect(byContent('Salut')?.fontFamily).toBe('Playfair Display')
+    expect(byContent('Note')?.fontFamily).toBe('Caveat')
+    expect(back.find(b => b.type === 'table')?.fontFamily).toBe('Merriweather')
+    // La police par défaut s'exporte en Segoe UI, qui se réimporte sans police explicite.
+    expect(byContent('Défaut')?.fontFamily).toBeUndefined()
+  })
+
   it('exporte un tableau pivoté en image', async () => {
     const slides: Slide[] = [{ id: 1, blocks: [block({ id: 1, type: 'table', cells: [['a']], rotation: 10 })] }]
     const { plan } = await exportSlides(slides)

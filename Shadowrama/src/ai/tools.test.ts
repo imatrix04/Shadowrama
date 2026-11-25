@@ -289,6 +289,24 @@ describe('executeTool — tableaux', () => {
   })
 })
 
+describe('executeTool — polices', () => {
+  it('pose une police du catalogue, la retire avec une valeur vide, refuse le reste', () => {
+    const added = apply(blank(), 'add_block', { slide: 1, type: 'title', props: { content: 'Salut', fontFamily: 'Playfair Display' } })
+    expect((added.slides[0].blocks[0] as { fontFamily?: string }).fontFamily).toBe('Playfair Display')
+    const id = JSON.parse(added.result).id
+    const cleared = apply(added.slides, 'update_block', { slide: 1, id, props: { fontFamily: '' } })
+    expect((cleared.slides[0].blocks[0] as { fontFamily?: string }).fontFamily).toBe('')
+    expect(executeTool(added.slides, 'update_block', { slide: 1, id, props: { fontFamily: 'Comic Sans' } }, basic).isError).toBe(true)
+  })
+
+  it('liste les polices dans la référence', () => {
+    const ref = JSON.parse(apply(blank(), 'get_reference', {}).result)
+    const text = ref.blocks.find((b: { type: string }) => b.type === 'text')
+    const prop = text.properties.find((p: { key: string }) => p.key === 'fontFamily')
+    expect(prop.values).toContain('Caveat')
+  })
+})
+
 describe('executeTool — numérotation', () => {
   it('active la numérotation sans toucher aux diapositives', () => {
     const slides = blank()

@@ -5,6 +5,7 @@ import { attr, descendants, kid, kids, numAttr } from './xml'
 import { EMU_PER_PT, r1, readXfrm, toBox } from './context'
 import type { Ctx, Tx } from './context'
 import { readSolid } from './theme'
+import { fontFromPptx } from '../fonts'
 
 /**
  * Import d'un tableau PowerPoint (`<a:tbl>` d'un `graphicFrame`) vers un bloc
@@ -92,6 +93,9 @@ export function emitTable(node: Element, ctx: Ctx, tx: Tx, blocks: BlockData[]):
     ...(sizes.length ? { fontSize: Math.max(1, r1((sizes[0] / 100) * pxPerPt)) } : {}),
     ...(xf.rot !== 0 ? { rotation: r1(xf.rot) } : {}),
   }
+  const font = fontFromPptx(rawRows.flat().map(tc => attr(kid(firstRunProps(tc), 'latin'), 'typeface')).find(Boolean)
+    ?.replace('+mj-lt', ctx.theme.majorFont ?? '').replace('+mn-lt', ctx.theme.minorFont ?? ''))
+  if (font) block.fontFamily = font
 
   if (headerRow) {
     // Sans remplissage explicite, PowerPoint applique le style du tableau : sa

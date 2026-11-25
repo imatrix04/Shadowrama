@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import type { BlockComponentProps, TextBlockData, TitleBlockData } from '../../types'
 import { gradientCss } from '../../ultra/effectStyle'
+import { fontStack } from '../../utils/fonts'
 
 type TextualBlockData = TextBlockData | TitleBlockData
 
@@ -117,6 +118,7 @@ export function createTextualBlock(defaultFontSize: number) {
             margin: 0,
             width: '100%',
             fontSize: block.fontSize ?? defaultFontSize,
+            fontFamily: fontStack(block.fontFamily),
             fontWeight: block.fontWeight ?? 'normal',
             fontStyle: block.fontStyle ?? 'normal',
             lineHeight: block.lineHeight ?? 1.4,

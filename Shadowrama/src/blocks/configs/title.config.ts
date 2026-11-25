@@ -1,4 +1,5 @@
 import type { BlockConfig } from '../../types'
+import { FONT_OPTIONS } from '../../utils/fonts'
 
 const titleConfig: BlockConfig = {
   type: 'title',
@@ -7,6 +8,7 @@ const titleConfig: BlockConfig = {
   defaultProps: { content: 'Mon Titre', fontSize: 36, color: '#ffffff', verticalAlign: 'middle', fontWeight: 'bold', fontStyle: 'normal', lineHeight: 1.2 },
   properties: [
     { key: 'content', label: 'Contenu', type: 'textarea' },
+    { key: 'fontFamily', label: 'Police', type: 'select', options: FONT_OPTIONS },
     { key: 'fontSize', label: 'Taille police', type: 'number' },
     { key: 'color', label: 'Couleur', type: 'color' },
     { key: 'textAlign', label: 'Alignement', type: 'select', options: [

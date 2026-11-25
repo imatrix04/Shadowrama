@@ -5,6 +5,7 @@ import { clipboardMediaKeys } from './clipboard'
 import { nextId } from './ids'
 import { normalizeChartData } from './chart'
 import { normalizeCells } from './table'
+import { normalizeFontFamily } from './fonts'
 import { DEFAULT_NUMBERING, normalizeNumbering } from './numbering'
 import { PptxFormatError, importPptx } from './pptx/import'
 import type { ImportReport } from './pptx/import'
@@ -317,6 +318,11 @@ function normalizeBlock(block: BlockData): BlockData {
   const clean = { ...block } as BlockData & { properties?: unknown }
   delete clean.properties
   if (typeof clean.id !== 'number') clean.id = nextId()
+
+  // Une police inconnue (projet d'une autre version) retombe sur la police par défaut.
+  const family = normalizeFontFamily((clean as { fontFamily?: unknown }).fontFamily)
+  if (family) clean.fontFamily = family
+  else delete clean.fontFamily
 
   // Un carrousel sans tableau `items` ferait planter le rendu : même principe
   // que normalizeBackground, on ne garde que ce qui est exploitable.

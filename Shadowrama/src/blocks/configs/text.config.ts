@@ -1,4 +1,5 @@
 import type { BlockConfig } from '../../types'
+import { FONT_OPTIONS } from '../../utils/fonts'
 
 const textConfig: BlockConfig = {
   type: 'text',
@@ -7,6 +8,7 @@ const textConfig: BlockConfig = {
   defaultProps: { content: 'Mon texte', fontSize: 18, color: '#ffffff', verticalAlign: 'middle', fontWeight: 'normal', fontStyle: 'normal', lineHeight: 1.4 },
   properties: [
     { key: 'content', label: 'Contenu', type: 'textarea' },
+    { key: 'fontFamily', label: 'Police', type: 'select', options: FONT_OPTIONS },
     { key: 'fontSize', label: 'Taille police', type: 'number' },
     { key: 'color', label: 'Couleur', type: 'color' },
     { key: 'textAlign', label: 'Alignement', type: 'select', options: [

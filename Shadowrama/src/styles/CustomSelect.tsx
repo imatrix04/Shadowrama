@@ -5,6 +5,8 @@ import styles from './CustomSelect.module.css'
 interface Option {
   label: string
   value: string
+  /** Pile CSS : l'option s'affiche dans sa propre police. */
+  fontFamily?: string
 }
 
 interface Props {
@@ -86,7 +88,7 @@ export default function CustomSelect({ value, options, onChange }: Props) {
         className={`${styles.trigger} ${open ? styles.triggerActive : ''}`}
         onClick={toggle}
       >
-        <span className={styles.triggerLabel}>{selected?.label ?? '—'}</span>
+        <span className={styles.triggerLabel} style={{ fontFamily: selected?.fontFamily }}>{selected?.label ?? '—'}</span>
         <svg
           className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`}
           width="10" height="6" viewBox="0 0 10 6" fill="none"
@@ -114,6 +116,7 @@ export default function CustomSelect({ value, options, onChange }: Props) {
               key={opt.value}
               type="button"
               className={`${styles.option} ${opt.value === value ? styles.optionActive : ''}`}
+              style={{ fontFamily: opt.fontFamily }}
               onClick={() => handleSelect(opt.value)}
             >
               {opt.label}

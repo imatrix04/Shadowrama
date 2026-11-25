@@ -7,7 +7,7 @@ export interface BlockProperty {
   label: string
   type: 'text' | 'textarea' | 'number' | 'color' | 'select' | 'float' | 'file'
       | 'shapePolygon' | 'boolean' | 'carouselItems' | 'url' | 'chartData' | 'tableData'
-  options?: { label: string; value: string }[]
+  options?: { label: string; value: string; /** Pile CSS pour afficher l'option dans sa propre police. */ fontFamily?: string }[]
   accept?: string
   /** Affiche le champ si la valeur du champ `key` vaut `value` ; `a|b` accepte plusieurs valeurs. */
   showIf?: { key: string; value: string }
@@ -179,6 +179,9 @@ export interface BaseBlockData {
   opacity?: number
   /** Degrés, sens horaire. Appliquée au rendu du bloc (voir Block.tsx). */
   rotation?: number
+  /** Police du texte (nom du catalogue, voir utils/fonts). Absent = police par défaut. Sans effet
+   *  sur les blocs sans texte (image, forme, vidéo…). */
+  fontFamily?: string
   /** Mode Ultra Design : effets visuels avancés. */
   effects?: BlockEffects
   /** Mode Ultra Design : séquences d'entrée et de sortie. Prend le pas sur
