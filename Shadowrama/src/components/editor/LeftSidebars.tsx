@@ -4,7 +4,8 @@ import type { BlockConfig, BlockData, MotionPhase } from '../../types'
 import { BLOCKS_CONFIG } from '../../blocks'
 import Drawer, { DrawerTitle } from '../ui/Drawer'
 import type { DrawerTab } from '../ui/Drawer'
-import Icon from '../ui/Icon'
+import BlockArt from './BlockArt'
+import { BLOCK_CATEGORIES, blockMeta, matchesBlock } from './blockCatalog'
 import MotionPanel from './ultra/MotionPanel'
 import EffectsPanel from './ultra/EffectsPanel'
 import AlignPanel from './AlignPanel'
@@ -55,6 +56,7 @@ export default function LeftSidebars({
   selectedBlocks, onCommitBlocks, alignmentEnabled, features,
 }: Props) {
   const [openPanel, setOpenPanel] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
 
   // Alignement s'insère après Blocs ; les onglets Ultra restent en dernier.
   const tabs = [
@@ -66,27 +68,72 @@ export default function LeftSidebars({
   // Un panneau ouvert dont l'onglet a disparu ne doit pas rester affiché.
   const activePanel = openPanel && tabs.some(tab => tab.key === openPanel) ? openPanel : null
 
-  const renderBlocks = () => (
-    <>
-      <DrawerTitle>Blocs</DrawerTitle>
-      <div className={styles.list}>
-          {BLOCKS_CONFIG.filter(config => (!config.ultraOnly || ultra) && (!config.beta || features[config.beta])).map((config, i) => (
-          <button
-            key={config.type}
-            className={`${styles.item} ${config.ultraOnly ? styles.itemUltra : ''}`}
-            style={stagger(i)}
-            onClick={() => onAddBlock({ type: config.type, ...config.defaultProps })}
-            title={`Ajouter un bloc ${config.label.toLowerCase()}`}
-          >
-            <span className={styles.itemIcon}><Icon name={config.icon} /></span>
-            {config.label}
-            {config.ultraOnly && <span className={styles.ultraBadge}>Ultra</span>}
-            {config.beta && <span className={styles.betaBadge}>Bêta</span>}
-          </button>
+  const renderBlocks = () => {
+    const available = BLOCKS_CONFIG.filter(
+      config => (!config.ultraOnly || ultra) && (!config.beta || features[config.beta]),
+    )
+    const shown = available.filter(config => matchesBlock(config.label, config.type, query))
+    const add = (config: BlockConfig) => onAddBlock({ type: config.type, ...config.defaultProps })
+
+    // Les catégories vides (rien ne correspond à la recherche) disparaissent.
+    const groups = BLOCK_CATEGORIES
+      .map(cat => ({ cat, items: shown.filter(c => blockMeta(c.type).category === cat.id) }))
+      .filter(g => g.items.length > 0)
+
+    let cardIndex = 0
+    return (
+      <>
+        <DrawerTitle>Blocs</DrawerTitle>
+        <label className={styles.search}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+            strokeLinecap="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
+          <input
+            type="text"
+            value={query}
+            placeholder="Rechercher un bloc…"
+            aria-label="Rechercher un bloc"
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && shown[0]) { add(shown[0]); setQuery('') }
+              if (e.key === 'Escape' && query) { e.stopPropagation(); setQuery('') }
+            }}
+          />
+        </label>
+
+        {groups.map(({ cat, items }) => (
+          <section key={cat.id} className={styles.group} style={{ '--hue': cat.hue } as React.CSSProperties}>
+            <h3 className={styles.groupTitle}>{cat.label}</h3>
+            <div className={styles.grid}>
+              {items.map(config => (
+                <button
+                  key={config.type}
+                  type="button"
+                  className={`${styles.card} ${config.ultraOnly ? styles.cardUltra : ''}`}
+                  style={stagger(cardIndex++)}
+                  onClick={() => add(config)}
+                  title={`Ajouter un bloc ${config.label.toLowerCase()}`}
+                >
+                  <span className={styles.art}><BlockArt type={config.type} icon={config.icon} /></span>
+                  <span className={styles.cardLabel}>{config.label}</span>
+                  <span className={styles.cardTagline}>{blockMeta(config.type).tagline}</span>
+                  <span className={styles.plus} aria-hidden="true">+</span>
+                  {config.ultraOnly && <span className={styles.ultraBadge}>Ultra</span>}
+                  {config.beta && <span className={styles.betaBadge}>Bêta</span>}
+                </button>
+              ))}
+            </div>
+          </section>
         ))}
-      </div>
-    </>
-  )
+
+        {groups.length === 0 && (
+          <p className={styles.empty}>Aucun bloc ne correspond à « {query} ».</p>
+        )}
+      </>
+    )
+  }
 
   const renderTab = (key: string) => {
     if (key === 'blocs') return renderBlocks()
